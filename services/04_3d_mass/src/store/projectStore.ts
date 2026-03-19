@@ -113,13 +113,14 @@ export interface MassingResult {
     warnings: string[];
 }
 
-export type TypologyType = 'SINGLE_BLOCK' | 'TOWER_PODIUM' | 'L_SHAPE' | 'U_SHAPE' | 'PARALLEL' | 'COURTYARD' | 'STAGGERED';
+export type TypologyType = 'SINGLE_BLOCK' | 'TOWER_PODIUM' | 'L_SHAPE' | 'U_SHAPE' | 'H_SHAPE' | 'PARALLEL' | 'COURTYARD' | 'STAGGERED';
 
 export const TYPOLOGY_LABELS: Record<TypologyType, string> = {
     SINGLE_BLOCK: '단일 블록',
-    TOWER_PODIUM: '타워 + 포디온',
+    TOWER_PODIUM: '타워 + 포디엄',
     L_SHAPE: 'ㄱ자형',
     U_SHAPE: 'ㄷ자형',
+    H_SHAPE: 'H자형',
     PARALLEL: '평행동',
     COURTYARD: '중정형',
     STAGGERED: '엇갈림',
@@ -325,6 +326,22 @@ export interface ProjectState {
     massingError: string | null;
     showMassing: boolean;
 
+    // ── 법규 완화 (인센티브) 적용 ──
+    incentives: {
+        publicOpenSpace: boolean;    // 공개공지 (용적률, 높이 +20%)
+        greenBuilding: boolean;      // 녹색건축/ZEB 등 (건폐, 용적, 높이 +15%)
+        intelligentBuilding: boolean;// 지능형건축물 (건폐, 용적, 높이 +15%)
+        greenRoof: boolean;          // 옥상녹화 (건폐율, 용적률 +5%)
+    };
+    setIncentives: (updates: Partial<ProjectState['incentives']>) => void;
+
+    // ── 시뮬레이션 (일조, 그림자) ──
+    showSunlight: boolean;
+    simulationMonth: number;
+    simulationDay: number;
+    simulationHour: number;
+    showShadowAnalysis: boolean;
+
     // 액션
     setAddress: (address: string) => void;
     setZoneType: (zone: string) => void;
@@ -349,6 +366,17 @@ export interface ProjectState {
     setSelectedTypology: (type: TypologyType) => void;
     generateMassing: (typology?: TypologyType | 'ALL') => Promise<void>;
     setShowMassing: (show: boolean) => void;
+
+    // ── 시뮬레이션 액션 ──
+    setShowSunlight: (show: boolean) => void;
+    setSimulationDate: (month: number, day: number) => void;
+    setSimulationHour: (hour: number) => void;
+    setShowShadowAnalysis: (show: boolean) => void;
+
+    // ── AI 코파일럿 채팅 상태 ──
+    chatLoading: boolean;
+    aiComment: string | null;
+    sendMassingChat: (msg: string) => Promise<void>;
 }
 
 // ─── 법규 기반 계산 로직 ───
@@ -474,7 +502,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     allTypologyResults: [],
     massingLoading: false,
     massingError: null,
-    showMassing: false,
+    showMassing: true,
+
+    // AI 코파일럿 상태 초기화
+    chatLoading: false,
+    aiComment: null,
+
+    // 초기 인센티브 모두 비활성화
+    incentives: {
+        publicOpenSpace: false,
+        greenBuilding: false,
+        intelligentBuilding: false,
+        greenRoof: false,
+    },
+    setIncentives: (updates: Partial<ProjectState['incentives']>) => {
+        set((state) => ({ incentives: { ...state.incentives, ...updates } }));
+    },
+
+    // ── 시뮬레이션 (일조, 그림자) 초기값 ──
+    showSunlight: false,
+    simulationMonth: new Date().getMonth() + 1,
+    simulationDay: new Date().getDate(),
+    simulationHour: 12, // 정오
+    showShadowAnalysis: false,
 
     setAddress: (address) => set({ address }),
 
@@ -503,6 +553,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     setGeminiApiKey: (geminiApiKey: string) => set({ geminiApiKey }),
     setShowMassing: (showMassing: boolean) => set({ showMassing }),
 
+    // ── 시뮬레이션 액션 ──
+    setShowSunlight: (showSunlight) => set({ showSunlight }),
+    setSimulationDate: (simulationMonth, simulationDay) => set({ simulationMonth, simulationDay }),
+    setSimulationHour: (simulationHour) => set({ simulationHour }),
+    setShowShadowAnalysis: (showShadowAnalysis) => set({ showShadowAnalysis }),
+
     setSelectedTypology: (selectedTypology: TypologyType) => {
         const allResults = get().allTypologyResults;
         const matched = allResults.find(r => r.typology_type === selectedTypology);
@@ -525,13 +581,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         set({ massingLoading: true, massingError: null });
 
         try {
+            // 법규 완화 계산 적용
+            let farMultiplier = 1.0;
+            let heightMultiplier = 1.0;
+            let coverageMultiplier = 1.0;
+
+            if (state.incentives.publicOpenSpace) { farMultiplier += 0.2; heightMultiplier += 0.2; }
+            if (state.incentives.greenBuilding) { farMultiplier += 0.15; coverageMultiplier += 0.15; heightMultiplier += 0.15; }
+            if (state.incentives.intelligentBuilding) { farMultiplier += 0.15; coverageMultiplier += 0.15; heightMultiplier += 0.15; }
+            if (state.incentives.greenRoof) { coverageMultiplier += 0.05; farMultiplier += 0.05; }
+
+            const effectiveCoverage = Math.min(100, state.buildingCoverageLimit * coverageMultiplier);
+            const effectiveFar = state.floorAreaRatioLimit * farMultiplier;
+            const effectiveHeight = state.maxHeight * heightMultiplier;
+
             const body = {
                 site_polygon: state.landPolygon.map(([x, y]) => [x, y]),
                 typology_type: type,
-                max_coverage_pct: state.buildingCoverageLimit,
-                max_far_pct: state.floorAreaRatioLimit,
-                max_height_m: state.maxHeight,
-                max_floors: Math.floor(state.maxHeight / state.floorHeight),
+                max_coverage_pct: effectiveCoverage,
+                max_far_pct: effectiveFar,
+                max_height_m: effectiveHeight,
+                max_floors: Math.floor(effectiveHeight / state.floorHeight),
                 floor_height_m: state.floorHeight,
                 setback_m: 1.5,
                 site_area_sqm: state.landArea,
@@ -578,6 +648,64 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             set({ massingError: err.message || '매스 생성 실패' });
         } finally {
             set({ massingLoading: false });
+        }
+    },
+
+    sendMassingChat: async (msg: string) => {
+        set({ chatLoading: true, aiComment: null });
+        try {
+            const state = get();
+            const body = {
+                message: msg,
+                current_state: {
+                    typology_type: state.selectedTypology,
+                    max_coverage_pct: state.buildingCoverageLimit,
+                    max_far_pct: state.floorAreaRatioLimit,
+                    incentives: state.incentives
+                }
+            };
+            
+            const resp = await fetch('/massing-api/api/massing/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            
+            if (!resp.ok) throw new Error(`API 오류: ${resp.status}`);
+            const data = await resp.json();
+            
+            if (data.status === 'success' && data.action) {
+                const action = data.action;
+                
+                // Update properties based on AI response
+                if (action.typology && Object.keys(TYPOLOGY_LABELS).includes(action.typology)) {
+                    set({ selectedTypology: action.typology as TypologyType });
+                }
+                if (action.incentives) {
+                    state.setIncentives(action.incentives);
+                }
+                if (action.max_coverage_pct) {
+                    set({ buildingCoverageLimit: action.max_coverage_pct });
+                }
+                if (action.max_far_pct) {
+                    set({ floorAreaRatioLimit: action.max_far_pct });
+                }
+                
+                // Show AI comment briefly or store it
+                console.log("AI 코멘트:", action.ai_comment);
+                set({ aiComment: action.ai_comment });
+
+                // Trigger massing generation
+                await get().generateMassing(action.typology as TypologyType || state.selectedTypology);
+                
+            } else {
+                throw new Error(data.message || data.error || 'AI 응답 오류');
+            }
+        } catch (err: any) {
+             console.error('[Massing Chat] 오류:', err);
+             set({ aiComment: `오류 발생: ${err.message}` });
+        } finally {
+            set({ chatLoading: false });
         }
     },
 
@@ -673,7 +801,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 get().recalculate();
 
                 // 실제 주변 건물 데이터 비동기 로드
-                fetchSurroundingBuildings(parcel.centerLng, parcel.centerLat, 200)
+                fetchSurroundingBuildings(parcel.centerLng, parcel.centerLat, 100)
                     .then(buildings => {
                         console.log(`[Store] 실제 주변 건물 ${buildings.length}개 로드 완료`);
                         set({ realSurroundingBuildings: buildings });

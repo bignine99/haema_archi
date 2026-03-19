@@ -1,6 +1,8 @@
 /**
- * 토지이용규제정보 조례분석 서비스
+ * 토지이용규제정보 조례분석 서비스 v2
  * Python 백엔드 (포트 8010) /api/land-use 호출
+ * 
+ * 업데이트: 2026-03-19 — OrdinanceDetails, key_restrictions 추가
  */
 
 export interface PnuInfo {
@@ -12,16 +14,25 @@ export interface PnuInfo {
   dong: string;
 }
 
-export interface RegulationDetail {
-  code: string;
-  name: string;
-  category: string;
-  description: string;
-  building_coverage_range: string;
-  floor_area_ratio_range: string;
+export interface OrdinanceDetails {
+  building_coverage: string;
+  floor_area_ratio: string;
   height_limit: string;
-  key_restrictions: string[];
+  setback: string;
+  parking: string;
+  landscape: string;
+  sunlight_regulation: string;
+  permitted_uses: string[];
+  prohibited_uses: string[];
+}
+
+export interface RegulationDetail {
   related_law: string;
+  restriction_summary: string;
+  design_impact: string;
+  management_agency: string;
+  key_restrictions: string[];
+  ordinance_details: OrdinanceDetails | null;
 }
 
 export interface LandUseRegulationItem {

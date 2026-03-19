@@ -2128,7 +2128,126 @@ const excludeKeywords = ['교량', '고가교', '고가도로', '육교', '지�
 
 ---
 
-## 📊 전체 진행 상황 (업데이트: 2026-03-18 10:35)
+## 📌 2026-03-18 오후 — 법규 분석 복원 + 조례분석 + 서버 배포
+
+### 작업 배경
+- 이전 버전에서 제공하던 **4배치 순차 법규 분석** + **개별 법률 드릴다운** 기능이 코드 리팩토링 과정에서 유실됨
+- 오늘 시연을 위해 **네이버 클라우드 서버(110.165.17.170)**에 전체 배포가 필요함
+
+---
+
+### ① 법규 분석 시스템 복원 (regulationAnalysisService.ts)
+
+#### 복원된 핵심 기능
+
+| 항목 | 설명 |
+|------|------|
+| **REGULATION_BATCHES (4배치)** | 건축법→주거법→화재/안전→환경/에너지 순차 분석 |
+| **analyzeSingleBatch()** | 배치별 Gemini AI 호출, 진행률 콜백 |
+| **analyzeSingleLawDetail()** | 개별 법률 드릴다운 (조문, Lux, 높이 등 수치 기준 포함) |
+| **Batch Progress Bar** | `RegulationPanel.tsx` — 4단계 진행 표시 UI |
+| **Category Accordion** | 분석 결과를 카테고리별 접이식 UI로 표시 |
+| **Law Detail Modal** | 개별 법률 클릭 시 상세 정보 모달 |
+
+#### 드릴다운 분석 방식
+```
+[1/4] 건축법·시행령  ──────▶ Gemini AI ──▶ 카테고리별 결과
+[2/4] 주택법·주거 관련법 ──▶ Gemini AI ──▶ 카테고리별 결과
+[3/4] 화재/안전 관련법 ──▶ Gemini AI ──▶ 카테고리별 결과
+[4/4] 환경/에너지 관련법 ──▶ Gemini AI ──▶ 카테고리별 결과
+```
+- 한번에 모든 법규를 요청하지 않고, 배치별로 나누어 AI 토큰 관리 + 상세도 극대화
+- 각 법률을 개별 클릭하면 **조례 수준의 상세 수치** (교실 조도 Lux, 복도 폭 m 등)까지 드릴다운
+
+---
+
+### ② 조례분석 (Ordinance Analysis) 통합
+
+- `RegulationPanel.tsx`에 조례분석 탭 통합
+- 주소 입력 → VWorld 토지이용규제 API 조회 → PNU 기반 용도지역/건폐율/용적률/특수규제 표시
+- Python 백엔드 (`land_use_service.py`)가 Function Calling 기반으로 9개 도구 활용:
+  - `get_land_use_regulation`, `get_pnu_code`, `get_zone_limits`
+  - `detect_district_plan`, `analyze_road_adjacency`, `calculate_sunlight_setback` 등
+
+---
+
+### ③ 네이버 클라우드 서버 배포
+
+#### 배포 구성
+
+| 구성 요소 | 서버 경로 | 포트 |
+|-----------|-----------|------|
+| **프론트엔드** (Vite 빌드) | `/var/www/haema-archi/dist/` | 80 (Nginx) |
+| **Python 백엔드** (FastAPI) | `/opt/haema-backend/` | 8010 |
+| **Nginx 프록시** | `/etc/nginx/sites-available/haema-archi` | 80 |
+
+#### Nginx 프록시 설정
+
+```nginx
+server {
+    listen 80;
+    server_name 110.165.17.170;
+    root /var/www/haema-archi/dist;
+    index index.html;
+
+    location / { try_files $uri $uri/ /index.html; }
+    location /land-use-api/ { proxy_pass http://127.0.0.1:8010/; }
+    location /kakao-api/ { proxy_pass https://dapi.kakao.com/; proxy_ssl_server_name on; }
+    location /vworld-api/ { proxy_pass https://api.vworld.kr/; proxy_ssl_server_name on; }
+    location /building-api/ { proxy_pass https://apis.data.go.kr/; proxy_ssl_server_name on; }
+}
+```
+
+#### 배포 과정에서 해결한 이슈
+
+| 이슈 | 원인 | 해결 |
+|------|------|------|
+| **ModuleNotFoundError: regulation_details** | 서버에 .py 파일 미전송 | `scp *.py` 전체 전송 |
+| **ModuleNotFoundError: fc_executor** | 동일 | `scp *.py` 전체 전송 |
+| **서버가 테스트만 실행 후 종료** | `__main__`이 인자 없으면 테스트 모드 | `python3 land_use_service.py serve` |
+| **Nginx 403 Forbidden** | default 사이트 + 파일 권한 700 | `rm default` + `chmod -R 755` |
+| **scp 실패 (서버→서버)** | SSH 세션 안에서 로컬 경로 사용 | 로컬 Windows CMD에서 scp 실행 |
+
+#### 백엔드 실행 명령어 (서버 재시작 시)
+
+```bash
+cd /opt/haema-backend
+source venv/bin/activate
+nohup python3 land_use_service.py serve > /var/log/haema-backend.log 2>&1 &
+```
+
+---
+
+### ④ NNHomepage 솔루션 카드 추가
+
+- `251123_NNHomepage/src/data/solutions.ts`에 Haema Architect 카드 추가
+- 카테고리: `Architecture`, 배지: `NEW`
+- 링크: `http://110.165.17.170`
+- 서버에서 `npm run build && pm2 restart ninetynine-hub`로 반영 완료
+
+---
+
+### ⑤ GitHub 저장소
+
+- 기존 remote(`haema_archi_01`) → 신규 remote(`haema_archi`)로 변경
+- `git push -u origin main` — 235 objects, 6.10 MiB 푸시 완료
+- URL: https://github.com/bignine99/haema_archi
+
+---
+
+### 수정/생성된 파일 총괄 (2026-03-18 오후)
+
+| 파일 | 변경 내용 | 변경 규모 |
+|------|----------|----------|
+| `services/04_3d_mass/src/services/regulationAnalysisService.ts` | 4배치 분석 + 드릴다운 복원 | **~300줄 복원** |
+| `services/04_3d_mass/src/components/ui/RegulationPanel.tsx` | 배치 프로그레스 바, 아코디언, 모달, 조례분석 UI | **~400줄 복원** |
+| `services/04_3d_mass/package.json` | build 스크립트 수정 (`tsc` 제거) | 1줄 |
+| `/etc/nginx/sites-available/haema-archi` | Nginx 서버 설정 파일 (신규 생성) | 14줄 |
+| `251123_NNHomepage/src/data/solutions.ts` | Haema Architect 솔루션 카드 추가 | 12줄 |
+
+---
+
+## 📊 전체 진행 상황 (업데이트: 2026-03-18 15:35)
 
 | Step | 내용 | 상태 |
 |------|------|------|
@@ -2145,16 +2264,23 @@ const excludeKeywords = ['교량', '고가교', '고가도로', '육교', '지�
 | 위성 해상도 향상 | zoom 18 (0.47m/px, 2배 향상) | ✅ 완료 |
 | 키워드 필터 버그 수정 | '교'→'교량' (교회 누락 방지) | ✅ 완료 |
 | heightSource 시각적 구분 | register(파랑)/floors(노랑)/estimate(회색) 색상 분리 | ✅ 완료 |
-| **heightSource 범례 UI** | **3D 뷰 우측 상단 글래스모피즘 범례 오버레이** | ✅ **완료** (2026-03-18) |
-| **건물 클릭 상세 팝업** | **클릭→높이/층수/용도/출처 팝업 + 호버 하이라이트** | ✅ **완료** (2026-03-18) |
-| 건축물대장 API 연동 | 실측 높이 보강 파이프라인 | ✅ 완료 (코드) / ⏳ **API 키 외부 전파 대기 (401)** |
+| heightSource 범례 UI | 3D 뷰 우측 상단 글래스모피즘 범례 오버레이 | ✅ 완료 |
+| 건물 클릭 상세 팝업 | 클릭→높이/층수/용도/출처 팝업 + 호버 하이라이트 | ✅ 완료 |
+| 건축물대장 API 연동 | 실측 높이 보강 파이프라인 | ✅ 완료 (코드) / ⏳ API 키 외부 전파 대기 |
+| **법규 분석 4배치 복원** | **REGULATION_BATCHES + analyzeSingleBatch + 드릴다운** | ✅ **완료** (2026-03-18 오후) |
+| **조례분석 통합** | **VWorld 토지이용규제 + PNU 기반 분석** | ✅ **완료** (2026-03-18 오후) |
+| **네이버 클라우드 배포** | **Nginx + FastAPI 백엔드 → http://110.165.17.170** | ✅ **완료** (2026-03-18 오후) |
+| **NNHomepage 카드** | **솔루션 페이지에 Haema Architect 카드 추가** | ✅ **완료** (2026-03-18 오후) |
+| **GitHub 푸시** | **https://github.com/bignine99/haema_archi** | ✅ **완료** (2026-03-18 오후) |
 | Phase 1-A | 대지정보 수집 강화 | 🔶 부분완료 |
 | Phase 1-D | 환경 시뮬레이션 (일조/바람/소음/조망) | ⬜ 예정 |
 | Phase 1-E | 제너레이티브 배치 (GA 엔진) | ⬜ 예정 |
 | Phase 1-F | 사업성 실시간 연동 (ROI/IRR) | ⬜ 예정 |
 
 ### 다음 작업 예정
-> 1. **건축물대장 API 키 활성화 계속 모니터링** (공공데이터포털 마이페이지 확인)
-> 2. **Phase 1-D: 일조 시뮬레이션** — 태양 궤적 계산, 건물 그림자 투영
-> 3. 또는 **Phase 1-E: 제너레이티브 배치 (GA 엔진)** 진행
+> 1. **조례분석 상세 강화** — 현재 기본 규제 코드만 표시, 실제 조례 원문과 설계 영향 수치 추가 필요
+> 2. **건축물대장 API 키 활성화 모니터링** (공공데이터포털 마이페이지 확인)
+> 3. **지방 지역 VWorld 위성사진** — 저줌 폴백 또는 대체 지도 API 검토
+> 4. **Phase 1-D: 일조 시뮬레이션** — 태양 궤적 계산, 건물 그림자 투영
+
 

@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore, MOCK_PARCELS, type ParcelData, type BuildingUse, TYPOLOGY_LABELS, type TypologyType } from '@/store/projectStore';
 import { type KakaoAddressResult } from '@/services/gisApi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Building2, Layers, Ruler, Compass, ChevronDown, Globe, Loader2, AlertCircle, Box, Eye, EyeOff, ShieldCheck, ShieldAlert, UploadCloud, FileText, CheckCircle2, X, Award, Boxes, RotateCw } from 'lucide-react';
+import { Search, MapPin, Building2, Layers, Ruler, Compass, ChevronDown, Globe, Loader2, AlertCircle, Box, Eye, EyeOff, ShieldCheck, ShieldAlert, UploadCloud, FileText, CheckCircle2, X, Award, Boxes, RotateCw, Sun } from 'lucide-react';
 import DocumentUploader from '@/components/ui/DocumentUploader';
 
 const ZONE_TYPES = [
@@ -628,6 +628,76 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* ─── 일조 시뮬레이션 (Phase 1-D) ─── */}
+            <div className="glass-panel p-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <Sun size={14} className="text-amber-500" />
+                    <span className="text-xs font-semibold text-slate-700">일조 시뮬레이션</span>
+                    <button
+                        onClick={() => store.setShowSunlight(!store.showSunlight)}
+                        className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${store.showSunlight
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        {store.showSunlight ? <Eye size={10} /> : <EyeOff size={10} />}
+                        {store.showSunlight ? '태양 ON' : '태양 OFF'}
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {/* 날짜 선택 (월) */}
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] text-slate-500">월 선택 (매월 21일 기준)</label>
+                            <span className="text-[11px] text-amber-600 font-semibold">{store.simulationMonth}월 21일</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1"
+                            max="12"
+                            step="1"
+                            value={store.simulationMonth}
+                            onChange={(e) => store.setSimulationDate(parseInt(e.target.value), 21)} // 보통 21일이 하지, 동지, 춘분, 추분과 가까움
+                            className="w-full accent-amber-500"
+                        />
+                    </div>
+                    {/* 시간 선택 */}
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] text-slate-500">시간 {store.showSunlight ? '' : '(태양 ON 필요)'}</label>
+                            <span className="text-[11px] text-blue-600 font-semibold">
+                                {Math.floor(store.simulationHour).toString().padStart(2, '0')}:{(store.simulationHour % 1 * 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min="6"
+                            max="19"
+                            step="0.5"
+                            value={store.simulationHour}
+                            onChange={(e) => store.setSimulationHour(parseFloat(e.target.value))}
+                            disabled={!store.showSunlight}
+                            className={`w-full ${store.showSunlight ? 'accent-amber-500' : 'grayscale opacity-50 cursor-not-allowed'}`}
+                        />
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-3 mt-3">
+                        <button
+                            onClick={() => store.setShowShadowAnalysis(!store.showShadowAnalysis)}
+                            className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                                store.showShadowAnalysis 
+                                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                            }`}
+                        >
+                            <Globe size={14} />
+                            {store.showShadowAnalysis ? '그림자 히트맵 끄기' : '그림자 히트맵 분석 (동지 기준)'}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* ─── 범례 ─── */}

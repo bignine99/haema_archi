@@ -7,7 +7,7 @@ import MapPanel from '@/components/ui/MapPanel';
 import {
     Search, LayoutDashboard, Scale, MapPin, Compass,
     Network, Grid, Building, Ruler, Box,
-    Lightbulb, ImageIcon
+    Lightbulb, ImageIcon, LogOut
 } from 'lucide-react';
 
 import { useProjectStore } from '@/store/projectStore';
@@ -275,6 +275,13 @@ export default function App() {
                             <span className="text-[10px] text-emerald-400">Enterprise Plan</span>
                         </div>
                     </div>
+                    <button
+                        onClick={() => setIsAuthorized(false)}
+                        className="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-xs font-medium border border-slate-700"
+                    >
+                        <LogOut size={14} />
+                        <span>랜딩 페이지로 이동</span>
+                    </button>
                 </div>
             </aside>
 

@@ -305,6 +305,66 @@ def _cap_floors_by_far(
     return wings
 
 
+def _scale_wings_to_fit_polygon(wings: list[MassingWing], buildable: Polygon) -> list[MassingWing]:
+    """모든 Wing이 buildable 폴리곤 내부에 오도록 centroid 기준으로 크기 및 위치 비례 축소"""
+    from shapely.geometry import box
+    rep_pt = buildable.representative_point()
+    cx, cy = rep_pt.x, rep_pt.y
+    scale = 1.0
+    
+    while scale >= 0.05:
+        all_ok = True
+        temp_wings = []
+        for w in wings:
+            wx, wy = w.x, -w.z
+            vx, vy = wx - cx, wy - cy
+            nx = cx + vx * scale
+            ny = cy + vy * scale
+            
+            sw, sd = w.width * scale, w.depth * scale
+            hw, hd = sw / 2, sd / 2
+            
+            rect = box(nx - hw, ny - hd, nx + hw, ny + hd)
+            intersection_area = buildable.intersection(rect).area
+            # 98% 이상 포함되면 통과 (소수점 오차 허용)
+            if intersection_area < rect.area * 0.98:
+                all_ok = False
+                break
+                
+            new_fp = [
+                [nx - hw, ny - hd], [nx + hw, ny - hd],
+                [nx + hw, ny + hd], [nx - hw, ny + hd]
+            ]
+            temp_wings.append((w, nx, ny, sw, sd, new_fp))
+            
+        if all_ok:
+            for w, nx, ny, sw, sd, new_fp in temp_wings:
+                w.x = round(nx, 2)
+                w.z = round(-ny, 2)
+                w.width = round(sw, 2)
+                w.depth = round(sd, 2)
+                w.floor_area_sqm = round(sw * sd, 2)
+                w.footprint_coords = [[round(p[0], 3), round(p[1], 3)] for p in new_fp]
+            return wings
+        
+        scale -= 0.05
+            
+    # 정 안 들어간다면 단일 극소 매스로 중앙 강제 복귀
+    minx, miny, maxx, maxy = buildable.bounds
+    bw, bh = maxx - minx, maxy - miny
+    for w in wings:
+        w.width = round(bw * 0.2, 2)
+        w.depth = round(bh * 0.2, 2)
+        w.x = cx
+        w.z = -cy
+        w.floor_area_sqm = round(w.width * w.depth, 2)
+        hw, hd = w.width / 2, w.depth / 2
+        w.footprint_coords = [
+            [round(cx - hw, 3), round(cy - hd, 3)], [round(cx + hw, 3), round(cy - hd, 3)],
+            [round(cx + hw, 3), round(cy + hd, 3)], [round(cx - hw, 3), round(cy + hd, 3)]
+        ]
+    return wings
+
 # ══════════════════════════════════════════════════════════════
 # 7종 매스 생성기
 # ══════════════════════════════════════════════════════════════
@@ -403,12 +463,17 @@ def _gen_l_shape(
     overlap = wing_thickness * wing_thickness
     actual_footprint -= overlap
     
-    if actual_footprint > max_footprint:
+    if actual_footprint > 0:
         scale = math.sqrt(max_footprint / actual_footprint)
         wing_a_w *= scale
         wing_a_d *= scale
         wing_b_w *= scale
         wing_b_d *= scale
+        wing_thickness *= scale
+        # 위치 재조정 (scale에 맞게)
+        wing_a_cy = miny + wing_a_d / 2 + 0.5
+        wing_b_w = wing_thickness
+        wing_b_cx = minx + wing_b_w / 2 + 0.5
     
     return [
         _create_wing("l-a", "가로동 (Wing A)", wing_a_w, wing_a_d, needed_floors,
@@ -456,12 +521,18 @@ def _gen_u_shape(
     # 건폐율 검증 및 조정
     max_footprint = site_area * (inp.max_coverage_pct / 100)
     total_fp = (wc_w * wc_d) + (wa_w * wa_d) + (wb_w * wb_d)
-    if total_fp > max_footprint:
+    if total_fp > 0:
         scale = math.sqrt(max_footprint / total_fp)
         wing_thickness *= scale
         wc_w *= scale; wc_d *= scale
         wa_w *= scale; wa_d *= scale
         wb_w *= scale; wb_d *= scale
+        
+        wc_cy = maxy - wc_d / 2 - 0.5
+        wa_w = wing_thickness
+        wa_cx = minx + wa_w / 2 + 0.5
+        wb_w = wing_thickness
+        wb_cx = maxx - wb_w / 2 - 0.5
     
     return [
         _create_wing("u-a", "좌측동", wa_w, wa_d, needed_floors,
@@ -618,6 +689,58 @@ def _gen_staggered(
     
     return wings
 
+def _gen_h_shape(
+    buildable: Polygon, inp: MassingInput, site_area: float
+) -> list[MassingWing]:
+    """8. H자형 (듀얼 코어/양방향 개방)"""
+    minx, miny, maxx, maxy = buildable.bounds
+    bw = maxx - minx
+    bh = maxy - miny
+    cx = (minx + maxx) / 2
+    cy = (miny + maxy) / 2
+    
+    needed_floors = min(
+        inp.max_floors,
+        math.floor(inp.max_height_m / inp.floor_height_m)
+    )
+    
+    wing_thickness = min(bw * 0.25, 15)
+    
+    # 좌측 동
+    wing_l_w = wing_thickness
+    wing_l_d = bh * 0.85
+    wing_l_cx = minx + wing_l_w / 2 + (bw * 0.05)
+    wing_l_cy = cy
+    
+    # 우측 동
+    wing_r_w = wing_thickness
+    wing_r_d = bh * 0.85
+    wing_r_cx = maxx - wing_r_w / 2 - (bw * 0.05)
+    wing_r_cy = cy
+    
+    # 중앙 동
+    wing_c_w = max(0.1, (wing_r_cx - wing_l_cx) - wing_thickness)
+    wing_c_d = wing_thickness
+    wing_c_cx = cx
+    wing_c_cy = cy
+    
+    wings = [
+        _create_wing("h-l", "좌측동", wing_l_w, wing_l_d, needed_floors, inp.floor_height_m, wing_l_cx, wing_l_cy),
+        _create_wing("h-r", "우측동", wing_r_w, wing_r_d, needed_floors, inp.floor_height_m, wing_r_cx, wing_r_cy),
+        _create_wing("h-c", "연결동", wing_c_w, wing_c_d, needed_floors, inp.floor_height_m, wing_c_cx, wing_c_cy),
+    ]
+    
+    max_footprint = site_area * (inp.max_coverage_pct / 100)
+    total_fp = sum(w.floor_area_sqm for w in wings)
+    if total_fp > max_footprint:
+        scale = math.sqrt(max_footprint / total_fp)
+        for w in wings:
+            w.width = round(w.width * scale, 2)
+            w.depth = round(w.depth * scale, 2)
+            w.floor_area_sqm = round(w.width * w.depth, 1)
+            
+    return wings
+
 
 # ══════════════════════════════════════════════════════════════
 # 전체 레이블 매핑
@@ -628,6 +751,7 @@ TYPOLOGY_LABELS = {
     "TOWER_PODIUM": "타워 + 포디엄",
     "L_SHAPE": "ㄱ자형",
     "U_SHAPE": "ㄷ자형 (중정 개방)",
+    "H_SHAPE": "H자형 (듀얼 중정)",
     "PARALLEL": "평행동",
     "COURTYARD": "사각 중정형",
     "STAGGERED": "엇갈림 배치",
@@ -638,6 +762,7 @@ GENERATORS = {
     "TOWER_PODIUM": _gen_tower_podium,
     "L_SHAPE": _gen_l_shape,
     "U_SHAPE": _gen_u_shape,
+    "H_SHAPE": _gen_h_shape,
     "PARALLEL": _gen_parallel,
     "COURTYARD": _gen_courtyard,
     "STAGGERED": _gen_staggered,
@@ -670,6 +795,28 @@ def generate_massing(inp: MassingInput) -> MassingResult:
         buildable_area = round(buildable.area, 1)
         buildable_coords = _polygon_to_coords(buildable)
         
+        # 2.5. 방향 정렬 (가장 긴 엣지를 찾아 평행 맞추기)
+        coords = list(buildable.exterior.coords)
+        longest_edge_len = -1
+        longest_edge_angle = 0
+        for i in range(len(coords) - 1):
+            dx = coords[i+1][0] - coords[i][0]
+            dy = coords[i+1][1] - coords[i][1]
+            dist = math.hypot(dx, dy)
+            if dist > longest_edge_len:
+                longest_edge_len = dist
+                longest_edge_angle = math.degrees(math.atan2(dy, dx))
+                
+        align_angle = longest_edge_angle % 180
+        if align_angle > 90:
+            align_angle -= 180
+            
+        rep_pt = buildable.representative_point()
+        cen_x, cen_y = rep_pt.x, rep_pt.y
+        # 축에 평행하게 회전 (-align_angle)
+        rotated_buildable = rotate(buildable, -align_angle, origin=(cen_x, cen_y))
+
+        
         # 3. 타입별 생성
         typology = inp.typology_type.upper()
         if typology not in GENERATORS:
@@ -680,9 +827,48 @@ def generate_massing(inp: MassingInput) -> MassingResult:
             )
         
         generator = GENERATORS[typology]
-        wings = generator(buildable, inp, site_area)
+        wings = generator(rotated_buildable, inp, site_area)
         
-        # 4. 용적률 기반 층수 제한 (FAR 역산)
+        # 3.5. 생성된 매스들을 폴리곤 내부에 완전 피팅 (삐져나가지 않도록)
+        wings = _scale_wings_to_fit_polygon(wings, rotated_buildable)
+        
+        # 3.6. 실제 건폐율 기반으로 층수 극대화 (최대 높이까지 일단 쌓음)
+        # _scale_wings_to_fit_polygon으로 인해 평면이 잘렸으므로, 일단 최대한 높이를 배정하고 4.5단계에서 FAR 로 정확히 자름.
+        max_floors_by_height = math.floor(inp.max_height_m / inp.floor_height_m)
+        max_allowed_floors = min(inp.max_floors, max_floors_by_height)
+        
+        for w in wings:
+            if typology == "TOWER_PODIUM" and w.id.startswith('pod'):
+                continue
+            w.floors = max_allowed_floors
+            w.height = round(max_allowed_floors * w.floor_height, 2)
+        
+        # 4. 역회전 적용 (+align_angle)
+        rad = math.radians(align_angle)
+        cos_val, sin_val = math.cos(rad), math.sin(rad)
+        
+        for w in wings:
+            # 중심 이동 (w.z 에는 현재 Y위치가 음수(three.js 좌표)로 들어있음! \n            # _create_wing에서 w.z = -cz를 하므로, _rotate_point 입력으로 복원해야함)
+            cz = -w.z
+            cx = w.x
+            
+            px, py = cx - cen_x, cz - cen_y
+            nx = px * cos_val - py * sin_val + cen_x
+            ny = px * sin_val + py * cos_val + cen_y
+            
+            w.x = round(nx, 2)
+            w.z = round(-ny, 2)
+            w.rotation = round((w.rotation + align_angle) % 360, 1)
+            
+            new_fp = []
+            for fx, fy in w.footprint_coords:
+                fpx, fpy = fx - cen_x, fy - cen_y
+                fnx = fpx * cos_val - fpy * sin_val + cen_x
+                fny = fpx * sin_val + fpy * cos_val + cen_y
+                new_fp.append([round(fnx, 3), round(fny, 3)])
+            w.footprint_coords = new_fp
+        
+        # 4.5. 용적률 기반 층수 제한 (FAR 역산)
         wings = _cap_floors_by_far(wings, site_area, inp.max_far_pct, typology)
         
         # 5. Rotation 적용 (전체 매스 회전)

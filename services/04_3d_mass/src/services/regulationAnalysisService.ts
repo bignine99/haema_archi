@@ -313,59 +313,71 @@ export async function analyzeSingleBatch(
 
   console.log(`[법규분석] 배치 ${batch.batchId}/${REGULATION_BATCHES.length} (${batch.label}) 분석 시작...`);
 
-  try {
-    const response = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json',
-        },
-      }),
-    });
+  let attempt = 0;
+  const maxRetries = 2;
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      const errorMsg = errorBody?.error?.message || `HTTP ${response.status}`;
-      console.error(`[법규분석] 배치 ${batch.batchId} API 오류:`, errorMsg);
-      throw new Error(`배치 ${batch.batchId} 오류: ${errorMsg}`);
-    }
+  while (attempt <= maxRetries) {
+    try {
+      const response = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 4096,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
 
-    const result = await response.json();
-    const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) return [];
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const errorMsg = errorBody?.error?.message || `HTTP ${response.status}`;
+        console.error(`[법규분석] 배치 ${batch.batchId} API 오류:`, errorMsg);
+        throw new Error(`배치 ${batch.batchId} 오류: ${errorMsg}`);
+      }
 
-    const parsed = JSON.parse(content);
-    const icons: Record<string, string> = {
-      B1: '🏙️', B2: '🚗', B3: '🔥', B4: '♿', B5: '🌿', B6: '⚡', B7: '📋',
-    };
+      const result = await response.json();
+      const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) return [];
 
-    const categories: RegulationCategory[] = (parsed.categories || []).map((cat: any) => {
-      const laws: RegulationLaw[] = (cat.laws || []).map((law: any) => ({
-        name: law.name || '',
-        risk: law.risk || 'info',
-        items: law.items || [],
-      }));
-
-      return {
-        id: cat.id || '',
-        title: cat.title || '',
-        icon: icons[cat.id] || '📋',
-        laws,
-        requiredCount: laws.filter(l => l.risk === 'required').length,
-        totalCount: laws.filter(l => l.risk !== 'na').length,
+      const parsed = JSON.parse(content);
+      const icons: Record<string, string> = {
+        B1: '🏙️', B2: '🚗', B3: '🔥', B4: '♿', B5: '🌿', B6: '⚡', B7: '📋',
       };
-    });
 
-    console.log(`[법규분석] 배치 ${batch.batchId}/${REGULATION_BATCHES.length} 완료: ${categories.length}개 카테고리, 법규 ${categories.reduce((s, c) => s + c.laws.length, 0)}개`);
-    return categories;
-  } catch (error) {
-    console.error(`[법규분석] 배치 ${batch.batchId} 오류:`, error);
-    throw error;
+      const categories: RegulationCategory[] = (parsed.categories || []).map((cat: any) => {
+        const laws: RegulationLaw[] = (cat.laws || []).map((law: any) => ({
+          name: law.name || '',
+          risk: law.risk || 'info',
+          items: law.items || [],
+        }));
+
+        return {
+          id: cat.id || '',
+          title: cat.title || '',
+          icon: icons[cat.id] || '📋',
+          laws,
+          requiredCount: laws.filter(l => l.risk === 'required').length,
+          totalCount: laws.filter(l => l.risk !== 'na').length,
+        };
+      });
+
+      console.log(`[법규분석] 배치 ${batch.batchId}/${REGULATION_BATCHES.length} 완료: ${categories.length}개 카테고리, 법규 ${categories.reduce((s, c) => s + c.laws.length, 0)}개`);
+      return categories;
+    } catch (error: any) {
+      attempt++;
+      const isRetryable = error.message.includes('503') || error.message.includes('429') || error.message.includes('500') || error.message.includes('fetch');
+      if (attempt > maxRetries || !isRetryable) {
+        console.error(`[법규분석] 배치 ${batch.batchId} 최종 오류:`, error);
+        throw error;
+      }
+      console.warn(`[법규분석] 배치 ${batch.batchId} 통신 지연(또는 일시 오류). 재시도 (${attempt}/${maxRetries})...`);
+      await new Promise(r => setTimeout(r, 2000 * attempt));
+    }
   }
+  return [];
 }
 
 // ══════════════════════════════════════════════

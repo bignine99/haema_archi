@@ -17,7 +17,7 @@ const TILE_LAYERS = {
 // OSM 타일 (Vworld 실패 시 Fallback)
 const OSM_TILE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-export default function MapPanel() {
+export default function MapPanel({ isRightAligned = false }: { isRightAligned?: boolean }) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const polygonLayerRef = useRef<any>(null);
@@ -176,7 +176,7 @@ export default function MapPanel() {
         : 'w-[360px] h-[240px]';
 
     return (
-        <div className={`absolute bottom-14 left-4 ${panelSize} rounded-xl overflow-hidden border border-slate-300 shadow-2xl z-30 transition-all duration-300`}
+        <div className={`absolute bottom-14 ${isRightAligned ? 'right-4' : 'left-4'} ${panelSize} rounded-xl overflow-hidden border border-slate-300 shadow-2xl z-30 transition-all duration-300`}
             style={{ background: '#f1f5f9' }}
         >
             {/* 헤더 */}

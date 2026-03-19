@@ -860,6 +860,22 @@ def create_app():
             result = generate_massing(inp)
             return result.model_dump()
 
+    # ── AI 코파일럿 채팅 연동 (Skill 10) ──────────────────────────
+    
+    @app.post("/api/massing/chat")
+    async def api_massing_chat(body: dict = Body(...)):
+        from massing_chat import MassingChatInput, process_chat_message
+        try:
+            inp = MassingChatInput(
+                message=body.get("message", ""),
+                current_state=body.get("current_state", {})
+            )
+            result = await process_chat_message(inp)
+            return result
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
+    # ── 법규 위반 검증 (Skill 8) ─────────────────────────────────
     @app.post("/api/massing/validate")
     async def api_validate_compliance(body: dict = Body(...)):
         """3D 매스 법규 정합성 검증 — 건폐율/용적률/높이/후퇴 (Shapely 기반)"""
@@ -934,11 +950,11 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         # ── 서비스 모드: FastAPI 서버 실행 ──
         import uvicorn
-        app = create_app()
         print(f"\n[START] Land Use Service v2.0: http://localhost:{SERVICE_PORT}")
         print(f"[API  ] VWorld getLandUseAttr (PNU → 용도지역/건폐율/용적률)")
         print(f"[DOCS ] http://localhost:{SERVICE_PORT}/docs\n")
-        uvicorn.run(app, host="127.0.0.1", port=SERVICE_PORT)
+        # uvicorn.run()에 reload=True를 명시적으로 주려면 파일 문자열을 넘겨야 함
+        uvicorn.run("land_use_service:create_app", host="127.0.0.1", port=SERVICE_PORT, reload=True)
     else:
         # ── 테스트 모드: 직접 주소 입력 ──
         # Windows 콘솔 UTF-8 출력 설정 (테스트 모드에서만)

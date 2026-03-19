@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import { ZONE_REGULATIONS } from '@/services/regulationEngine';
 import {
@@ -22,6 +22,125 @@ import {
     Info, X, MapPin, Globe, Landmark,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// ────── 조례 규제 항목 확장형 행 ──────
+import type { LandUseRegulationItem, OrdinanceDetails } from '@/services/landUseService';
+
+function OrdinanceDetailGrid({ ord }: { ord: OrdinanceDetails }) {
+    const fields = [
+        { label: '건폐율', value: ord.building_coverage, icon: '📐', color: 'bg-blue-50 border-blue-200 text-blue-800' },
+        { label: '용적률', value: ord.floor_area_ratio, icon: '📊', color: 'bg-indigo-50 border-indigo-200 text-indigo-800' },
+        { label: '높이제한', value: ord.height_limit, icon: '🏗️', color: 'bg-amber-50 border-amber-200 text-amber-800' },
+        { label: '대지 안의 공지', value: ord.setback, icon: '↔️', color: 'bg-teal-50 border-teal-200 text-teal-800' },
+        { label: '주차기준', value: ord.parking, icon: '🅿️', color: 'bg-slate-50 border-slate-200 text-slate-800' },
+        { label: '조경기준', value: ord.landscape, icon: '🌳', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+        { label: '일조권 사선제한', value: ord.sunlight_regulation, icon: '☀️', color: 'bg-orange-50 border-orange-200 text-orange-800' },
+    ];
+    return (
+        <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5">
+                {fields.filter(f => f.value).map((f, i) => (
+                    <div key={i} className={`rounded-lg p-2 border ${f.color}`}>
+                        <p className="text-[8px] font-semibold opacity-70 flex items-center gap-1">
+                            <span>{f.icon}</span> {f.label}
+                        </p>
+                        <p className="text-[10px] font-bold leading-snug mt-0.5">{f.value}</p>
+                    </div>
+                ))}
+            </div>
+            {ord.permitted_uses.length > 0 && (
+                <div className="rounded-lg p-2 border bg-green-50 border-green-200">
+                    <p className="text-[8px] font-semibold text-green-700 mb-1">✅ 허용 용도</p>
+                    <div className="flex flex-wrap gap-1">
+                        {ord.permitted_uses.map((u, i) => (
+                            <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-green-100 text-green-800 border border-green-200">{u}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {ord.prohibited_uses.length > 0 && (
+                <div className="rounded-lg p-2 border bg-red-50 border-red-200">
+                    <p className="text-[8px] font-semibold text-red-700 mb-1">🚫 금지/제한 용도</p>
+                    <div className="flex flex-wrap gap-1">
+                        {ord.prohibited_uses.map((u, i) => (
+                            <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-200">{u}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function OrdinanceRegulationRow({ reg }: { reg: LandUseRegulationItem }) {
+    const [expanded, setExpanded] = useState(false);
+    const detail = reg.detail;
+    const hasDetail = !!(detail && (detail.key_restrictions?.length || detail.ordinance_details));
+
+    const typeBadge = reg.regulation_type === '용도지역' ? 'bg-blue-100 text-blue-700' :
+        reg.regulation_type === '용도지구' ? 'bg-amber-100 text-amber-700' :
+        reg.regulation_type === '용도구역' ? 'bg-purple-100 text-purple-700' :
+        reg.regulation_type === '도시계획시설' ? 'bg-teal-100 text-teal-700' :
+        'bg-slate-100 text-slate-600';
+
+    const rowBg = reg.regulation_type === '용도지역' ? 'hover:bg-blue-50/50' :
+        reg.regulation_type === '용도지구' ? 'hover:bg-amber-50/50' :
+        reg.regulation_type === '용도구역' ? 'hover:bg-purple-50/50' : 'hover:bg-slate-50/50';
+
+    return (
+        <div className={`${rowBg} transition-colors`}>
+            <button
+                onClick={() => hasDetail && setExpanded(!expanded)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left ${hasDetail ? 'cursor-pointer' : 'cursor-default'}`}
+            >
+                <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold shrink-0 ${typeBadge}`}>{reg.regulation_type}</span>
+                <span className="text-[10px] font-medium text-slate-800 flex-1 min-w-0 truncate">{reg.regulation_name}</span>
+                <span className="text-[9px] text-slate-400 shrink-0 max-w-[120px] truncate">{reg.law_name || ''}</span>
+                {hasDetail && (
+                    expanded ? <ChevronDown size={12} className="text-slate-400 shrink-0" /> : <ChevronRight size={12} className="text-slate-400 shrink-0" />
+                )}
+            </button>
+            <AnimatePresence>
+                {expanded && detail && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-3 pb-3 space-y-2">
+                            {/* 핵심 제한사항 배지 */}
+                            {detail.key_restrictions && detail.key_restrictions.length > 0 && (
+                                <div className="flex flex-wrap gap-1 pt-1">
+                                    {detail.key_restrictions.map((kr, i) => (
+                                        <span key={i} className="text-[8px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-semibold">⚡ {kr}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {/* 설계 영향 */}
+                            {detail.design_impact && (
+                                <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                    <p className="text-[9px] text-slate-500 font-semibold mb-0.5">💡 설계 영향</p>
+                                    <p className="text-[10px] text-slate-700 leading-relaxed">{detail.design_impact}</p>
+                                </div>
+                            )}
+                            {/* 조례 상세 그리드 */}
+                            {detail.ordinance_details && (
+                                <OrdinanceDetailGrid ord={detail.ordinance_details} />
+                            )}
+                            {/* 관련 법령 · 관리기관 */}
+                            <div className="flex items-center gap-3 text-[8px] text-slate-400 pt-1">
+                                {detail.related_law && <span>📖 {detail.related_law}</span>}
+                                {detail.management_agency && <span>🏛️ {detail.management_agency}</span>}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
 
 // ────── 리스크 등급 배지 ──────
 const RISK_CONFIG = {
@@ -386,6 +505,25 @@ export default function RegulationPanel() {
     const [isOrdinanceLoading, setIsOrdinanceLoading] = useState(false);
     const [ordinanceError, setOrdinanceError] = useState<string | null>(null);
 
+    const groupedRegulations = useMemo(() => {
+        if (!ordinanceResult) return {};
+        const groups: Record<string, typeof ordinanceResult.regulations> = {
+            '용도지역': [],
+            '용도지구': [],
+            '용도구역': [],
+            '도시계획시설': [],
+            '기타': []
+        };
+        ordinanceResult.regulations.forEach(reg => {
+            if (groups[reg.regulation_type]) {
+                groups[reg.regulation_type].push(reg);
+            } else {
+                groups['기타'].push(reg);
+            }
+        });
+        return groups;
+    }, [ordinanceResult]);
+
     const hasProjectInfo = !!(store.projectName && store.projectName !== '미정 프로젝트');
     const totalBatches = REGULATION_BATCHES.length;
 
@@ -745,40 +883,38 @@ export default function RegulationPanel() {
                                 </div>
                             )}
                             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                                <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                                <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center justify-between">
                                     <p className="text-[10px] font-bold text-slate-700">📋 전체 규제 항목 ({ordinanceResult.regulations.length}건)</p>
+                                    <span className="text-[9px] text-slate-400">항목 클릭 시 조례 상세 정보 확인</span>
                                 </div>
-                                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                                    <table className="w-full text-[10px]">
-                                        <thead className="bg-slate-50 sticky top-0">
-                                            <tr className="border-b border-slate-200">
-                                                <th className="px-3 py-2 text-left text-slate-600 font-semibold">구분</th>
-                                                <th className="px-3 py-2 text-left text-slate-600 font-semibold">규제명</th>
-                                                <th className="px-3 py-2 text-left text-slate-600 font-semibold">관련 법령</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {ordinanceResult.regulations.map((reg, i) => (
-                                                <tr key={i} className={`hover:bg-slate-50/50 ${
-                                                    reg.regulation_type === '용도지역' ? 'bg-blue-50/30' :
-                                                    reg.regulation_type === '용도지구' ? 'bg-amber-50/30' :
-                                                    reg.regulation_type === '용도구역' ? 'bg-purple-50/30' : ''
-                                                }`}>
-                                                    <td className="px-3 py-2">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold ${
-                                                            reg.regulation_type === '용도지역' ? 'bg-blue-100 text-blue-700' :
-                                                            reg.regulation_type === '용도지구' ? 'bg-amber-100 text-amber-700' :
-                                                            reg.regulation_type === '용도구역' ? 'bg-purple-100 text-purple-700' :
-                                                            reg.regulation_type === '도시계획시설' ? 'bg-teal-100 text-teal-700' :
-                                                            'bg-slate-100 text-slate-600'
-                                                        }`}>{reg.regulation_type}</span>
-                                                    </td>
-                                                    <td className="px-3 py-2 font-medium text-slate-800">{reg.regulation_name}</td>
-                                                    <td className="px-3 py-2 text-slate-500">{reg.law_name || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="max-h-[600px] overflow-y-auto custom-scrollbar bg-slate-50/30 pb-2">
+                                    {['용도지역', '용도지구', '용도구역', '도시계획시설', '기타'].map((groupType) => {
+                                        const groupRegs = groupedRegulations[groupType];
+                                        if (!groupRegs || groupRegs.length === 0) return null;
+                                        
+                                        const badgeColor = 
+                                            groupType === '용도지역' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                            groupType === '용도지구' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                            groupType === '용도구역' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                            groupType === '도시계획시설' ? 'bg-teal-100 text-teal-700 border-teal-200' :
+                                            'bg-slate-100 text-slate-700 border-slate-200';
+                                            
+                                        return (
+                                            <div key={groupType} className="mb-3 last:mb-0">
+                                                <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-3 py-1.5 border-y border-slate-200 shadow-sm z-10 flex items-center gap-2">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${badgeColor}`}>
+                                                        {groupType}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 font-medium">{groupRegs.length}건</span>
+                                                </div>
+                                                <div className="divide-y divide-slate-100 bg-white">
+                                                    {groupRegs.map((reg, i) => (
+                                                        <OrdinanceRegulationRow key={`${groupType}-${i}`} reg={reg} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

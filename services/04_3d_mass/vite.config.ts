@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         '/massing-api': {
-          target: 'http://127.0.0.1:8003',
+          target: 'http://127.0.0.1:8010',
           changeOrigin: true,
           rewrite: (path: string) => path.replace(/^\/massing-api/, ''),
         },

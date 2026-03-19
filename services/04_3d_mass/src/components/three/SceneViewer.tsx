@@ -327,29 +327,11 @@ function BuildingMass() {
     const showMassing = useProjectStore(s => s.showMassing);
     const [selectedWingId, setSelectedWingId] = useState<string | null>(null);
 
-    // ★ Wing[] 데이터가 있으면 Wing 기반 렌더링
-    if (massingWings.length > 0 && showMassing) {
-        return (
-            <group>
-                {massingWings.map((wing) => (
-                    <WingBlock
-                        key={wing.id}
-                        wing={wing}
-                        isSelected={selectedWingId === wing.id}
-                        onClick={() => setSelectedWingId(selectedWingId === wing.id ? null : wing.id)}
-                    />
-                ))}
-            </group>
-        );
-    }
-
-    // [Fix 3] showMassing이 false이면 건물 매스를 표시하지 않음 (대지 경계만 표시)
-    if (!showMassing) return null;
-
-    // ★ 폴백: Wing 데이터 없으면 기존 단일 박스 방식
+    // ★ 폴백: Wing 데이터 없으면 기존 단일 박스 방식 로직 (항상 Hook 실행 보장)
     const totalFloors = commercialFloors + residentialFloors;
 
     const { buildW, buildD } = useMemo(() => {
+        if (!polygon || polygon.length < 3) return { buildW: 0, buildD: 0 };
         const center = polygonCentroid(polygon);
         const centered = polygon.map(([x, y]) => [x - center[0], y - center[1]] as [number, number]);
         const bbox = polygonBBox(centered);
@@ -378,6 +360,30 @@ function BuildingMass() {
         }
         return result;
     }, [totalFloors, commercialFloors, floorHeight, buildW, buildD]);
+
+    // ★ Wing[] 데이터가 있으면 Wing 기반 렌더링
+    if (massingWings.length > 0 && showMassing) {
+        const center = polygon && polygon.length > 0 ? polygonCentroid(polygon) : [0, 0];
+        return (
+            <group>
+                {massingWings.map((wing) => (
+                    <WingBlock
+                        key={wing.id}
+                        wing={{
+                            ...wing,
+                            x: wing.x - center[0],
+                            z: wing.z + center[1]
+                        }}
+                        isSelected={selectedWingId === wing.id}
+                        onClick={() => setSelectedWingId(selectedWingId === wing.id ? null : wing.id)}
+                    />
+                ))}
+            </group>
+        );
+    }
+
+    // showMassing이 false이면 건물 매스를 표시하지 않음 (대지 경계만 표시)
+    if (!showMassing) return null;
 
     return (
         <group>
@@ -786,28 +792,26 @@ function TreeInstances({ context }: { context: SiteContext }) {
 }
 
 // ─── 확장 지면 (도시 블록 느낌 / 위성 맵 텍스처) ───
+// ★ zoom 폴백 전략: 18 → 17 → 16 → 15 (지방/농촌 타일 미존재 대응)
+const ZOOM_FALLBACK_ORDER = [18, 17, 16, 15] as const;
+
 function UrbanGroundPlane() {
     const centerLng = useProjectStore(s => s.centerLng);
     const centerLat = useProjectStore(s => s.centerLat);
     const [texture, setTexture] = useState<THREE.Texture | null>(null);
+    const [activeZoom, setActiveZoom] = useState(18);
 
-    // VWorld API Parameter
     const imgSize = 1024;
-    const zoom = 18; // 줌 18: 약 0.47m/px 해상도 (Google Maps 위성 수준)
     const key = process.env.VWORLD_API_KEY || '';
 
     // ─── 동적 planeSize 계산 (Web Mercator 지상해상도 공식) ───
-    // 이것이 건물↔위성지도 정렬의 핵심!
     // ground_resolution = 156543.03 * cos(lat) / 2^zoom [m/px]
     const groundResolution = useMemo(() => {
         if (!centerLat) return 1;
-        return 156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, zoom);
-    }, [centerLat, zoom]);
+        return 156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, activeZoom);
+    }, [centerLat, activeZoom]);
 
     const planeSize = imgSize * groundResolution;
-
-    // basemap=PHOTO 로 설정하여 실제 위성사진 적용
-    const url = `/vworld-api/req/image?service=image&request=getmap&key=${key}&basemap=PHOTO&center=${centerLng},${centerLat}&zoom=${zoom}&size=${imgSize},${imgSize}&crs=epsg:4326&domain=${encodeURIComponent('http://localhost')}`;
 
     useEffect(() => {
         if (!centerLng || !centerLat) {
@@ -815,24 +819,64 @@ function UrbanGroundPlane() {
             return;
         }
 
-        console.log(`[UrbanGroundPlane] zoom=${zoom}, groundRes=${groundResolution.toFixed(3)}m/px, planeSize=${planeSize.toFixed(1)}m`);
-
+        let cancelled = false;
         const loader = new THREE.TextureLoader();
         loader.setCrossOrigin('anonymous');
 
-        loader.load(url, (tex) => {
-            console.log(`[UrbanGroundPlane] ✅ 위성 텍스처 로드 완료 (${planeSize.toFixed(0)}m × ${planeSize.toFixed(0)}m)`);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            tex.minFilter = THREE.LinearMipmapLinearFilter;
-            tex.magFilter = THREE.LinearFilter;
-            tex.anisotropy = 16;
-            tex.needsUpdate = true;
-            setTexture(tex);
-        }, undefined, (err) => {
-            console.warn('[3D] 위성 이미지 로드 실패:', err);
-            setTexture(null);
-        });
-    }, [centerLng, centerLat, url]);
+        // 순차 폴백: zoom 18 → 17 → 16 → 15
+        async function tryLoadWithFallback() {
+            for (const z of ZOOM_FALLBACK_ORDER) {
+                if (cancelled) return;
+
+                const url = `/vworld-api/req/image?service=image&request=getmap&key=${key}&basemap=PHOTO&center=${centerLng},${centerLat}&zoom=${z}&size=${imgSize},${imgSize}&crs=epsg:4326&domain=${encodeURIComponent('http://localhost')}`;
+                const zPlaneSize = imgSize * (156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, z));
+
+                console.log(`[UrbanGroundPlane] 시도 zoom=${z}, 예상 planeSize=${(imgSize * (156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, z))).toFixed(1)}m`);
+
+                const success = await new Promise<boolean>((resolve) => {
+                    loader.load(
+                        url,
+                        (tex) => {
+                            if (cancelled) { tex.dispose(); resolve(false); return; }
+                            // VWorld는 빈 타일에 대해 1x1 또는 매우 작은 이미지 반환 가능
+                            if (tex.image && tex.image.width > 2 && tex.image.height > 2) {
+                                tex.colorSpace = THREE.SRGBColorSpace;
+                                tex.minFilter = THREE.LinearMipmapLinearFilter;
+                                tex.magFilter = THREE.LinearFilter;
+                                tex.anisotropy = 16;
+                                tex.needsUpdate = true;
+                                setActiveZoom(z);
+                                setTexture(tex);
+                                console.log(`[UrbanGroundPlane] ✅ zoom=${z} 위성 텍스처 로드 성공`);
+                                resolve(true);
+                            } else {
+                                console.warn(`[UrbanGroundPlane] zoom=${z} 빈 타일 (${tex.image?.width}x${tex.image?.height}) → 낮은 줌으로 재시도`);
+                                tex.dispose();
+                                resolve(false);
+                            }
+                        },
+                        undefined,
+                        () => {
+                            console.warn(`[UrbanGroundPlane] zoom=${z} 로드 실패 → 다음 줌 시도`);
+                            resolve(false);
+                        }
+                    );
+                });
+
+                if (success) return;
+            }
+
+            // 모든 줌 실패
+            console.warn('[UrbanGroundPlane] ⚠️ 모든 줌 레벨 실패 — 기본 그라운드 표시');
+            if (!cancelled) {
+                setTexture(null);
+                setActiveZoom(16); // 적당한 축소 줌으로 plane 크기 유지
+            }
+        }
+
+        tryLoadWithFallback();
+        return () => { cancelled = true; };
+    }, [centerLng, centerLat, key]);
 
     return (
         <group>
