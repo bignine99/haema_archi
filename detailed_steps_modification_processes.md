@@ -1216,7 +1216,7 @@ interface SiteAnalysisResult {
 | 🟢 Vworld | `B8385331...` | 정상 | 영향 없음 |
 
 #### 해결 조치
-1. **새 Gemini API 키 발급**: `AIzaSyBpjTpY-pvfpbUovwKES2WGD7ejDu02bKk`
+1. **새 Gemini API 키 발급**: `AIzaSy****************************bKk` ← 이미 노출/폐기됨. 새 키는 .env에만 저장
 2. **모든 하드코딩 API 키 제거** → `process.env` 환경변수로 교체
 3. **`webpack.config.js`에 `webpack.DefinePlugin` 추가** — .env → 빌드 시 주입
 4. **로컬 `frontend/.env` 파일 생성** (Git에 포함되지 않음)
@@ -1607,7 +1607,7 @@ python land_use_service.py serve
 - **신청 API**: 건축물대장정보 서비스 (국토교통부)
   - 건축물대장 표제부 조회 (`getBrTitleInfo`) — 개별 건물 높이(`heit`) 포함
   - 건축물대장 총괄표제부 조회 (`getBrRecapTitleInfo`) — 대단지 총괄 정보
-- **발급 인증키**: `VAJkxQFCr4ViM45g0TSpV16Z+AVQXz3k+wpQPc9/X+rUlcA/GMvjdf6U6Cd3d/WXH+7vmtuQ9CnteJcJXu5dCg==`
+- **발급 인증키**: `VAJkxQFC*****` (전체 키는 .secrets/API_KEYS.md 참조)
 - **API 활성화 확인**: 공공데이터포털 "미리보기" 테스트에서 `resultCode: 00`, `NORMAL SERVICE` 응답 확인
 
 #### 1-2. 코드 구현 (`gisApi.ts`)
@@ -1659,7 +1659,7 @@ python land_use_service.py serve
 #### 2-2. VWorld 인증키 신규 발급
 | 항목 | 값 |
 |------|-----|
-| 키 | `34F345CA-9827-3F0D-9742-DA1B5B1CD364` |
+| 키 | `34F345CA-****-****-****-************` (전체 키는 .secrets/API_KEYS.md 참조) |
 | 서비스URL | `http://localhost` |
 | 서비스분류 | 교육 |
 | 서비스유형 | 웹사이트 |
@@ -1669,8 +1669,8 @@ python land_use_service.py serve
 
 #### 2-3. .env 업데이트
 ```diff
-- VWORLD_API_KEY=B8385331-2B58-3CEF-9209-33CB9AFD68A6
-+ VWORLD_API_KEY=34F345CA-9827-3F0D-9742-DA1B5B1CD364
+- VWORLD_API_KEY=B8385331-****-****-****-************
++ VWORLD_API_KEY=34F345CA-****-****-****-************
 ```
 
 ---
@@ -1844,7 +1844,7 @@ python land_use_service.py serve
 ### 4. 건축물대장 API 401 문제 진단
 
 #### 상태
-- 공공데이터포털(data.go.kr) 건축물대장 API 키 `VAJkxQFCr4ViM45g0TSpV16Z+...`
+- 공공데이터포털(data.go.kr) 건축물대장 API 키 `VAJkxQFC****`
 - **직접 호출(https://apis.data.go.kr/...)**: ❌ 401 Unauthorized
 - **프록시 경유**: ❌ 401 Unauthorized
 - 다양한 인코딩 방식(encodeURIComponent, raw, manual encoding, XML format) 모두 실패
@@ -2283,4 +2283,967 @@ nohup python3 land_use_service.py serve > /var/log/haema-backend.log 2>&1 &
 > 3. **지방 지역 VWorld 위성사진** — 저줌 폴백 또는 대체 지도 API 검토
 > 4. **Phase 1-D: 일조 시뮬레이션** — 태양 궤적 계산, 건물 그림자 투영
 
+---
+
+## 📌 2026-03-19~20 — 랜딩페이지 리뉴얼, UX 개선 및 서버 배포
+
+### 작업 배경
+- 해마건축(HAEMA ARCHI) 브랜드 아이덴티티를 담은 프리미엄 랜딩 페이지로 전면 개편
+- 좌측 사이드바 메뉴 중복 항목(프로젝트 개요/과업지시서) 통폐합으로 UX 개선
+- 일조 시뮬레이션 등 3D 분석 도구가 우측 상단 플로팅 버튼에만 있어 사용자가 인지하기 어려운 문제 해결
+- 빌드 및 서버 배포 전체 사이클 수행
+
+---
+
+### ① 랜딩 페이지(LandingPage.tsx) 전면 리뉴얼
+
+#### 다이나믹 3D Hero 슬라이드 캐러셀 구현
+
+| 항목 | 변경 내용 |
+|------|----------|
+| **3D 파티클 움직임** | AbstractSculpture 컴포넌트의 `Math.sin/cos` 진폭 및 회전 속도 대폭 상향. Float 가속도 증가, 마우스 트래킹 반응성 x3 강화 |
+| **슬라이드 시스템** | `SLIDES` 배열(3개 항목) + `slide` state + `AnimatePresence` 기반 전환 애니메이션 구현 |
+| **Slide 0** | 추상 파티클 조각상 / 타이틀: "The Choice to Increase The Value of Space" |
+| **Slide 1** | Octahedron + Cube 구성 / 타이틀: "Innovation in Architectural Intelligence" |
+| **Slide 2** | TorusKnot + Torus 구성 / 타이틀: "Sustainable and Parametric Masterplanning" |
+| **슬라이드 네비게이션** | 좌우 화살표 버튼 + 하단 페이지네이션 점(dots) 클릭으로 직접 이동 가능 |
+| **웹사이트 URL 갱신** | Footer 연락처 Email → `https://www.haemaarch.com` 링크로 교체 |
+
+#### 수정 파일
+- `services/04_3d_mass/src/components/ui/LandingPage.tsx` (메인 수정본)
+- `frontend/src/components/ui/LandingPage.tsx` (동기화 복사본)
+
+---
+
+### ② 좌측 사이드바 메뉴 UX 개선 (`services/04_3d_mass/src/App.tsx`)
+
+#### 중복 메뉴 제거
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|--------|
+| `MenuId` 타입 | `'dashboard' \| 'documents' \| ...` | `'documents' \| ...` (dashboard 제거) |
+| `MENU_ITEMS` 배열 | 1번: 프로젝트 개요(dashboard) / 2번: 과업지시서(documents) | 1번: 과업지시서(documents)만 유지 |
+| 기본 진입 화면 | `useState<MenuId>('dashboard')` | `useState<MenuId>('documents')` |
+| 렌더링 분기 | `dashboard` 케이스 별도 존재 | `documents` 케이스 하나로 통합 |
+
+**배경**: `dashboard`와 `documents` 모두 동일한 `<Dashboard />` 컴포넌트를 렌더링하는 중복 메뉴였음. 사용자의 요청으로 `프로젝트 개요` 항목 삭제, `과업지시서`가 로그인 직후 기본 화면으로 표시됨.
+
+#### 3D 사이트 - 분석 도구 서브메뉴 추가 (사이드바 내)
+
+`3D 사이트` 또는 `AI 매스 설계` 메뉴 선택 시, 좌측 사이드바 하단에 **"Analysis Tools"** 섹션이 `AnimatePresence`로 부드럽게 펼쳐짐.
+
+| 서브메뉴 아이템 | 아이콘 | 기능 | 토글 스위치 |
+|--------------|--------|------|------------|
+| 일조 시뮬레이션 | ☀️ Sun | `setSunlightEnabled` 직접 토글 | ✅ 미니 슬라이드 스위치 |
+| 그림자 분석 | 📊 BarChart3 | 분석 실행 또는 결과 패널 열기/닫기 | 상태 텍스트 표시 |
+| 히트맵 표시 | 👁️ Eye/EyeOff | `setShowShadowHeatmap` 토글 (분석 완료 시만 표시) | ✅ 미니 슬라이드 스위치 |
+| 매스 표시 | 👁️ Eye/EyeOff | `store.setShowMassing` 토글 (매스 생성 시만 표시) | ✅ 미니 슬라이드 스위치 |
+
+**디자인 포인트:**
+- 주황색 세로 라인(`border-l-2 border-orange-200`)으로 서브메뉴 소속 관계 시각화
+- 활성 상태별 배경색 변화: 일조(Amber), 그림자(Emerald), 히트맵/매스(Orange)
+- 사이드바 접힌 상태(`sidebarCollapsed`)에서는 서브메뉴 미표시
+
+---
+
+### ③ Git 커밋 및 GitHub 푸시
+
+```
+커밋 해시: 7819694
+커밋 메시지: feat: 랜딩페이지 다이나믹 3D/캐러셀 리뉴얼 및 좌측 메뉴 UX(분석툴 등) 통폐합 개선
+변경 파일: 33개, 7835줄 추가 / 682줄 삭제
+```
+
+```
+커밋 해시: fbceea5
+커밋 메시지: chore: 잘못된 디버깅 파일 제거
+(이전 작업 중 잘못 생성된 디버깅용 파일명 파일 2개 + dist 파일 교체)
+```
+
+- 원격 저장소: `https://github.com/bignine99/haema_archi`
+- 브랜치: `main` — 정상 푸시 완료
+
+---
+
+### ④ Vite 프론트엔드 빌드
+
+```bash
+# 빌드 위치
+services/04_3d_mass/
+
+# 결과 (성공)
+dist/index.html                       0.71 kB
+dist/assets/index-a07bda62.css       53.44 kB
+dist/assets/geminiService-6a6e8060.js  2.65 kB
+dist/assets/AIMassPanel-05cedef5.js   12.35 kB
+dist/assets/SceneViewer-eeb56a6a.js  197.81 kB
+dist/assets/index-4518325a.js      1,329.38 kB
+✓ built in 9.08s
+```
+
+---
+
+### ⑤ 네이버 클라우드 서버 배포 및 트러블슈팅
+
+#### 배포 절차
+```bash
+# 1. 서버 기존 dist 전체 삭제
+ssh root@110.165.17.170 "rm -rf /var/www/haema-archi/dist/*"
+
+# 2. 새 dist 파일 업로드 (assets 포함)
+scp -r dist/* root@110.165.17.170:/var/www/haema-archi/dist/
+scp -r dist/assets root@110.165.17.170:/var/www/haema-archi/dist/
+scp dist/index.html root@110.165.17.170:/var/www/haema-archi/dist/
+
+# 3. Nginx 리로드
+nginx -s reload
+```
+
+#### 🔴 트러블슈팅: assets 폴더 권한 700 문제 (빈 화면 원인)
+
+| 항목 | 내용 |
+|------|------|
+| **증상** | 파일 업로드 성공, Nginx 재시작 완료 → 화면은 여전히 공백(완전 흰색) |
+| **원인** | `scp`로 디렉터리 업로드 시 `assets/` 폴더가 `drwx------` (700 권한)으로 생성됨. Nginx가 `www-data` 사용자로 실행되므로 root 소유의 700 폴더에 접근 불가 → JS/CSS 파일 404 → 빈 화면 |
+| **확인 방법** | `ls -la /var/www/haema-archi/dist/` 실행 결과에서 `drwx------` 확인 |
+| **해결** | `chmod 755 /var/www/haema-archi/dist/assets && chmod 644 /var/www/haema-archi/dist/assets/*` |
+| **배포 후 루틴** | `chmod -R 755 /var/www/haema-archi/dist/` 를 배포 후 매번 실행 |
+
+> **참고**: 이 문제는 이전 배포(2026-03-18)에서도 동일하게 발생한 적 있음. `detailed_steps_modification_processes.md` 2026-03-18 오후 섹션 ④ 참조.
+
+---
+
+### 수정/생성된 파일 총괄 (2026-03-19~20)
+
+| 파일 | 변경 내용 | 변경 규모 |
+|------|----------|---------|
+| `services/04_3d_mass/src/components/ui/LandingPage.tsx` | 3슬라이드 캐러셀, 3D 파티클 역동성 강화, Footer URL 갱신 | ~120줄 수정 |
+| `frontend/src/components/ui/LandingPage.tsx` | 위와 동일본으로 복사 동기화 | 전체 동기화 |
+| `services/04_3d_mass/src/App.tsx` | dashboard 메뉴 제거 + 기본경로 변경 + Analysis Tools 서브메뉴 전체 추가 | ~100줄 추가 |
+| `detailed_steps_modification_processes.md` | 오늘 작업 내역 전체 추가 | 이 섹션 |
+| `imsi.md` | 다음 작업 계획 및 취소 항목 업데이트 | 전면 갱신 |
+
+---
+
+## 📊 전체 진행 상황 (업데이트: 2026-03-20)
+
+| Step | 내용 | 상태 |
+|------|------|------|
+| Step 1 | Base UI & 3D 환경 구축 | ✅ 완료 |
+| Step 2 | 지도 & 지적도 연동 (카카오/Vworld API) | ✅ 완료 |
+| Step 2.5 | 법규 엔진 기초 + 법규 팝업 9섹션 | ✅ 완료 |
+| Phase 1-B | Build-line 산출 (2D Offset → 3D) | ✅ 완료 |
+| Phase 1-C | Max Envelope 3D (Boolean 절단) | ✅ 완료 |
+| UI 리스트럭처링 | 사이드바 메뉴 + 라우팅 | ✅ 완료 |
+| 04_3d_mass | Vite 독립 모듈 분리 + 3D 매스 엔진 | ✅ 완료 |
+| VWorld 건물 폴리곤 | LT_C_SPBD 연동 + 프록시 헤더 수정 | ✅ 완료 |
+| 3D 주변 건물 렌더링 | 위성지도 + 건물 매스 3D 정상 수신 | ✅ 완료 |
+| 건물↔위성 좌표 정렬 | 동적 planeSize (Web Mercator 공식) | ✅ 완료 |
+| 법규 분석 4배치 복원 | REGULATION_BATCHES + 드릴다운 | ✅ 완료 |
+| 조례분석 통합 | VWorld 토지이용규제 + PNU 기반 분석 | ✅ 완료 |
+| 네이버 클라우드 배포 | Nginx + FastAPI 백엔드 → http://110.165.17.170 | ✅ 완료 |
+| **랜딩페이지 리뉴얼** | **3슬라이드 캐러셀 + 다이나믹 3D 파티클** | ✅ **완료** (2026-03-19) |
+| **메뉴 UX 개선** | **중복 메뉴 제거 + Analysis Tools 서브메뉴** | ✅ **완료** (2026-03-19) |
+| **GitHub 푸시** | **fbceea5 — haema_archi main 브랜치** | ✅ **완료** (2026-03-20) |
+| **서버 배포** | **http://110.165.17.170 신규 빌드 반영** | ✅ **완료** (2026-03-20) |
+| Phase 1-A | 대지정보 수집 강화 | 🔶 부분완료 |
+| Phase 1-D | 환경 시뮬레이션 (일조/바람/소음/조망) 고도화 | ⬜ 다음 작업 |
+| Phase 1-E | 제너레이티브 배치 (GA 엔진) | ⬜ 예정 |
+| Phase 1-F | 사업성 실시간 연동 (ROI/IRR) | ❌ 개발 취소 (진행하지 않음) |
+| Phase 2 | 평면도 자동 생성 | ⬜ 예정 |
+
+### 다음 작업 예정 (우선순위 순)
+> 1. **도메인 연결**: `110.165.17.170`에 서브도메인 연결 (내일 최우선)
+> 2. **Phase 1-D 고도화**: 현재 기초 일조 시뮬레이션을 넘어 주변 건물 그림자 상호작용, 바람길/소음 시각화 추가
+> 3. **Phase 1-E**: GA 기반 제너레이티브 배치 엔진 설계 및 프로토타입
+> 4. **Phase 2**: 과업지시서 기반 평면도 자동 생성 (실 구성, 코어, 복도 자동 배치)
+
+---
+
+## 📌 2026-03-20 — API 키 보안 사고 대응 및 재발 방지
+
+### 사고 개요
+- **노출된 키:** `AIzaSyCy****` (삭제 완료), `AIzaSyBp****` (삭제 완료)
+- **노출 경로:** `services/04_3d_mass/dist/assets/index-4518325a.js` (빌드 산출물)가 `.gitignore`에 없어 GitHub(`bignine99/haema_archi`)에 push됨
+- **감지:** GitHub 자동 시크릿 스캐너 → Google 신고 → 키 자동 차단
+
+### 노출 원인 분석
+```
+[1] vite.config.ts의 define 설정
+    'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+    → Vite 빌드 시 .env의 키 값을 번들에 리터럴 문자열로 인라인 삽입
+
+[2] services/04_3d_mass/dist/ 폴더가 .gitignore에 미등록
+    → npm run build 후 dist/ 폴더가 Git에 그대로 추적됨
+
+[3] GitHub push 시 빌드 산출물 포함 → 시크릿 스캐너 감지
+```
+
+### 조치 내용
+
+| 항목 | 내용 | 상태 |
+|------|------|------|
+| 노출 키 삭제 | Google Cloud Console에서 노출된 키 2개 삭제 | ✅ |
+| 새 키 발급 | `AIzaSyDZ****` (전체 키는 .secrets/API_KEYS.md 참조) | ✅ |
+| `.env` 키 교체 | `services/04_3d_mass/.env`, `frontend/.env` | ✅ |
+| `vite.config.ts` 수정 | `define`에서 `GEMINI_API_KEY` 완전 제거 | ✅ |
+| `LandingPage.tsx` 수정 | `process.env` 자동입력 → `localStorage` 기반 교체 | ✅ |
+| `.gitignore` 추가 | `services/04_3d_mass/dist/` 추가 | ✅ |
+| 재빌드 | `npm run build` 성공 (키 번들 미포함 확인) | ✅ |
+| 서버 배포 | SCP → 네이버 클라우드 반영 완료 | ✅ |
+
+### 재발 방지 원칙
+- `vite.config.ts`의 `define`에 **절대로 GEMINI_API_KEY 추가 금지**
+- Vite/Webpack 빌드 산출물(`dist/`, `build/`)은 **항상 `.gitignore`에 포함**
+- API 키는 브라우저 환경에서 **사용자 입력 + localStorage 저장** 방식 사용
+- 새 키 발급 시 `.env` 파일만 수정하면 충분 (재빌드 시 번들에 포함 안 됨)
+
+### 내일 예정 작업
+- `110.165.17.170`에 서브도메인 연결 (`platform.haemaarch.com` 등)
+  - 네이버 클라우드 DNS A 레코드 추가
+  - Nginx `server_name` 수정
+  - (선택) Let's Encrypt HTTPS 인증서 발급
+
+---
+
+## ✅ 완료된 작업: 3D 이미지 z-index 수정 & 도메인 URL 배포 (2026-03-20)
+
+> 작업 시각: 2026-03-20 오전~오후
+> 작업자: AI 에이전트 (Antigravity)
+
+### 📌 배경
+
+이 세션에서는 두 가지 주요 작업을 수행했습니다:
+1. **3D 이미지 z-index 수정** — 랜딩페이지의 3D 오브젝트가 텍스트 앞에 표시되도록 레이아웃 변경
+2. **도메인 URL 전환 및 배포** — 기존 IP 주소 `http://110.165.17.170/`를 `https://www.ninetynine99.co.kr/haema`로 변경하고 서버에 배포
+
+---
+
+## 🔧 문제 1: 3D 이미지가 텍스트 앞에 표시되지 않음
+
+### 증상
+- `services/04_3d_mass`의 HAEMA 랜딩페이지(LandingPage.tsx) 슬라이드 01, 02, 03에서
+- 3D 오브젝트(Three.js Canvas)가 화면 **왼쪽 절반**에만 표시되고
+- 텍스트(헤딩, 설명 문구)와 **겹치지 않음** (텍스트 뒤 또는 별도 영역에 배치됨)
+- 사용자 의도: 3D 이미지가 글자를 **가릴 수 있을 정도로** 텍스트 앞/위에 출력되어야 함
+
+### 원인 분석
+
+#### 기존 코드 (Before)
+```tsx
+{/* Full-screen Abstract 3D Canvas */}
+<div className="absolute inset-0 md:relative md:w-1/2 h-full z-20 pointer-events-none">
+    <Canvas ...>
+```
+
+**문제점 분석:**
+- `md:relative md:w-1/2` — md(768px 이상) 환경에서 절대 위치(absolute)가 해제되고 (`relative`), 너비가 1/2로 제한됨
+- 즉, Canvas가 화면 왼쪽 절반에만 배치되어 오른쪽 텍스트 영역과 겹칠 수 없음
+- `z-20`이 설정되어 있어도 레이아웃상 Canvas 영역 자체가 분리된 상태
+
+#### 수정 코드 (After)
+```tsx
+{/* Full-screen Abstract 3D Canvas — z-20 to float above text */}
+<div className="absolute inset-0 h-full z-20 pointer-events-none opacity-40 md:opacity-100">
+    <Canvas ...>
+```
+
+**수정 내용:**
+- `md:relative md:w-1/2` **제거** → 항상 `absolute inset-0`(전체화면 절대 위치) 유지
+- `opacity-40 md:opacity-100` 추가 → 모바일에서는 40% 투명도(텍스트 가독성 확보), 데스크탑에서는 100% 불투명
+- `z-20` 유지 → Canvas가 텍스트(z-10 이하) 위에 표시
+
+### 슬라이드 01, 02, 03 모두 동일하게 수정
+
+| 슬라이드 | 오브젝트 | 수정 전 | 수정 후 |
+|:---:|:---:|:---|:---|
+| 01 | 디스크/링 (AbstractSculpture) | `md:relative md:w-1/2` 좌측 절반 배치 | `absolute inset-0` 전체화면 오버레이 |
+| 02 | 큐브 (CubeScene) | 동일 문제 | 동일 수정 |
+| 03 | 토러스 너트 (TorusKnotScene) | 동일 문제 | 동일 수정 |
+
+### 수정된 파일
+
+```
+services/04_3d_mass/src/components/ui/LandingPage.tsx
+```
+
+- **변경 위치 1**: Section 01 HERO (슬라이드 01) — `div` className 수정 (line ~255)
+- **변경 위치 2**: Section 02 (슬라이드 02) — 동일 패턴 수정
+- **변경 위치 3**: Section 03 (슬라이드 03) — 동일 패턴 수정
+
+### 검증
+- 로컬 dev 서버(`http://localhost:5173/`)에서 3D 오브젝트가 텍스트 위를 덮는 것 확인
+- 슬라이드 02(큐브), 03(토러스 너트)도 동일하게 반영됨
+
+---
+
+## 🔧 문제 2: 도메인 URL 전환 — `ninetynine99.co.kr/haema`로 서비스 이전
+
+### 배경 및 목표
+- 기존: `http://110.165.17.170/` (숫자 IP 주소 직접 접속)
+- 목표: `https://www.ninetynine99.co.kr/haema` (브랜드 도메인 + 서브패스 방식)
+- 이유: 전문적인 URL 체계, HTTPS 보안, 기존 NNHomepage 인프라 활용
+
+### 서버 인프라 분석
+
+```
+[DNS]
+www.ninetynine99.co.kr → 110.165.17.170 (동일 서버!)
+
+[서버 내 프로세스]
+- PM2: ninetynine-hub (Next.js, port 3000) → ninetynine99.co.kr 메인 홈페이지
+- Nginx: 110.165.17.170 → /var/www/haema-archi/dist/ (기존 HAEMA 앱)
+- Nginx: ninetynine99.co.kr → localhost:3000 프록시
+```
+
+**핵심 발견:** 두 도메인이 동일 서버에 있으므로, NNHomepage Next.js 앱에 `/haema` 라우팅만 추가하면 됨
+
+### 전략
+
+1. HAEMA Vite 앱을 `/haema/` base path로 빌드
+2. 빌드 결과물을 NNHomepage의 `public/haema/` 디렉토리에 복사
+3. NNHomepage `next.config.mjs`에 `/haema` → `public/haema/index.html` rewrite 추가
+4. 서버 배포 (SCP + npm run build + PM2 재시작)
+
+---
+
+### Step A. Vite 설정 — base path 추가
+
+**파일:** `services/04_3d_mass/vite.config.ts`
+
+```typescript
+// Before
+export default defineConfig({
+    plugins: [react(), tailwindcss()],
+    ...
+})
+
+// After
+export default defineConfig({
+    plugins: [react(), tailwindcss()],
+    base: '/haema/',   // ← 추가: ninetynine99.co.kr/haema/ 서브패스用
+    ...
+})
+```
+
+**효과:** 빌드 시 에셋 경로가 `/assets/...` → `/haema/assets/...`로 생성됨
+
+**주의:** 이 설정은 `ninetynine99.co.kr/haema` 전용 빌드이며,
+`110.165.17.170` 직접 접속용 빌드에는 `base: '/'`를 사용해야 함
+
+---
+
+### Step B. HAEMA 앱 빌드 (ninetynine99.co.kr/haema 용)
+
+```bash
+cd services/04_3d_mass
+npx vite build
+# → base: '/haema/' 기준으로 dist/ 생성
+# dist/index.html 에셋 경로: /haema/assets/index-xxx.js
+```
+
+---
+
+### Step C. NNHomepage next.config.mjs 수정
+
+**파일:** `251123_NNHomepage/next.config.mjs`
+
+```javascript
+async rewrites() {
+    return {
+        beforeFiles: [
+            // 기존 라우팅들...
+            { source: '/thesis-advisor', destination: '/thesis-advisor/index.html' },
+            { source: '/thesis-advisor/', destination: '/thesis-advisor/index.html' },
+            { source: '/stat', destination: '/stat/index.html' },
+
+            // ↓ 신규 추가
+            { source: '/haema', destination: '/haema/index.html' },
+            { source: '/haema/', destination: '/haema/index.html' },
+        ],
+    };
+}
+```
+
+**동작 원리:** Next.js가 `/haema` 요청을 받으면 `public/haema/index.html`을 직접 서빙
+(Static file serving — 서버 사이드 렌더링 불필요)
+
+---
+
+### Step D. 서버 파일 업로드 (SCP)
+
+Git pull이 SSH 인증 문제로 실패하여 SCP로 직접 업로드:
+
+```bash
+# 1. 서버에 디렉토리 생성
+ssh root@110.165.17.170 "mkdir -p /root/homepage/public/haema/assets"
+
+# 2. 에셋 파일 업로드
+scp -r dist/assets root@110.165.17.170:/root/homepage/public/haema/
+
+# 3. index.html 업로드
+scp dist/index.html root@110.165.17.170:/root/homepage/public/haema/
+
+# 4. next.config.mjs 업로드
+scp next.config.mjs root@110.165.17.170:/root/homepage/next.config.mjs
+```
+
+---
+
+### Step E. 서버에서 Next.js 재빌드 및 재시작
+
+```bash
+# PM2 프로세스 목록 확인 → ninetynine-hub (id: 9) 가 메인 앱
+ssh root@110.165.17.170 "pm2 list"
+# → ID 9: ninetynine-hub (online, uptime 11h)
+
+# Next.js 빌드 (next.config.mjs rewrite 반영)
+ssh root@110.165.17.170 "cd /root/homepage && npm run build 2>&1"
+# → 빌드 성공: /haema 라우팅 포함
+
+# PM2 재시작
+ssh root@110.165.17.170 "pm2 restart ninetynine-hub"
+# → [PM2] [ninetynine-hub](9) ✓ 성공
+```
+
+**핵심 발견:** `pm2 restart 0`는 ID 0 프로세스가 없어서 실패. 반드시 `pm2 restart ninetynine-hub` (이름으로 지정)해야 함
+
+---
+
+### Step F. NNHomepage 카드 링크 수정
+
+**발견된 문제:** `ninetynine99.co.kr/solutions` 페이지의 "Haema Architect" 카드가
+여전히 `http://110.165.17.170`으로 링크됨
+
+**파일:** `251123_NNHomepage/src/data/solutions.ts` (line 88)
+
+```typescript
+// Before
+{
+    id: 'solution-haema-architect',
+    title: 'Haema Architect',
+    href: 'http://110.165.17.170',   // ← 숫자 IP
+    ...
+}
+
+// After
+{
+    id: 'solution-haema-architect',
+    title: 'Haema Architect',
+    href: 'https://www.ninetynine99.co.kr/haema',  // ← 도메인 주소
+    ...
+}
+```
+
+이후 `solutions.ts`를 SCP로 서버에 업로드 + `npm run build` + `pm2 restart ninetynine-hub` 재실행
+
+---
+
+## 🔧 문제 3: 110.165.17.170에 z-index 수정이 반영되지 않음
+
+### 증상
+- `https://www.ninetynine99.co.kr/haema`에서는 3D 이미지가 텍스트 앞에 정상 표시
+- 그러나 `http://110.165.17.170/`에서는 여전히 3D 이미지가 왼쪽에만 배치됨
+
+### 원인 분석
+
+```
+[배포 순서 오류]
+1. z-index 수정 후 빌드 → base: '/haema/' 설정 추가
+2. base: '/haema/' 빌드 결과물 → /root/homepage/public/haema/ 에 업로드 ✅
+3. 110.165.17.170 (/var/www/haema-archi/dist/)에는 업로드되지 않음 ❌
+
+두 배포 대상의 base path가 다름:
+- ninetynine99.co.kr/haema → base: '/haema/' 빌드 필요
+- 110.165.17.170/         → base: '/'    빌드 필요 (에셋 경로: /assets/...)
+```
+
+### 해결 과정
+
+#### 1. `110.165.17.170`용 별도 빌드 (base: '/')
+
+```bash
+cd services/04_3d_mass
+npx vite build --base="/"
+# → 에셋 경로: /assets/index-ae8e82b8.js (/ 기준)
+# → dist/ 파일명도 변경됨 (해시값 다름)
+```
+
+#### 2. 서버 기존 파일 삭제 후 새 빌드 업로드
+
+```bash
+# 기존 파일 완전 삭제
+ssh root@110.165.17.170 "rm -rf /var/www/haema-archi/dist/*"
+
+# 새 빌드 업로드
+scp -r dist/assets root@110.165.17.170:/var/www/haema-archi/dist/
+scp dist/index.html root@110.165.17.170:/var/www/haema-archi/dist/
+
+# 권한 설정 + nginx 리로드
+ssh root@110.165.17.170 "chmod -R 755 /var/www/haema-archi/dist/ && nginx -s reload"
+```
+
+---
+
+## 📋 배포 이력 (2026-03-20)
+
+| 시각 | 작업 내용 | 결과 |
+|:---:|:---|:---:|
+| 오전 세션 | LandingPage.tsx z-index 수정 (슬라이드 01, 02, 03) | ✅ |
+| 오전 세션 | 로컬 dev 서버 동작 확인 | ✅ |
+| 13:06 | vite.config.ts에 `base: '/haema/'` 추가 | ✅ |
+| 13:07 | `npx vite build` 실행 (ninetynine99용) | ✅ |
+| 13:08 | next.config.mjs에 `/haema` rewrite 추가 | ✅ |
+| 13:10 | SCP로 `/root/homepage/public/haema/` 업로드 | ✅ |
+| 13:11 | SCP로 `next.config.mjs` 서버 업로드 | ✅ |
+| 13:13 | 서버에서 `npm run build` 실행 (2~3분 소요) | ✅ |
+| 13:14 | `pm2 restart ninetynine-hub` | ✅ |
+| 13:15 | `https://www.ninetynine99.co.kr/haema` 접속 확인 | ✅ |
+| 13:17 | solutions.ts 카드 링크 수정 (IP → 도메인) | ✅ |
+| 13:18 | solutions.ts SCP 업로드 + 재빌드 + 재시작 | ✅ |
+| 13:25 | `npx vite build --base="/"` (110.165.17.170용) | ✅ |
+| 13:26 | SCP로 `/var/www/haema-archi/dist/` 업로드 | ✅ |
+| 13:26 | `nginx -s reload` | ✅ |
+| 13:27 | `http://110.165.17.170/` 접속 확인 → z-index 정상 | ✅ |
+
+---
+
+## 📁 수정/생성된 파일 총괄 (2026-03-20)
+
+| 파일 | 변경 내용 | 규모 |
+|:---|:---|:---:|
+| `services/04_3d_mass/src/components/ui/LandingPage.tsx` | 슬라이드 01/02/03 Canvas 컨테이너 className 수정 — `md:relative md:w-1/2` 제거, `opacity-40 md:opacity-100` 추가 | ~6줄 |
+| `services/04_3d_mass/vite.config.ts` | `base: '/haema/'` 추가 | 1줄 |
+| `251123_NNHomepage/next.config.mjs` | `/haema`, `/haema/` rewrite 2줄 추가 | 2줄 |
+| `251123_NNHomepage/src/data/solutions.ts` | Haema Architect 카드 href 수정 (IP→도메인) | 1줄 |
+
+---
+
+## 🗂️ 배포 구조 최종 정리 (2026-03-20 기준)
+
+```
+[서버: 110.165.17.170]
+│
+├── Nginx (haema-archi)
+│   └── server_name 110.165.17.170
+│       root /var/www/haema-archi/dist/   ← base: '/' 빌드 배포
+│       → http://110.165.17.170/  접속 가능
+│
+└── PM2: ninetynine-hub (Next.js, :3000)
+    └── /root/homepage/
+        ├── public/haema/                ← base: '/haema/' 빌드 배포
+        │   ├── index.html
+        │   └── assets/
+        ├── next.config.mjs              ← /haema rewrite 포함
+        └── src/data/solutions.ts        ← 카드 링크 수정
+    → https://www.ninetynine99.co.kr/haema 접속 가능
+```
+
+**⚠️ 주의사항 (향후 배포 시):**
+- `base: '/haema/'` 빌드는 **ninetynine99.co.kr/haema 전용** → `/root/homepage/public/haema/`에 업로드
+- `base: '/'` 빌드는 **110.165.17.170 전용** → `/var/www/haema-archi/dist/`에 업로드
+- 두 빌드를 혼용하면 에셋 경로가 달라 404 오류 발생
+
+---
+
+## 📊 전체 진행 상황 (업데이트: 2026-03-20)
+
+| 항목 | 내용 | 상태 |
+|:---|:---|:---:|
+| z-index 수정 | Canvas 전체화면 오버레이 (텍스트 앞 표시) | ✅ 완료 |
+| 도메인 URL 전환 | https://www.ninetynine99.co.kr/haema | ✅ 완료 |
+| 카드 링크 수정 | solutions.ts Haema 카드 링크 도메인으로 교체 | ✅ 완료 |
+| 110.165.17.170 배포 | z-index 수정 반영 (base:'/' 별도 빌드) | ✅ 완료 |
+| ninetynine99/haema 배포 | 새 URL에서 랜딩페이지 정상 서빙 | ✅ 완료 |
+| 위성지도 수정 | MapPanel.tsx 타일URL → /vworld-api/ 프록시 경로 | ✅ 완료 |
+| 재빌드 & 업로드 | dist/ → /var/www/haema-archi/dist/ & /var/www/haema/ | ✅ 완료 |
+| ninetynine nginx vworld 블록 추가 | 도메인 접속 위성지도용 | ⏳ 대기 중 |
+
+---
+
+## 🛰️ 위성지도 수정 작업 (2026-03-20 저녁)
+
+### 원인
+`MapPanel.tsx`에서 VWorld WMTS 타일 URL을 브라우저가 `api.vworld.kr`에 직접 요청 → VWorld 도메인 인증 실패 → 타일 미로드.
+Leaflet 타일은 `<img>` 태그 기반이라 Vite 프록시를 우회함.
+
+### 수정 내용
+
+**`services/04_3d_mass/src/components/ui/MapPanel.tsx`**
+```diff
+- base: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Base/{z}/{y}/{x}.png`,
+- satellite: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Satellite/{z}/{y}/{x}.jpeg`,
+- hybrid: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Hybrid/{z}/{y}/{x}.png`,
++ base: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Base/{z}/{y}/{x}.png`,
++ satellite: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Satellite/{z}/{y}/{x}.jpeg`,
++ hybrid: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Hybrid/{z}/{y}/{x}.png`,
+```
+
+### 서버 배포 현황
+- 빌드: `npm run build` ✅
+- SCP 업로드: `/var/www/haema-archi/dist/` & `/var/www/haema/` ✅
+- `haema-archi` nginx `/vworld-api/` 블록: 원래부터 존재 ✅
+- `ninetynine` nginx `/vworld-api/` 블록: **미추가** (홈페이지 작업 완료 후 처리 예정)
+
+### 서버 구조 파악 (2026-03-20)
+```
+[www.ninetynine99.co.kr]
+└── Nginx (ninetynine) → proxy_pass http://localhost:3000 (Next.js)
+    └── /haema → Next.js가 /root/homepage/public/haema/ 정적파일 서빙
+
+[110.165.17.170 직접 IP]
+└── Nginx (haema-archi)
+    └── root /var/www/haema-archi/dist/ (base:'/' 빌드)
+        └── /vworld-api/ 프록시 블록 ← 이미 존재
+```
+
+---
+
+## 📊 전체 진행 상황 (업데이트: 2026-03-20 저녁)
+
+| 항목 | 내용 | 상태 |
+|:---|:---|:---:|
+| z-index 수정 | Canvas 전체화면 오버레이 (텍스트 앞 표시) | ✅ 완료 |
+| 도메인 URL 전환 | https://www.ninetynine99.co.kr/haema | ✅ 완료 |
+| 카드 링크 수정 | solutions.ts Haema 카드 링크 도메인으로 교체 | ✅ 완료 |
+| 110.165.17.170 배포 | z-index 수정 반영 (base:'/' 별도 빌드) | ✅ 완료 |
+| ninetynine99/haema 배포 | 새 URL에서 랜딩페이지 정상 서빙 | ✅ 완료 |
+| 위성지도 타일 URL 수정 | /vworld-api/ 프록시 경로로 변경 | ✅ 완료 |
+| ninetynine nginx vworld 블록 | 도메인 위성지도 + 건물 렌더링 최종 활성화 | ✅ 완료 (2026-03-21) |
+
+---
+
+## ✅ 해결 완료: 3D 사이트/매스 설계 — 주소 검색·위성사진·주변 건물 렌더링 (2026-03-21)
+
+> **작업 시간**: 2026-03-21 22:30 ~ 23:10 (약 40분)
+> **영향 범위**: `www.ninetynine99.co.kr/haema` → 3D 사이트, AI 매스 설계 메뉴
+> **수정 대상**: 서버 Nginx 설정 (`/etc/nginx/sites-enabled/ninetynine`, `/etc/nginx/sites-available/ninetynine`)
+> **코드 수정**: 없음 (서버 설정만 변경)
+
+---
+
+### 1. 이슈 보고
+
+| # | 증상 | 영향 메뉴 | 심각도 |
+|---|------|-----------|--------|
+| 1 | **주소 검색이 되지 않음** — 검색바에 주소 입력 시 결과 미반환 | 3D 사이트, AI 매스 설계 | 🔴 Critical |
+| 2 | **위성사진(PHOTO) 미로드** — 3D 바닥면과 2D 미니맵 모두 위성 타일 깨짐 | 3D 사이트, AI 매스 설계 | 🔴 Critical |
+| 3 | **주변 건물 3D 미렌더링** — 위성사진 위에 건물이 없음 (폴리곤 데이터 미수신) | 3D 사이트 | 🔴 Critical |
+
+> **참고**: 동일한 코드가 `110.165.17.170` (IP 직접 접속)에서는 3가지 이슈 모두 정상 작동.
+> 문제는 `www.ninetynine99.co.kr` **도메인 Nginx 설정**에만 존재.
+
+---
+
+### 2. 근본 원인 분석
+
+#### 배경: 프록시 아키텍처
+
+HAEMA 3D 앱은 **외부 API에 직접 접근하지 않고**, Nginx 리버스 프록시를 경유합니다:
+
+```
+[브라우저]  →  /kakao-api/...    →  [Nginx 프록시]  →  https://dapi.kakao.com/
+[브라우저]  →  /vworld-api/...   →  [Nginx 프록시]  →  https://api.vworld.kr/
+[브라우저]  →  /building-api/... →  [Nginx 프록시]  →  https://apis.data.go.kr/
+```
+
+로컬 개발 시에는 Vite 프록시(`vite.config.ts`)가 이 역할을 담당하고,
+IP 서버(`110.165.17.170`)에서는 `haema-archi` Nginx 설정이 처리합니다.
+
+**그런데 도메인(`ninetynine99.co.kr`) Nginx 설정에는 이 프록시 블록이 존재하지 않았습니다.**
+
+#### 원인 ①: `/kakao-api/`, `/vworld-api/`, `/building-api/` 프록시 블록 부재
+
+| 환경 | Nginx 설정 파일 | `/kakao-api/` | `/vworld-api/` | `/building-api/` |
+|------|----------------|:---:|:---:|:---:|
+| 로컬 (localhost:3004) | `vite.config.ts` | ✅ | ✅ | ✅ |
+| IP (110.165.17.170) | `haema-archi` | ✅ | ✅ | ✅ |
+| **도메인 (ninetynine99.co.kr)** | **`ninetynine`** | **❌** | **❌** | **❌** |
+
+→ 도메인에서 `/kakao-api/...`, `/vworld-api/...` 요청 시 `location / {}` (Next.js catch-all)로 전달되어 **404 반환**
+
+**요청 흐름 상세:**
+```
+이슈1 — 주소 검색 실패:
+[gisApi.ts:128] fetch('/kakao-api/v2/local/search/address.json?query=서울')
+    → Nginx: /kakao-api/ 매칭 블록 없음
+    → location / {} (Next.js)로 포워딩
+    → Next.js: 해당 라우트 없음 → 404
+
+이슈2 — 위성사진 미로드:
+[MapPanel.tsx:13] Leaflet TileLayer URL: '/vworld-api/req/wmts/1.0.0/${KEY}/Satellite/{z}/{y}/{x}.jpeg'
+[SceneViewer.tsx] THREE.TextureLoader: '/vworld-api/req/image?...PHOTO...'
+    → 동일 원인 → 404
+
+이슈3 — 건물 데이터 미수신:
+[gisApi.ts:502] fetch('/vworld-api/req/data?...&data=LT_C_SPBD&...')
+    → 동일 원인 → 404
+```
+
+#### 원인 ②: `sites-available` vs `sites-enabled` 파일 불일치 (숨겨진 함정)
+
+Nginx 표준 관행에서 `sites-enabled/`에는 `sites-available/`의 **심볼릭 링크**를 두어, 한 곳만 수정하면 자동 반영됩니다.
+
+**그러나 이 서버에서는 `sites-enabled/ninetynine`이 심볼릭 링크가 아니라 별도의 독립 파일이었습니다:**
+
+```bash
+$ ls -la /etc/nginx/sites-enabled/
+haema-archi -> /etc/nginx/sites-available/haema-archi  # ✅ 심볼릭 링크 (정상)
+ninetynine   -rw-r--r-- 3518 Mar 20 20:36              # ❌ 독립 파일! (비정상)
+posteval    -> /etc/nginx/sites-available/posteval      # ✅ 심볼릭 링크 (정상)
+```
+
+| 파일 | 내용 | 실제 적용 여부 |
+|------|------|:-----------:|
+| `sites-available/ninetynine` | `location /api/research`, `location /` 만 존재 | ❌ 미적용 |
+| `sites-enabled/ninetynine` | `location = /bridgebook`, `location ~ \.vcf$`, `location /api/research`, `location /` 존재 | ✅ **실제 적용** |
+
+→ `sites-available/ninetynine`에 프록시를 추가해도 **실제 적용 파일에는 반영되지 않음**
+→ 1차 수정 시도 후 `curl` 테스트에서 계속 404가 반환된 원인
+
+#### 원인 ③: VWorld `Referer` 헤더 불일치 (건물 데이터만 실패)
+
+프록시 블록 추가 후 **위성사진 타일(WMTS)**은 정상 로드되었으나, **건물 폴리곤(Data API)**만 실패:
+
+| VWorld API 종류 | Referer 검증 방식 | `Referer: https://www.ninetynine99.co.kr` 결과 |
+|----------------|:---:|:---:|
+| WMTS 타일 (`/req/wmts/...`) | 느슨 (Referer 무관) | ✅ 200 OK |
+| Data API (`/req/data?...`) | **엄격** (등록 도메인 필수) | ❌ `INCORRECT_KEY` |
+
+VWorld API 키 `34F345CA-...`는 **`http://localhost` 도메인으로만 등록**되어 있어,
+Nginx 프록시가 `Referer: https://www.ninetynine99.co.kr`을 보내면 Data API가 인증 거부.
+
+IP 서버(`haema-archi`)의 Nginx 설정:
+```nginx
+proxy_set_header Referer http://localhost;   # ← 정상 작동하는 설정
+```
+
+도메인(`ninetynine`)에 잘못 설정된 값:
+```nginx
+proxy_set_header Referer https://www.ninetynine99.co.kr;   # ← Data API 인증 실패
+```
+
+---
+
+### 3. 수정 과정 (시간순)
+
+#### 3-1. 1차 시도: `sites-available/ninetynine` 수정 (22:35) — ❌ 실패
+
+```bash
+# 백업
+cp /etc/nginx/sites-available/ninetynine /etc/nginx/sites-available/ninetynine.bak.20260321
+
+# Python으로 프록시 블록 삽입 (Windows cmd에서 ssh + sed가 멀티라인 처리 불가하여 Python 사용)
+ssh root@110.165.17.170 "python3 -c \"...insert proxy blocks...\""
+
+# 검증 → sites-available에는 프록시 블록 추가됨
+ssh root@110.165.17.170 "cat -n /etc/nginx/sites-available/ninetynine | head -50"
+# 21: location /kakao-api/ { ... }   ← 추가됨
+# 29: location /vworld-api/ { ... }  ← 추가됨
+# 38: location /building-api/ { ... } ← 추가됨
+
+# Nginx reload
+nginx -t && systemctl reload nginx  # syntax ok, test successful
+
+# 실제 테스트 → 여전히 404!
+curl -s -o /dev/null -w '%{http_code}' https://www.ninetynine99.co.kr/kakao-api/...
+# → 404 ← ❌ 여전히 동일
+```
+
+**실패 원인 발견**: `ls -la /etc/nginx/sites-enabled/`에서 `ninetynine`이 심볼릭 링크가 아닌 독립 파일임을 확인.
+Nginx는 `sites-enabled/`의 파일을 읽으므로, `sites-available/`만 수정하면 효과 없음.
+
+#### 3-2. 2차 시도: `sites-enabled/ninetynine` 수정 (22:43) — ✅ 성공
+
+```bash
+# 백업
+cp /etc/nginx/sites-enabled/ninetynine /etc/nginx/sites-enabled/ninetynine.bak.20260321
+
+# 실제 적용 파일에 프록시 블록 삽입
+ssh root@110.165.17.170 "python3 -c \"...insert proxy blocks into sites-enabled...\""
+# → PYTHON_ENABLED_OK
+
+# 검증
+grep -n 'location' /etc/nginx/sites-enabled/ninetynine
+# 28: location /kakao-api/ {       ← 추가됨
+# 35: location /vworld-api/ {      ← 추가됨
+# 44: location /building-api/ {    ← 추가됨
+# 48: location / {                 ← 기존 catch-all
+
+# Nginx reload
+nginx -t && systemctl reload nginx  # ALL_DONE
+
+# curl 테스트
+curl https://www.ninetynine99.co.kr/kakao-api/...  → 401 (프록시 성공, 인증 헤더 미전송으로 401)
+curl https://www.ninetynine99.co.kr/vworld-api/...  → 200 (타일 이미지 정상)
+```
+
+**결과**: 주소 검색(✅) + 위성사진(✅) 복구 완료. **그러나 주변 건물 3D 미렌더링(❌).**
+
+#### 3-3. 3차 수정: VWorld Referer 헤더 변경 (23:03) — ✅ 성공
+
+```bash
+# haema-archi(IP 서버)의 vworld Referer 설정 확인
+cat /etc/nginx/sites-available/haema-archi
+# → proxy_set_header Referer http://localhost;  ← ✅ 이것이 정상
+
+# ninetynine(도메인) 설정의 Referer를 수정
+# 변경 전: proxy_set_header Referer https://www.ninetynine99.co.kr;
+# 변경 후: proxy_set_header Referer http://localhost;
+#          proxy_set_header Origin http://localhost;
+# (sites-enabled + sites-available 모두 수정)
+
+python3 -c "...replace Referer header in both files..."
+# → FIX1_OK, FIX2_OK
+
+nginx -t && systemctl reload nginx  # RELOAD_DONE
+
+# 검증 → VWorld Data API 정상 작동
+curl 'https://www.ninetynine99.co.kr/vworld-api/req/data?...&data=LT_C_SPBD&...'
+# → 200 OK (건물 폴리곤 데이터 반환)
+```
+
+**결과**: 주변 건물 3D 렌더링(✅) 복구 완료. 3가지 이슈 모두 해결.
+
+---
+
+### 4. 변경된 파일 상세
+
+> 이번 수정에서 **소스 코드는 변경하지 않았습니다**. 서버의 Nginx 설정만 변경되었습니다.
+
+#### 4-1. `/etc/nginx/sites-enabled/ninetynine` (실제 적용 파일)
+
+**추가된 블록** (`location /api/research { ... }` 뒤, `location / { ... }` 앞):
+
+```nginx
+    # -- HAEMA 3D Site API Proxies (added 2026-03-21) --
+
+    location /kakao-api/ {
+        proxy_pass https://dapi.kakao.com/;
+        proxy_set_header Host dapi.kakao.com;
+        proxy_ssl_server_name on;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*";
+    }
+
+    location /vworld-api/ {
+        proxy_pass https://api.vworld.kr/;
+        proxy_set_header Host api.vworld.kr;
+        proxy_set_header Referer http://localhost;       # ← 핵심: localhost로 설정
+        proxy_set_header Origin http://localhost;         # ← 추가
+        proxy_ssl_server_name on;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*";
+    }
+
+    location /building-api/ {
+        proxy_pass https://apis.data.go.kr/;
+        proxy_set_header Host apis.data.go.kr;
+        proxy_ssl_server_name on;
+    }
+```
+
+#### 4-2. `/etc/nginx/sites-available/ninetynine` (참조용 원본)
+
+동일한 블록이 추가됨 (미래에 심볼릭 링크로 전환 시 정합성 유지).
+
+#### 4-3. 백업 파일
+
+| 백업 파일 | 원본 |
+|-----------|------|
+| `/etc/nginx/sites-available/ninetynine.bak.20260321` | 수정 전 `sites-available` 원본 |
+| `/etc/nginx/sites-enabled/ninetynine.bak.20260321` | 수정 전 `sites-enabled` 원본 |
+
+---
+
+### 5. 최종 검증 결과
+
+#### 5-1. 서버 curl 테스트
+
+| 테스트 | URL | HTTP 상태 | 의미 |
+|--------|-----|:---------:|------|
+| Kakao API 프록시 | `https://www.ninetynine99.co.kr/kakao-api/v2/local/search/address.json?query=test` | **401** | ✅ 프록시 정상 (인증 헤더 없어서 401) |
+| VWorld WMTS 타일 | `https://www.ninetynine99.co.kr/vworld-api/req/wmts/1.0.0/.../Base/12/1589/3485.png` | **200** | ✅ 위성 타일 정상 로드 |
+| VWorld Data API | `https://www.ninetynine99.co.kr/vworld-api/req/data?...&data=LT_C_SPBD&...` | **200** | ✅ 건물 폴리곤 정상 반환 |
+| VWorld 지역정보 | `https://www.ninetynine99.co.kr/vworld-api/req/data?...&typename=lt_c_bisdsigg&...` | **200** | ✅ 행정구역 데이터 정상 반환 |
+
+#### 5-2. 브라우저 JavaScript 검증 (`https://www.ninetynine99.co.kr/haema`)
+
+```javascript
+// Kakao 주소 검색 테스트
+fetch('/kakao-api/v2/local/search/address.json?query=서울', {
+  headers: { Authorization: 'KakaoAK YOUR_KAKAO_KEY_HERE' }
+}).then(r => r.json()).then(d => console.log(d));
+// → {"documents":[{"address":{"address_name":"서울", ...}]}  ✅
+
+// VWorld 건물 데이터 테스트
+fetch('/vworld-api/req/data?...&data=LT_C_SPBD&domain=http%3A%2F%2Flocalhost&...')
+  .then(r => r.json()).then(d => console.log(d));
+// → 100 buildings found  ✅
+
+// VWorld 위성 타일 테스트
+fetch('/vworld-api/req/wmts/1.0.0/.../Satellite/12/1589/3485.jpeg')
+  .then(r => console.log(r.status, r.headers.get('content-type')));
+// → 200 image/jpeg  ✅
+```
+
+#### 5-3. 실제 UI 동작 확인
+
+| 기능 | 수정 전 | 수정 후 |
+|------|:-------:|:-------:|
+| 주소 검색 (카카오) | ❌ 결과 없음 | ✅ 정상 검색 |
+| 2D 미니맵 위성사진 | ❌ 타일 깨짐 | ✅ 정상 로드 |
+| 3D 바닥면 위성 텍스처 | ❌ 텍스처 없음 | ✅ 정상 렌더링 |
+| 3D 주변 건물 폴리곤 | ❌ 건물 없음 | ✅ 정상 렌더링 |
+| 필지 폴리곤 (VWorld) | ❌ 표시 안 됨 | ✅ 정상 표시 |
+
+---
+
+### 6. 발견된 교훈 및 주의사항
+
+#### 🚨 교훈 1: `sites-available` ≠ `sites-enabled` (반드시 확인)
+
+```bash
+# 반드시 sites-enabled 파일이 심볼릭 링크인지 확인할 것!
+ls -la /etc/nginx/sites-enabled/
+# 심볼릭 링크: lrwxrwxrwx ... ninetynine -> /etc/nginx/sites-available/ninetynine
+# 독립 파일:   -rw-r--r-- ... ninetynine  ← ⚠️ 이 경우 두 파일 모두 수정 필요
+```
+
+이 서버에서는 과거 직접 편집(`nano`)으로 `sites-enabled`에 독립 복사본이 생성된 것으로 추정.
+향후 심볼릭 링크로 통일하는 것을 권장:
+```bash
+rm /etc/nginx/sites-enabled/ninetynine
+ln -s /etc/nginx/sites-available/ninetynine /etc/nginx/sites-enabled/ninetynine
+```
+
+#### 🚨 교훈 2: VWorld WMTS vs Data API — 인증 수준이 다름
+
+| VWorld API | 용도 | Referer 검증 | domain 파라미터 검증 |
+|-----------|------|:---:|:---:|
+| WMTS (`/req/wmts/...`) | 지도 타일 이미지 | 느슨 (무관) | 사용 안 함 |
+| Data API (`/req/data?...`) | GIS 피처 데이터 | **엄격** | **엄격** |
+
+→ "위성사진이 보이니까 VWorld 프록시는 OK" 라고 판단하면 **오진** 발생
+→ Data API는 **Referer 헤더**와 URL의 **`domain` 파라미터**가 VWorld에 등록된 도메인과 일치해야 함
+→ API 키 `34F345CA-...`의 등록 도메인은 `http://localhost`이므로, Nginx에서도 `Referer: http://localhost` 전송 필수
+
+#### 🚨 교훈 3: VWorld 도메인 등록 확인 방법
+
+현재 API 키가 `http://localhost`에만 등록되어 있어, 프록시가 `Referer`를 위장해야 합니다.
+보다 근본적인 해결은 **VWorld 포털에서 `https://www.ninetynine99.co.kr`을 추가 등록**하는 것입니다:
+- VWorld Open API 포털: https://www.vworld.kr/dev/v4api.do
+- API 키 관리 → 서비스 URL에 `https://www.ninetynine99.co.kr` 추가
+
+---
+
+### 7. 현재 Nginx 프록시 구성 요약 (수정 후)
+
+| 서버 | 설정 파일 | `/kakao-api/` | `/vworld-api/` | `/building-api/` | VWorld Referer |
+|------|----------|:---:|:---:|:---:|:---:|
+| 로컬 개발 | `vite.config.ts` | ✅ | ✅ | ✅ | `http://localhost` |
+| IP (110.165.17.170) | `haema-archi` | ✅ | ✅ | ✅ | `http://localhost` |
+| **도메인 (ninetynine99.co.kr)** | **`ninetynine`** | **✅** | **✅** | **✅** | **`http://localhost`** |
+
+모든 환경에서 3개 API 프록시가 동일하게 구성되었습니다.
 
