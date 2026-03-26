@@ -24,6 +24,19 @@ webpack_log.txt
 .env
 .env.local
 .env*.local
+!.env.example
+!**/.env.example
 frontend/.env
 frontend/.env.local
 .vercel
+
+# 보안 문서 (API 키 백업)
+.secrets/
+
+# 테스트용 임시 파일 (API 키 포함 위험)
+frontend/test_gemini.js
+test_apis.js
+test_*.js
+
+# 빌드 산출물 (하드코딩된 키가 번들에 포함될 수 있음)
+services/04_3d_mass/dist/
