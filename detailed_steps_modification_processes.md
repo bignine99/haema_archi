@@ -3247,3 +3247,90 @@ ln -s /etc/nginx/sites-available/ninetynine /etc/nginx/sites-enabled/ninetynine
 
 모든 환경에서 3개 API 프록시가 동일하게 구성되었습니다.
 
+---
+
+## 🚀 완료된 작업: Phase B "층별 조닝 & 스페이스 모듈" 고도화 (2026-03-29)
+
+### 2026-03-29 작업 내용
+
+오늘 세션에서는 기존 단일 화면으로 구성되어 정보가 과부하 상태였던 기획설계 스페이스 프로그래밍 패널의 **UI 구조 개편**과 **수동 편집 기능**, 그리고 **프롬프트 엔지니어링을 통한 AI 자동 생성 면적 부족 오류 해결**을 진행했습니다.
+
+### 1. 3-Tab 내비게이션 레이아웃 전면 리팩토링
+- **문제점:** 과업지시서 업로드, 설계 개요, 층별 세부 면적표, 그리고 각종 차트가 한 페이지에 세로로 무한 스크롤되는 구조여서 사용성이 떨어짐.
+- **해결 방안:** `SpaceProgrammingPanel` 컴포넌트를 3개의 탭으로 분리
+  1. **건축개요 및 시설면적표 (Overview & Document):** 과업지시서 업로드 컴포넌트, 기본 건축 개요, 연면적 배분 현황 막대바, 층별 요약 표 제공.
+  2. **층별 세부용도 및 면적표 (Editable Detail View):** Drag & Drop 조닝 테이블을 전체 화면으로 활성화하여 공간을 확보.
+  3. **시설면적 세부 분석 (Charts):** 통계 시각화 패널 단독 노출.
+
+### 2. 드래그 앤 드롭 테이블 내 면적 수동 편집(Input) 연동
+- **기능:** 층별 조닝 면적표 테이블에서 각 실(Room)의 `전용면적(netArea)`과 `공용면적(commonArea)`을 `type="number"` Text Input으로 양방향 바인딩.
+- **동작 원리:** Zustand `projectStore`에 `updateRoomArea` 액션을 추가.
+  - 특정 실의 면적 값 변경 시 부모 단계인 Zone의 총 면적 재계산.
+  - 이어서 상위 부모인 Floor의 총 면적 재계산.
+  - 최종적으로 전역 상태인 `totalAssignedArea` 및 진행률 막대(Progress Bar)에 실시간으로 반영되도록 로직 구축 (복잡도 O(1) 수준 유지).
+
+### 3. AI 기반 자동 생성 수치 계산 한계(LLM Hallucination) 극복
+- **발생한 문제:** 14,000㎡의 거대 프로젝트에서 AI가 연면적 초과 오류를 회피하기 위해 800㎡ 남짓만 생성하고 끝냄.
+- **개선 방법:** `geminiSpaceService.ts` 내 System Prompt의 지시어 강도 조절.
+  - *기존:* "절대로 목표 연면적을 초과하지 말 것"
+  - *변경:* **"모든 면적의 합계는 반드시 목표 연면적의 95% ~ 100% 사이를 남김없이 채울 것. 수백~수천 ㎡의 과감한 배분을 공용면적에 투자하여 수학적 정합성을 달성할 것."**
+  - *결과:* 단일 층에 10~25개의 개별 시설을 상세하게 쪼개서 만들고, 공용 복도 코어 면적을 대규모로 할당하여 14,000㎡ 스케일을 현실적으로 100% 분할하게 됨.
+
+### 4. 시각화 대시보드(StatisticsChartPanel) 대폭 확장 
+- **문제점:** 기존 회색 텍스트가 안 보이고 2개의 차트만 존재. 패널 기능 빈약.
+- **개선 방법:** 가독성 향상(`text-slate-800 font-bold` 적용) 및 총 6종의 Recharts 레이아웃 추가.
+  - ① 층별 총 면적 현황 (Bar Chart)
+  - ② 층별 전용 / 공용 면적 분포 (Stacked Bar)
+  - ③ 전체 전용 / 공용 비율 (Pie Chart)
+  - ④ 주요 클러스터(Zone) 비중 (Pie Chart)
+  - ⑤ 층별 실(방) 개수 & 평균 면적 (Composed Bar + Line)
+  - ⑥ 설계 한계 대비 계획률 분석 (Coverage & FAR Limits Custom Progress Bar)
+
+### 파일 수정 내역
+| 파일 | 주요 변경 내용 |
+|------|--------------|
+| `SpaceProgrammingPanel.tsx` | `activeTab` 도입 및 레이아웃 분할, `onChange` 기반 인풋 필드 적용 |
+| `StatisticsChartPanel.tsx` | 6개 차트 전단 개편 (Recharts 활용), 통계 로직 `useMemo` 캐싱 최적화 |
+| `geminiSpaceService.ts` | 스케일 강조 문구, 수학적 계산 강제성(95%~100%) 부여 패턴 추가 |
+| `projectStore.ts` | `updateRoomArea` 액션 리듀서 로직 추가 |
+| `regulationAnalysisService.ts` | 503 / 429 에러 텍스트 파싱을 기반으로 한 재시도(Retry) 로직 보강 |
+| `App.tsx` | Dashboard 메인 매뉴얼 탭 복구 연동 |
+---
+
+## 🚀 완료된 작업: Phase B 스페이스 프로그래밍 시각화 고도화 및 환경 최적화 (2026-03-30)
+
+### 2026-03-30 작업 내용
+
+기획설계 단계의 핵심인 **스페이스 프로그래밍(Space Programming) 대시보드**를 전문 엔지니어링 수준의 10-Chart 통계 화면으로 고도화하고, UI 가독성 개선 및 로컬 개발 환경 편의성을 대폭 증강했습니다.
+
+### 1. 10-Chart 엔지니어링 Analytics 대시보드 전면 리뉴얼
+- **디자인 철학 반영:** 기존 유치한 색상 배열을 걷어내고, 전문가들이 사용하는 정론화된 **Tableau 10 글로벌 스탠다드 컬러 팔레트**를 적용하여 프리미엄 B2B 아키텍처 소프트웨어의 룩앤필(Look and Feel)로 탈바꿈했습니다.
+- **다차원 통계 차트 (총 10종):** `StatisticsChartPanel.tsx`를 전면 재작성하여, 다음과 같은 차트를 구성했습니다.
+  - ① 계획률 한계치 (건폐율/용적률 게이지)
+  - ② Area Treemap Configurator (트리맵)
+  - ③ 층별 면적 현황 (Bar)
+  - ④ 평균 공간 전용/공용 효율성 (Stacked Bar)
+  - ⑤ 공용면적 효율성 추적 (Area)
+  - ⑥ 전체 비율 균형 (Pie)
+  - ⑦ 최다 면적 실 Top 10 (Horizontal Bar)
+  - ⑧ 부서/조닝 클러스터 규모 (Pie)
+  - ⑨ 실(방) 개수 및 평균 면적 지수 (Composed Bar/Line)
+  - ⑩ 상위 부서 다면적 부피 평가 (Radar)
+
+### 2. 트리맵(Treemap) 계층 구조 확장 및 시각적 명료성(가독성) 개선
+- **가독성(Blurry Text) 버그 해결:** Windows OS 환경에서 SVG 안티앨리어싱 버그로 인해 글씨가 매우 두껍고 뿌옇게 번지던 현상을 해결. 모든 Recharts SVG 엘리먼트 텍스트와 HTML 툴팁에서 억지로 부여된 `fontWeight="600"`, `bold`, 및 `backdrop-blur` 유리를 제거하여 **극도로 선명한 타이포그래피**를 구현했습니다.
+- **전용 (Net) / 공용 (Common) 공간 면적의 명시적 공간 분할:**
+  - 트리맵 로직을 갱신하여, 단일 Room이 각각 고유한 전용면적 셀(`spaceType: 'net'`)과 공용면적 셀(`spaceType: 'common'`) 2개로 분할 렌더링되도록 처리했습니다.
+  - 전용면적은 배치된 Zone 고유의 화려한 색상을 그대로 상속받고, **공용면적은 통일된 Slate Gray(`#cbd5e1`) 계열로 강제 색상 지정**을 하여 단번에 시각적 계층이 구분되도록 만들었습니다.
+- **층별 필터 드롭다운 탑재:** `treemapFloor` 상태를 추가하여, 전체 건물의 트리맵 뿐만 아니라, 특정 단일 층 내부의 트리맵 구성만 집중적으로 격리하여 볼 수 있게 필터 기능을 탑재했습니다.
+
+### 3. 개발 편의성 증진 - Landing Page IP Bypass (Auto-Login)
+- **발생한 문제:** 개발하면서 앱이 리로드될 때마다 "과업지시서 재업로드 / 비밀번호 입력" 등 무의미한 절차를 밟아야 했습니다.
+- **개선 방법:** 사용자의 로컬 IP (`106.248.76.93`) 접근 시 `projectStore`의 `isAuthorized`를 즉시 `true`로 넘기고 메인 앱으로 리다이렉팅 시키는 Auto Bypass 로직을 주입했습니다.
+- **치명적 버그 수정:** 해당 useEffect 내부 로직이 컴포넌트 마운트/언마운트 시점에 충돌하며 화면이 백지로 변하는 **Infinite Re-render Loop (무한 루프) 에러**를 포착, `useRef(false)` 가드 스테이트를 두어 하드웨어적 단일 진입만 허용하도록 견고하게 방어했습니다.
+
+### 파일 수정 내역 총괄
+| 파일 | 주요 변경 내용 |
+|------|--------------|
+| `LandingPage.tsx` | 개발자 IPv4 바이패스(자동 로그인) 로직 구축 및 무한 렌더링 루프 방지 `useRef` 주입 |
+| `StatisticsChartPanel.tsx` | 10개 Analytics Chart 생성, Tableau 10 Color 적용, Windows Blurry Font 퇴출, Treemap 공용/전용면적 색상 분할 및 Floor 선택 필터링 |

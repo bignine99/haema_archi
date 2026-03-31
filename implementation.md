@@ -972,3 +972,513 @@ Vworld 필지/지형/도로   ←─┐    ┌─→  과업지시서 분석 결
 | View Cone (기본) | ✅ | `SceneViewer.tsx` 내장 |
 
 ---
+
+## 16. 전략 결정 사항 (2026-03-29 확정)
+
+### 16.1 사용자 지시 요약
+
+| 항목 | 결정 |
+|------|------|
+| **개발 순서** | Phase A(PDF 정밀 파서) → Phase B(공간 프로그래밍) |
+| **타겟 용도** | **특수학교 최우선** → 이후 일반 교육시설 → 기타 용도 확장 |
+| **산출물 수준** | (A) 분석 보고서 완성 → (B) 설계 제안서 → (C) 설계공모 제출 수준, **단계적 확장** |
+| **3D 연동** | 최종 목표이나 1단계에서는 **prototype만** |
+| **참조 PDF** | 성진/시흥학교 PDF는 **참조만** 활용 (학습 데이터 X). 향후 30건 이상 추가 제공 예정 |
+
+### 16.2 세부 항목 매핑 — "채광/동선/무장애건축은 어디에?"
+
+7대 계층 21개 항목 중 **실무 설계자가 자주 묻는 세부 사항**의 정확한 위치:
+
+```
+[채광 (Daylighting)]
+├── 계층 4B: 채광 및 환기 최적화 아트리움 계획
+│   └── 자연 채광 유입, 중정/아트리움 혼합 배치, 동적/정적 공간 분리
+├── 계층 6B: 신재생에너지 및 패시브 디자인 요소
+│   └── 로이복층유리, 고기밀 창호, 입면 차양 계획
+└── Phase 1-D: 환경 시뮬레이션 → 일조 분석 (동지 기준 그림자, 히트맵)
+
+[동선 (Circulation)]
+├── 계층 2B: 대지 레벨 및 진출입로 분리 계획
+│   └── 차량/보행 진출입구 분리, 지하진입램프, 스쿨버스 전용 동선
+├── 계층 4A: 보차 분리 및 맞춤형 드롭오프존
+│   └── 통학버스·콜택시·승용차 하차구역, 중증/경증 하차 시간 산정
+├── 계층 4C: 층별 주요 프로그램 구획
+│   └── 수평 동선 (복도 3.3m 이상, 코어 배치, 피난동선)
+└── 계층 3D: 특수 목적 클러스터 및 인솔거점
+    └── 단체이동 편의성, 원스탑 치료재활 클러스터 연계 동선
+
+[무장애건축 (Barrier-Free / Universal Design)]
+├── 계층 3B: 배리어 프리 및 무장애 안전 특화 ★핵심
+│   ├── 경사로 ≤1/18, 문턱 제거, 회전 공간 1.4m×1.4m
+│   ├── 복도 유효폭 3.3m+, 대형 EV (66인승 5,000kg) 2대
+│   └── 모서리 둥근 처리, 카운터 높이 최적화
+├── 계층 6A: 친환경 법정 인증 목표치
+│   └── BF(장애물 없는 생활환경) 인증 일반등급 목표
+└── 법규분석 B4: 복지 및 보건 관련 법규
+    └── 장애인등편의법 편의시설 설치 기준, BF 점수 시뮬레이션
+```
+
+---
+
+## 17. 1주일 상세 작업 계획 (2026-03-29 ~ 2026-04-04)
+
+### 전체 일정 개요
+
+```
+[Week 1: Phase A — PDF 정밀 파서 구축]
+
+Day 1 (03/29 토)  ─── 아키텍처 설계 + 스키마 정의
+Day 2 (03/30 일)  ─── PDF 전처리 파이프라인 구축
+Day 3 (03/31 월)  ─── Gemini 구조화 추출 엔진 v1
+Day 4 (04/01 화)  ─── 계층 1~2 파서 완성 + 검증
+Day 5 (04/02 수)  ─── 계층 3~4 파서 완성 + 검증
+Day 6 (04/03 목)  ─── 계층 5~7 파서 완성 + 전체 통합
+Day 7 (04/04 금)  ─── 산출물 Level-A (분석 보고서) 출력 엔진
+```
+
+---
+
+### Day 1 (03/29): 아키텍처 설계 + 21개 항목 스키마 정의
+
+#### 목표
+> PDF 정밀 파서의 전체 아키텍처를 확정하고, 7대 계층 × 21개 항목의 TypeScript 인터페이스를 완성한다.
+
+#### 작업 목록
+
+| # | 작업 | 산출물 | 예상 시간 |
+|---|------|--------|:---------:|
+| 1-1 | 21개 항목 JSON 스키마 설계 | `types/designAnalysis.ts` | 2h |
+| 1-2 | PDF 처리 전략 확정 (Gemini Vision vs pdf.js+Gemini Text) | 아키텍처 문서 | 1h |
+| 1-3 | 파일 구조 설계 (`services/pdf-parser/`) | 디렉터리 구조 | 0.5h |
+| 1-4 | Gemini 프롬프트 템플릿 v1 작성 | `prompts/layerExtraction.ts` | 1.5h |
+
+#### 1-1. 21개 항목 JSON 스키마 (핵심)
+
+```typescript
+// types/designAnalysis.ts
+
+/** 7대 계층 × 21개 항목 통합 스키마 */
+interface DesignAnalysisResult {
+  /** 계층 1: 건축 제원 및 정량적 개요 */
+  layer1_quantitative: {
+    /** 1A. 프로젝트 기본 제원 */
+    projectSpecs: {
+      projectName: string;
+      siteLocation: string;
+      siteArea: number;           // ㎡
+      zoneDistrict: string;       // 용도지역·지구
+      coverageRatio: number;      // 건폐율 %
+      floorAreaRatio: number;     // 용적률 %
+      maxHeight: number;          // 최고높이 m
+      totalFloors: { above: number; below: number };
+      grossFloorArea: number;     // 연면적 ㎡
+      buildingArea: number;       // 건축면적 ㎡
+    };
+    /** 1B. 시설 및 주차 규모 */
+    parkingFacilities: {
+      totalParking: number;
+      disabledParking: number;
+      ecoParking: number;
+      landscapeArea: number;      // ㎡
+      landscapeRatio: number;     // %
+    };
+    /** 1C. 층별 세부 면적 */
+    floorAreaTable: {
+      floor: string;              // "B1", "1F", "2F" ...
+      exclusiveArea: number;      // 전용면적 ㎡
+      commonArea: number;         // 공용면적 ㎡
+      totalArea: number;          // 합계 ㎡
+      primaryUse: string;         // 주요 용도
+    }[];
+  };
+
+  /** 계층 2: 대지 현황 분석 */
+  layer2_siteAnalysis: {
+    /** 2A. 주변 여건 */
+    surroundingConditions: {
+      adjacentRoads: { direction: string; width: number; noise: string }[];
+      nearbyBuildings: { type: string; height: number; distance: number }[];
+      populationInflow: string;
+    };
+    /** 2B. 대지 레벨·진출입 */
+    accessPlan: {
+      elevationDifference: number;  // 고저차 m
+      vehicleEntry: string[];
+      pedestrianEntry: string[];
+      separationStrategy: string;
+    };
+    /** 2C. 완충 녹지 구획 */
+    bufferGreen: {
+      noiseShielding: string;
+      privacyMeasures: string;
+      greenArea: number;           // ㎡
+    };
+  };
+
+  /** 계층 3: 공간 특화 및 설계 철학 */
+  layer3_designPhilosophy: {
+    /** 3A. 핵심 설계 콘셉트 */
+    designConcept: {
+      mainTheme: string;
+      designMotif: string;
+      keywords: string[];
+    };
+    /** 3B. 배리어프리 (★ 무장애건축 핵심) */
+    barrierFree: {
+      rampSlope: string;           // "≤1/18"
+      corridorWidth: number;       // m (≥3.3)
+      turningSpace: string;        // "1.4m×1.4m"
+      elevatorSpec: string;        // "66인승 5,000kg × 2대"
+      additionalFeatures: string[];
+    };
+    /** 3C. 수직 조닝 */
+    verticalZoning: {
+      floor: string;
+      targetGroup: string;
+      designRationale: string;
+    }[];
+    /** 3D. 특수 목적 클러스터 */
+    specialClusters: {
+      clusterName: string;
+      includedRooms: string[];
+      circulationStrategy: string;
+    }[];
+  };
+
+  /** 계층 4: 동선 및 프로그램 배치 */
+  layer4_circulation: {
+    /** 4A. 보차 분리·드롭오프존 (★ 동선 핵심) */
+    vehiclePedestrian: {
+      dropOffZones: number;
+      heavyDisabilityTime: string;  // "약 8분"
+      lightDisabilityTime: string;  // "약 5분"
+      undergroundAccess: string[];
+    };
+    /** 4B. 채광·환기 아트리움 (★ 채광 핵심) */
+    atriumPlan: {
+      type: string;         // "아트리움+중정 혼합형"
+      daylightStrategy: string;
+      ventilationStrategy: string;
+    };
+    /** 4C. 층별 프로그램 구획 */
+    floorProgram: {
+      floor: string;
+      rooms: { name: string; count: number; area: number }[];
+      coreLocation: string;
+    }[];
+  };
+
+  /** 계층 5: 구조·토목·설비 */
+  layer5_engineering: {
+    structuralSafety: {
+      seismicGrade: string;
+      analysisMethod: string;
+      specialStructures: string[];
+    };
+    civilWater: {
+      drainagePlan: string;
+      stormwaterDesign: string;
+    };
+    hvac: {
+      classroomSystem: string;
+      specialRoomSystem: string;
+      airQualityFeatures: string[];
+    };
+  };
+
+  /** 계층 6: 친환경 인증·에너지 */
+  layer6_sustainability: {
+    certificationTargets: {
+      name: string;     // "녹색건축물", "ZEB", "BF"
+      targetGrade: string;
+    }[];
+    renewableEnergy: {
+      targetRatio: number;    // %
+      systems: string[];
+    };
+    passiveDesign: string[];
+    maintenancePlan: string[];
+  };
+
+  /** 계층 7: 경제성 분석·시공 계획 */
+  layer7_economics: {
+    costBreakdown: {
+      category: string;
+      amount: number;          // 원
+    }[];
+    totalCost: number;
+    regulatoryCompliance: {
+      item: string;
+      legalStandard: string;
+      plannedValue: string;
+      status: 'pass' | 'fail';
+    }[];
+    constructionPhases: {
+      phase: number;
+      description: string;
+      scope: string[];
+    }[];
+  };
+}
+```
+
+#### 1-2. PDF 처리 전략
+
+| 방식 | 적용 | 이유 |
+|------|:----:|------|
+| **Gemini 2.5 Pro (Vision)** | ⭐ 채택 | 100만 토큰으로 PDF 전체 처리, 테이블+도면 캡션 인식 |
+| pdf.js (기존) | 보조 | 텍스트 사전 추출 후 Gemini에 보강 입력 |
+| Camelot/Tabula | 보류 | Python 서버 필요, 1단계에서는 Gemini만으로 충분 |
+
+---
+
+### Day 2 (03/30): PDF 전처리 파이프라인
+
+#### 목표
+> PDF를 Gemini에 최적으로 전달하기 위한 전처리 파이프라인 구축
+
+#### 작업 목록
+
+| # | 작업 | 산출물 |
+|---|------|--------|
+| 2-1 | PDF → 페이지별 분할 유틸리티 | `utils/pdfSplitter.ts` |
+| 2-2 | 대용량 PDF 청크 전략 (50페이지 단위) | `services/pdfChunkManager.ts` |
+| 2-3 | Gemini File API 업로드 래퍼 | `services/geminiFileUploader.ts` |
+| 2-4 | 텍스트 사전 추출 (pdf.js) + 메타데이터 | `services/pdfTextExtractor.ts` |
+| 2-5 | 추출 결과 캐싱 (localStorage/IndexedDB) | `services/analysisCache.ts` |
+
+#### 핵심 설계: 청크 전략
+
+```
+[33MB PDF, 180 페이지]
+    │
+    ├── Chunk 1: pp.1-50   → Gemini Call #1 (계층 1: 제원+면적표)
+    ├── Chunk 2: pp.51-100 → Gemini Call #2 (계층 2-3: 대지+설계철학)
+    ├── Chunk 3: pp.101-140 → Gemini Call #3 (계층 4-5: 동선+구조)
+    └── Chunk 4: pp.141-180 → Gemini Call #4 (계층 6-7: 인증+경제성)
+    
+    → 4개 결과 머지 → 최종 DesignAnalysisResult JSON
+```
+
+---
+
+### Day 3 (03/31): Gemini 구조화 추출 엔진 v1
+
+#### 목표
+> Gemini에 PDF 청크를 전송하고 21개 항목 스키마에 맞는 JSON을 반환받는 핵심 엔진
+
+#### 작업 목록
+
+| # | 작업 | 산출물 |
+|---|------|--------|
+| 3-1 | 계층별 추출 프롬프트 4종 작성 | `prompts/layer1-2.ts`, `layer3-4.ts`, `layer5.ts`, `layer6-7.ts` |
+| 3-2 | Gemini Structured Output 호출 래퍼 | `services/geminiStructuredExtractor.ts` |
+| 3-3 | 수치 정규화 엔진 (단위 변환, 쉼표 제거) | `utils/numberNormalizer.ts` |
+| 3-4 | 4-청크 병렬 호출 → 결과 머지 로직 | `services/analysisOrchestrator.ts` |
+
+#### 프롬프트 설계 원칙
+
+```
+[공통 System Prompt]
+당신은 한국 건축 설계공모 제안서 분석 전문가입니다.
+아래 PDF 문서에서 지정된 항목을 정확히 추출하여 JSON으로 반환하세요.
+
+[규칙]
+1. 수치는 반드시 숫자(Number)로 변환: "8,000제곱미터" → 8000
+2. 백분율은 소수점 2자리: "44.35퍼센트" → 44.35
+3. 금액은 원 단위 정수: "39,825,767,000원" → 39825767000
+4. 찾을 수 없는 항목은 null (추측 금지)
+5. 특수학교 관련 항목을 우선 인식
+```
+
+---
+
+### Day 4 (04/01): 계층 1~2 파서 완성 + 검증
+
+#### 목표
+> 계층 1(건축 제원) + 계층 2(대지 분석) 추출 결과를 성진학교 PDF로 검증
+
+#### 작업 목록
+
+| # | 작업 | 검증 기준 |
+|---|------|----------|
+| 4-1 | 계층 1A 파서: 기본 제원 추출 | 건폐율=44.35%, 용적률=141.65%, 높이=17.70m |
+| 4-2 | 계층 1B 파서: 주차/조경 추출 | 총주차 109대, 장애인 4대, 조경 16.76% |
+| 4-3 | 계층 1C 파서: 층별 면적표 추출 | 연면적=16,318.04㎡, 1F=2,641.73㎡ |
+| 4-4 | 계층 2A 파서: 주변 여건 분석 | 도로폭 30~35m, 8,245세대 유입 |
+| 4-5 | 계층 2B 파서: 진출입 계획 | 동측 경사로, 동서측 지하진입램프 |
+| 4-6 | 계층 2C 파서: 완충 녹지 | 학교숲 조성, 시각적 그린 오아시스 |
+| 4-7 | **정확도 측정**: 추출값 vs 원문 대조표 | **목표: 수치 정확도 90% 이상** |
+
+#### 검증 매트릭스 (계층 1A 예시)
+
+```
+┌──────────────┬──────────────┬──────────────┬────────┐
+│ 항목          │ 원문 값       │ 파서 추출값   │ 정확   │
+├──────────────┼──────────────┼──────────────┼────────┤
+│ 대지면적      │ 8,000㎡      │ ?            │ ?      │
+│ 건폐율        │ 44.35%       │ ?            │ ?      │
+│ 용적률        │ 141.65%      │ ?            │ ?      │
+│ 최고높이      │ 17.70m       │ ?            │ ?      │
+│ 연면적        │ 16,318.04㎡  │ ?            │ ?      │
+└──────────────┴──────────────┴──────────────┴────────┘
+```
+
+---
+
+### Day 5 (04/02): 계층 3~4 파서 완성 + 검증
+
+#### 목표
+> 계층 3(설계 철학·BF·조닝) + 계층 4(동선·채광·프로그램) 추출 완성
+
+#### 작업 목록
+
+| # | 작업 | 핵심 추출 대상 |
+|---|------|--------------|
+| 5-1 | 3A: 설계 콘셉트 | "러닝 루프 + 케어 루프" 이중 순환구조 |
+| 5-2 | 3B: 배리어프리 ★ | 경사로 ≤1/18, 복도 3.3m, EV 66인승 2대 |
+| 5-3 | 3C: 수직 조닝 | 유초등→2F, 중→3F, 고→4F 배치 논리 |
+| 5-4 | 3D: 특수 클러스터 | 치료재활 원스탑 클러스터 연계 |
+| 5-5 | 4A: 보차 분리 ★ | 드롭오프 3개소, 하차시간 8분/5분 |
+| 5-6 | 4B: 채광·아트리움 ★ | 아트리움+중정 혼합형 |
+| 5-7 | 4C: 층별 프로그램 | B1 주차109대, 1F 돌봄3실, 2F 유치원+초등6실 |
+| 5-8 | 정확도 측정 | **목표: 서술형 항목 핵심 키워드 80% 이상 포함** |
+
+---
+
+### Day 6 (04/03): 계층 5~7 파서 + 전체 통합
+
+#### 목표
+> 계층 5(구조·설비)·6(인증)·7(경제성) 파서 완성 → 21개 항목 전체 파이프라인 통합 테스트
+
+#### 작업 목록
+
+| # | 작업 | 핵심 추출 대상 |
+|---|------|--------------|
+| 6-1 | 5A: 구조 | 특등급 내진, 재현주기 2,400년, 3D 동적해석 |
+| 6-2 | 5B: 토목 | 우수관 D300/D450, 30년 빈도 10% 여유율 |
+| 6-3 | 5C: 공조 | 일반교실 환기유니트+바닥난방, HEPA필터 |
+| 6-4 | 6A: 인증 목표 | 녹색 4등급, ZEB 4등급, BF 일반등급 |
+| 6-5 | 6B: 신재생 | 신재생 40%+, 태양광+지열 |
+| 6-6 | 6C: 유지관리 | 베이크아웃 3회, BEMS 도입 |
+| 6-7 | 7A: 공사비 | 총 398억, 건축 190억, 토목 26억... |
+| 6-8 | 7B: 법규 적합성 | 건폐율/조경/주차/직통계단 대조표 |
+| 6-9 | 7C: 시공 로드맵 | 1단계 철거 → 2단계 신축 |
+| 6-10 | **통합 테스트**: 전체 PDF → 21개 항목 JSON 출력 | 완전성 검증 |
+
+---
+
+### Day 7 (04/04): 산출물 Level-A (분석 보고서) 출력 엔진
+
+#### 목표
+> 21개 항목 JSON → **분석 보고서 PDF** 자동 생성 (산출물 수준 A 완성)
+
+#### 작업 목록
+
+| # | 작업 | 산출물 |
+|---|------|--------|
+| 7-1 | 보고서 템플릿 설계 (jsPDF + autoTable) | `services/reportGenerator.ts` |
+| 7-2 | 표지 + 목차 자동 생성 | 프로젝트명, 일자, 로고 |
+| 7-3 | 계층 1: 제원 요약 + 면적표 테이블 | 표 렌더링 |
+| 7-4 | 계층 2: 대지 분석 요약 카드 | 텍스트+수치 혼합 |
+| 7-5 | 계층 3-4: 설계 철학·동선 요약 | 키워드 하이라이트 |
+| 7-6 | 계층 5-6: 구조·인증 체크리스트 | ✅/❌ 아이콘 |
+| 7-7 | 계층 7: 공사비 테이블 + 법규 대조표 | 핵심 산출물 |
+| 7-8 | PDF 다운로드 버튼 UI 연동 | Dashboard 패널 |
+| 7-9 | **최종 검증**: 성진학교 PDF 입력 → 보고서 출력 확인 | E2E 테스트 |
+
+#### 산출물 Level-A 출력 형식
+
+```
+╔══════════════════════════════════════╗
+║    건축 기본설계 AI 분석 보고서       ║
+║    ─────────────────────            ║
+║    프로젝트: 성진학교 신축            ║
+║    분석일: 2026-04-04               ║
+╠══════════════════════════════════════╣
+║ 1. 건축 제원 요약                    ║
+║    ┌────────┬──────────┐            ║
+║    │ 건폐율  │ 44.35%   │            ║
+║    │ 용적률  │ 141.65%  │            ║
+║    │ 최고높이 │ 17.70m   │            ║
+║    └────────┴──────────┘            ║
+║                                      ║
+║ 2. 층별 면적표                       ║
+║    [자동 생성 테이블]                 ║
+║                                      ║
+║ 3. 법규 적합성 대조표                 ║
+║    건폐율  60% ≥ 44.35% ✅ 적합      ║
+║    조경    15% ≤ 16.76% ✅ 적합      ║
+║    ...                               ║
+║                                      ║
+║ 4. 공사비 총괄표                     ║
+║    총공사비: 39,825,767,000원         ║
+║    [공종별 내역 테이블]               ║
+╚══════════════════════════════════════╝
+```
+
+---
+
+## 18. Week 2 예고: Phase B (공간 프로그래밍) 시작
+
+> Week 1의 Phase A 완성 후, Week 2에서 진행할 핵심 작업:
+
+| Day | 작업 | 목표 |
+|-----|------|------|
+| Day 8 | 특수학교 시설 표준면적 DB 구축 | 교실(66㎡), 특별교실(99㎡), 체육관 등 |
+| Day 9 | 수직 조닝 자동 배치 알고리즘 | 학령기별 층 배치 규칙 엔진 |
+| Day 10 | 수평 면적 배분 알고리즘 | 연면적 제약 내 실별 면적 자동 배분 |
+| Day 11 | 코어·동선 자동 배치 | 피난거리·BF 경사로 자동 검증 |
+| Day 12 | 층별 면적표(Excel) 자동 출력 | SheetJS 기반 |
+| Day 13 | UI 통합 + 3D prototype 연동 | 기존 SceneViewer에 층별 색상 매핑 |
+| Day 14 | 산출물 Level-B 통합 (설계 제안서) | Level-A + 공간 프로그램 + 법규 대조 |
+
+---
+
+## 19. 산출물 수준별 로드맵
+
+```
+[Level-A: 분석 보고서] ← Week 1 완성 목표
+│
+│  포함 항목:
+│  ├── 21개 항목 추출 요약
+│  ├── 건축 제원 + 면적표
+│  ├── 법규 적합성 대조표
+│  └── 공사비 총괄표
+│
+▼
+[Level-B: 설계 제안서] ← Week 2~3 목표
+│
+│  Level-A + 추가:
+│  ├── 공간 프로그램표 (층별 실 배치)
+│  ├── 설계 콘셉트 서술 (AI 생성)
+│  ├── 배리어프리 전략서
+│  ├── 동선 분석 다이어그램
+│  └── 친환경 인증 체크리스트
+│
+▼
+[Level-C: 설계공모 제출 수준] ← Week 4~6 목표
+
+   Level-B + 추가:
+   ├── 배치도 다이어그램 (SVG/PDF)
+   ├── 수직 조닝 다이어그램
+   ├── 3D 매스 prototype 연동
+   ├── 공사비 세부 내역표 (Excel)
+   └── 종합 설계 보고서 (40p+ PDF)
+```
+
+---
+
+## 20. 기술 스택 추가 (Phase A 전용)
+
+| 분류 | 기술 | 용도 | 상태 |
+|------|------|------|:----:|
+| AI 모델 | **Gemini 2.5 Pro** (Vision) | PDF 이미지+텍스트 분석, 구조화 추출 | 🔶 API 키 확인 필요 |
+| AI 모델 | Gemini 2.5 Flash Lite | 법규분석/대지분석 (기존 유지) | ✅ |
+| PDF 처리 | pdf.js (CDN) | 텍스트 사전 추출 | ✅ 기존 구현 |
+| PDF 출력 | **jsPDF + jspdf-autotable** | Level-A 보고서 PDF 생성 | 🔶 설치 필요 |
+| Excel 출력 | **SheetJS (xlsx)** | 면적표/공사비 Excel 출력 | 🔶 설치 필요 |
+| 캐싱 | IndexedDB (idb) | 대용량 분석 결과 캐싱 | 🔶 설치 필요 |
+| 수치 처리 | 자체 정규식 엔진 | 한국어 수치 표현 → Number 변환 | 🔶 신규 개발 |
+
+---

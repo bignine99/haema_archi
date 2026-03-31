@@ -493,7 +493,8 @@ function RegulationCatalogModal({ onClose }: { onClose: () => void }) {
 // ══════════════════════════════════════════════
 export default function RegulationPanel() {
     const store = useProjectStore();
-    const [analysisResult, setAnalysisResult] = useState<RegulationAnalysisResult | null>(null);
+    const analysisResult = store.regulationAnalysisResult;
+    const setAnalysisResult = store.setRegulationAnalysisResult;
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showCatalog, setShowCatalog] = useState(false);
@@ -501,7 +502,8 @@ export default function RegulationPanel() {
 
     // ── 조례분석 상태 ──
     const [ordinanceAddress, setOrdinanceAddress] = useState(store.address || '');
-    const [ordinanceResult, setOrdinanceResult] = useState<LandUseRegulationResult | null>(null);
+    const ordinanceResult = store.ordinanceResult;
+    const setOrdinanceResult = store.setOrdinanceResult;
     const [isOrdinanceLoading, setIsOrdinanceLoading] = useState(false);
     const [ordinanceError, setOrdinanceError] = useState<string | null>(null);
 
@@ -529,6 +531,11 @@ export default function RegulationPanel() {
 
     // ── 배치 분석 핸들러 ──
     const handleAnalyze = useCallback(async () => {
+        if (!store.geminiApiKey) {
+            setError('API 키가 입력되지 않았습니다. 사이드 메뉴 좌하단의 설정에서 API 키를 입력해주세요.');
+            return;
+        }
+
         setIsAnalyzing(true);
         setError(null);
         setBatchProgress(0);
@@ -829,7 +836,6 @@ export default function RegulationPanel() {
                             <AlertTriangle size={14} className="text-red-500 shrink-0" />
                             <div>
                                 <p className="text-xs font-semibold text-red-700">{ordinanceError}</p>
-                                <p className="text-[10px] text-red-500 mt-0.5">Python 서비스(포트 8010)가 실행 중인지 확인하세요.</p>
                             </div>
                         </div>
                     )}

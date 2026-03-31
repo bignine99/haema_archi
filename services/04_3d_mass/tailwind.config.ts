@@ -36,7 +36,7 @@ const config: Config = {
                 },
             },
             fontFamily: {
-                sans: ['Pretendard', 'Inter', 'system-ui', 'sans-serif'],
+                sans: ['Outfit', 'Pretendard Variable', 'Inter', 'system-ui', 'sans-serif'],
             },
             animation: {
                 'glow-pulse': 'glow-pulse 2s ease-in-out infinite',

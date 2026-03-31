@@ -4,10 +4,12 @@ import Dashboard from '@/components/ui/Dashboard';
 import RegulationPanel from '@/components/ui/RegulationPanel';
 import SiteAnalysisPanel from '@/components/ui/SiteAnalysisPanel';
 import MapPanel from '@/components/ui/MapPanel';
+import BarrierFreePanel from '@/components/ui/BarrierFreePanel';
+import SpaceProgrammingPanel from '@/components/ui/SpaceProgrammingPanel';
 import {
     Search, LayoutDashboard, Scale, MapPin, Compass,
     Network, Grid, Building, Ruler, Box,
-    Lightbulb, ImageIcon, LogOut
+    Lightbulb, ImageIcon, LogOut, ShieldCheck, Layers
 } from 'lucide-react';
 
 import { useProjectStore } from '@/store/projectStore';
@@ -114,19 +116,35 @@ function MassAddressSearch() {
     );
 }
 
-const MENU_ITEMS = [
-    { id: 'dashboard', label: '과업지시서 분석', icon: <LayoutDashboard size={20} /> },
-    { id: 'regulation', label: '법규분석', icon: <Scale size={20} /> },
-    { id: 'site', label: '대지분석', icon: <MapPin size={20} /> },
-    { id: '3dmass', label: '3D 매스', icon: <Box size={20} /> },
-    { id: 'siteplan', label: '배치도', icon: <Compass size={20} /> },
-    { id: 'bubble', label: '버블다이어그램', icon: <Network size={20} /> },
-    { id: 'floorplan', label: '평면도 및 실별면적표', icon: <Grid size={20} /> },
-    { id: 'elevation', label: '입면도', icon: <Building size={20} /> },
-    { id: 'section', label: '단면도', icon: <Ruler size={20} /> },
-    { id: 'concept_diagram', label: '개념도', icon: <Lightbulb size={20} /> },
-    { id: 'concept_image', label: '컨셉이미지', icon: <ImageIcon size={20} /> },
+const MENU_GROUPS = [
+    {
+        title: 'Phase A. 기획 및 분석',
+        items: [
+            { id: 'dashboard', label: '과업지시서 분석', icon: <LayoutDashboard size={18} /> },
+            { id: 'site', label: '대지현황 분석', icon: <MapPin size={18} /> },
+            { id: 'regulation', label: '법규/조례 검토', icon: <Scale size={18} /> },
+        ]
+    },
+    {
+        title: 'Phase B. 공간 프로그래밍',
+        items: [
+            { id: 'bf_special', label: '특화설계 & BF 검증', icon: <ShieldCheck size={18} /> },
+            { id: 'space_program', label: '층별 조닝 & 스페이스', icon: <Layers size={18} /> },
+        ]
+    },
+    {
+        title: 'Phase C. 시각화 및 제안',
+        items: [
+            { id: '3dmass', label: '3D 매스', icon: <Box size={18} /> },
+            { id: 'siteplan', label: '배치도', icon: <Compass size={18} /> },
+            { id: 'bubble', label: '버블다이어그램', icon: <Network size={18} /> },
+            { id: 'floorplan', label: '평면/입면/단면도', icon: <Grid size={18} /> },
+            { id: 'concept_diagram', label: '개념도 및 시각화', icon: <Lightbulb size={18} /> },
+        ]
+    }
 ];
+
+const allMenuItems = MENU_GROUPS.flatMap(g => g.items);
 
 export default function App() {
     const [isAuthorized, setIsAuthorized] = useState(false);
@@ -172,10 +190,10 @@ export default function App() {
     const renderPlaceholder = () => (
         <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
             <div className="w-24 h-24 mb-6 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-4xl transform hover:scale-105 transition-transform">
-                {MENU_ITEMS.find(m => m.id === activeMenu)?.icon}
+                {allMenuItems.find(m => m.id === activeMenu)?.icon}
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">
-                {MENU_ITEMS.find(m => m.id === activeMenu)?.label}
+                {allMenuItems.find(m => m.id === activeMenu)?.label}
             </h2>
             <p className="text-slate-500 text-sm">해당 모듈은 구성 중이거나 다음 프로세스에서 제공될 예정입니다.</p>
         </div>
@@ -191,6 +209,10 @@ export default function App() {
                 return renderSingleView(RegulationPanel);
             case 'site':
                 return renderSingleView(SiteAnalysisPanel);
+            case 'bf_special':
+                return renderSingleView(BarrierFreePanel);
+            case 'space_program':
+                return renderSingleView(SpaceProgrammingPanel);
             default:
                 return renderPlaceholder();
         }
@@ -242,26 +264,35 @@ export default function App() {
                             display: none;
                         }
                     `}</style>
-                    <ul className="space-y-2">
-                        {MENU_ITEMS.map(item => {
-                            const isActive = item.id === activeMenu;
-                            return (
-                                <li key={item.id}>
-                                    <button
-                                        onClick={() => setActiveMenu(item.id)}
-                                        className={`w-full text-left px-5 py-3 rounded-xl flex items-center transition-all duration-200 ${isActive
-                                            ? 'bg-blue-600 font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]'
-                                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                            }`}
-                                    >
-                                        <span className={`w-6 flex flex-shrink-0 items-center justify-center ${isActive ? 'text-white' : 'text-slate-400'}`} style={{ marginRight: '16px' }}>
-                                            {item.icon}
-                                        </span>
-                                        <span className={`text-[13px] tracking-wide whitespace-nowrap ${isActive ? 'opacity-100' : 'opacity-90'}`}>{item.label}</span>
-                                    </button>
-                                </li>
-                            )
-                        })}
+                    <ul className="space-y-6">
+                        {MENU_GROUPS.map((group, gIdx) => (
+                            <li key={gIdx} className="space-y-2">
+                                <div className="px-5 text-[10px] font-bold tracking-wider text-slate-500 mb-2">
+                                    {group.title}
+                                </div>
+                                <ul className="space-y-1">
+                                    {group.items.map(item => {
+                                        const isActive = item.id === activeMenu;
+                                        return (
+                                            <li key={item.id}>
+                                                <button
+                                                    onClick={() => setActiveMenu(item.id)}
+                                                    className={`w-full text-left px-5 py-2.5 rounded-xl flex items-center transition-all duration-200 ${isActive
+                                                        ? 'bg-blue-600 font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]'
+                                                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                                        }`}
+                                                >
+                                                    <span className={`w-5 flex flex-shrink-0 items-center justify-center ${isActive ? 'text-white' : 'text-slate-400'}`} style={{ marginRight: '14px' }}>
+                                                        {item.icon}
+                                                    </span>
+                                                    <span className={`text-[12px] tracking-wide whitespace-nowrap ${isActive ? 'opacity-100' : 'opacity-90'}`}>{item.label}</span>
+                                                </button>
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            </li>
+                        ))}
                     </ul>
                 </nav>
 
@@ -294,10 +325,10 @@ export default function App() {
                 <header className="border-b border-slate-200 shrink-0 flex items-center justify-between px-6 bg-white z-20" style={{ height: '60px' }}>
                     <div className="flex items-center gap-3">
                         <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md">
-                            {MENU_ITEMS.find(m => m.id === activeMenu)?.icon}
+                            {allMenuItems.find(m => m.id === activeMenu)?.icon}
                         </div>
                         <h2 className="font-bold text-slate-800" style={{ fontSize: '18px' }}>
-                            {MENU_ITEMS.find(m => m.id === activeMenu)?.label} 모듈
+                            {allMenuItems.find(m => m.id === activeMenu)?.label} 모듈
                         </h2>
                         {/* 3D 매스 모드일 때 주소검색창 표시 */}
                         {activeMenu === '3dmass' && (

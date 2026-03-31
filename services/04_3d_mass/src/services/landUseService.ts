@@ -68,18 +68,26 @@ export async function analyzeLandUse(address: string): Promise<LandUseRegulation
   
   console.log('[조례분석] 요청:', address);
   
-  const response = await fetch(url);
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`백엔드 서버(포트 8010) 연결 오류 또는 HTTP ${response.status}`);
+    }
+    
+    const result: LandUseRegulationResult = await response.json();
   
-  if (!response.ok) {
-    throw new Error(`조례분석 API 오류: HTTP ${response.status}`);
+    if (result.error) {
+      throw new Error(`조례분석 오류: ${result.error}`);
+    }
+    
+    console.log('[조례분석] 완료:', result.total_count, '건');
+    return result;
+  } catch (err: any) {
+    if (err.message?.includes('Failed to fetch') || err.message?.includes('ECONNREFUSED')) {
+      throw new Error('토지이용규제 백엔드 서비스(포트 8010)와 연결할 수 없습니다. \n' +
+                '서버가 실행 중인지 확인해주세요 (명령어: npm run dev:landuse)');
+    }
+    throw err;
   }
-  
-  const result: LandUseRegulationResult = await response.json();
-  
-  if (result.error) {
-    throw new Error(`조례분석 오류: ${result.error}`);
-  }
-  
-  console.log('[조례분석] 완료:', result.total_count, '건');
-  return result;
 }

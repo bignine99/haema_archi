@@ -94,10 +94,10 @@ export async function fetchLandUseRegulation(address: string): Promise<LandUseRe
 
         return data;
     } catch (err: any) {
-        if (err.message?.includes('Failed to fetch') || err.name === 'TypeError') {
+        if (err.message?.includes('Failed to fetch') || err.message?.includes('ECONNREFUSED') || err.name === 'TypeError') {
             throw new Error(
-                '토지이용규제 서비스(포트 8010)가 실행 중인지 확인하세요.\n' +
-                '실행 명령: cd services/land_use_regulation && python land_use_service.py serve'
+                '조례분석 백엔드 서비스(포트 8010)와 연결할 수 없습니다.\n' +
+                '서버가 실행 중인지 확인해주세요 (명령어: npm run dev:landuse)'
             );
         }
         throw err;

@@ -1,13 +1,54 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { searchKakaoAddress, getVworldParcel, fetchSurroundingBuildings, type KakaoAddressResult, type ParcelResult, type RealBuilding } from '@/services/gisApi';
 import { calculateMaxEnvelope, ZONE_REGULATIONS, type MaxEnvelopeResult, type SetbackResult } from '@/services/regulationEngine';
+import type { SiteAnalysisResult } from '@/services/siteAnalysisService';
+import type { RegulationAnalysisResult } from '@/services/regulationAnalysisService';
+import type { LandUseRegulationResult } from '@/services/landUseService';
 import { type ParsedProjectData } from '@/services/documentParser';
+import { generateSpaceProgramWithAI } from '@/services/geminiSpaceService';
 
 // ─── 건축 용도 타입 ───
 export type BuildingUse =
     | '다가구주택' | '다세대주택' | '공동주택(아파트)' | '오피스텔'
     | '근린생활시설' | '업무시설(오피스)' | '숙박시설' | '청년주택'
     | '교육연구시설' | '의료시설' | '종교시설';
+
+// ─── Phase B: 공간 프로그래밍 모델 ───
+export interface BarrierFreeChecklist {
+    rampSlopeConfig: number;       // 경사로 기울기 기준 (예: 18)
+    corridorWidth: number;         // 최소 복도 폭
+    wheelchairRotation: string;    // 회전 공간 규격
+    elevatorCapacity: string;      // 권장 엘리베이터 사양
+}
+
+export interface Room {
+    id: string;
+    name: string;
+    netArea: number;       // 전용면적
+    commonArea: number;    // 공용면적
+    totalArea: number;     // 합계
+    isRequired: boolean;   // 법적 필수 여부
+}
+
+export interface Zone {
+    id: string;
+    name: string;
+    rooms: Room[];
+    zoneTotalArea: number; // 합계
+}
+
+export interface FloorZoning {
+    id: string;
+    floor: string;                 // 예: '1F', 'B1F'
+    primaryUse: string;            // 예: 돌봄교실
+    secondaryUse: string[];        // 예: ['시청각교육실', '식당']
+    targetAgeGroup: string;        // 예: 유/초등, 중학, 고등
+    assignedArea: number;          // 층 배분 면적 (예상 연면적 할당 단위)
+    zones: Zone[];                 // NEW: 4Depth 조닝
+    floorTotalArea: number;        // NEW: 계산된 전체 층 면적
+    height?: number;               // NEW: 층고
+}
 
 // ─── 필지 데이터 인터페이스 ───
 export interface ParcelData {
@@ -297,6 +338,27 @@ export interface ProjectState {
     facilityList: string[];        // 시설 목록
     designDirection: string[];     // 설계 방향
 
+    // ── Persistent Analysis States ──
+    siteAnalysisResult: SiteAnalysisResult | null;
+    setSiteAnalysisResult: (result: SiteAnalysisResult | null) => void;
+    regulationAnalysisResult: RegulationAnalysisResult | null;
+    setRegulationAnalysisResult: (result: RegulationAnalysisResult | null) => void;
+    ordinanceResult: LandUseRegulationResult | null;
+    setOrdinanceResult: (result: LandUseRegulationResult | null) => void;
+
+    // Phase B State
+    barrierFreeChecklist: BarrierFreeChecklist;
+    floorZoning: FloorZoning[];
+    setBarrierFreeChecklist: (data: Partial<BarrierFreeChecklist>) => void;
+    updateFloorZoning: (id: string, data: Partial<FloorZoning>) => void;
+    addFloorZoning: (data: Omit<FloorZoning, 'id'>) => void;
+    removeFloorZoning: (id: string) => void;
+    addRoomToFloor: (floorId: string, room: Omit<Room, 'id'>) => void;
+    removeRoomFromFloor: (floorId: string, roomId: string) => void;
+    moveRoomToFloor: (roomId: string, sourceFloorId: string, targetFloorId: string) => void;
+    updateRoomArea: (floorId: string, zoneId: string, roomId: string, field: 'netArea' | 'commonArea', value: number) => void;
+    autoGenerateSpaceProgram: () => Promise<void>;
+
     // Step 2
     selectedParcelId: string | null;
     roadWidth: number;
@@ -438,8 +500,10 @@ function regulationCalculate(state: Partial<ProjectState>) {
 
 const defaultParcel = MOCK_PARCELS[0];
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
-    projectName: '미정 프로젝트',
+export const useProjectStore = create<ProjectState>()(
+    persist(
+        (set, get) => ({
+            projectName: '미정 프로젝트',
     address: defaultParcel.address,
     pnu: defaultParcel.pnu,
     landArea: defaultParcel.landArea,
@@ -461,8 +525,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     parkingRequired: 0,
 
     // 과업지시서 추가 데이터
-    constructionCost: '',
-    designScope: '',
+    constructionCost: '미정',
+    designScope: '미정',
     certifications: [],
     documentInfo: null,
 
@@ -473,6 +537,402 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     keyNotes: [],
     facilityList: [],
     designDirection: [],
+
+    siteAnalysisResult: null,
+    setSiteAnalysisResult: (result) => set({ siteAnalysisResult: result }),
+    regulationAnalysisResult: null,
+    setRegulationAnalysisResult: (result) => set({ regulationAnalysisResult: result }),
+    ordinanceResult: null,
+    setOrdinanceResult: (result) => set({ ordinanceResult: result }),
+
+    // Phase B: 공간 프로그래밍 초기값
+    barrierFreeChecklist: {
+        rampSlopeConfig: 18,
+        corridorWidth: 3.3,
+        wheelchairRotation: '1.4x1.4',
+        elevatorCapacity: '20인승 이상 (병원용 급)',
+    },
+    floorZoning: [
+        { 
+            id: 'f_b1', floor: 'B1F', primaryUse: '주차장 / 기계실', secondaryUse: ['용역원 휴게실', '기능실'], targetAgeGroup: '공동', assignedArea: 2000,
+            floorTotalArea: 2000, height: 4.5,
+            zones: [
+                { 
+                    id: 'z_b1_1', name: '지원시설영역', zoneTotalArea: 2000, 
+                    rooms: [
+                        { id: 'r_1', name: '지하주차장', netArea: 1500, commonArea: 500, totalArea: 2000, isRequired: true }
+                    ] 
+                }
+            ]
+        },
+        { 
+            id: 'f_1', floor: '1F', primaryUse: '행정실 / 중앙로비', secondaryUse: ['카페테리아', '식당', '보건실'], targetAgeGroup: '공동', assignedArea: 1500,
+            floorTotalArea: 1500, height: 4.2,
+            zones: [
+                { 
+                    id: 'z_1_1', name: '행정지원영역', zoneTotalArea: 500, 
+                    rooms: [
+                        { id: 'r_2', name: '행정실', netArea: 300, commonArea: 200, totalArea: 500, isRequired: true }
+                    ] 
+                },
+                { 
+                    id: 'z_1_2', name: '공용영역', zoneTotalArea: 1000, 
+                    rooms: [
+                        { id: 'r_3', name: '식당', netArea: 700, commonArea: 300, totalArea: 1000, isRequired: true }
+                    ] 
+                }
+            ]
+        },
+        { 
+            id: 'f_2', floor: '2F', primaryUse: '유치원 / 초등 일반학급', secondaryUse: ['돌봄교실', '기초재활실', '놀이실'], targetAgeGroup: '유치원/초등', assignedArea: 1800,
+            floorTotalArea: 1800, height: 3.9,
+            zones: [
+                { 
+                    id: 'z_2_1', name: '초등학습영역', zoneTotalArea: 1800, 
+                    rooms: [
+                        { id: 'r_4', name: '유치원 교실', netArea: 400, commonArea: 200, totalArea: 600, isRequired: true },
+                        { id: 'r_5', name: '초등 일반교실', netArea: 800, commonArea: 400, totalArea: 1200, isRequired: true }
+                    ] 
+                }
+            ]
+        },
+        { 
+            id: 'f_3', floor: '3F', primaryUse: '중학 일반학급', secondaryUse: ['컴퓨터실', '이동수업교실', '다목적실'], targetAgeGroup: '중학', assignedArea: 1800,
+            floorTotalArea: 1800, height: 3.9,
+            zones: [
+                { 
+                    id: 'z_3_1', name: '중학학습영역', zoneTotalArea: 1800, 
+                    rooms: [
+                        { id: 'r_6', name: '중학 일반교실', netArea: 1200, commonArea: 600, totalArea: 1800, isRequired: true }
+                    ] 
+                }
+            ]
+        },
+        { 
+            id: 'f_4', floor: '4F', primaryUse: '고등 일반학급 / 전공과', secondaryUse: ['전공실습실', '직업훈련실', '바리스타실'], targetAgeGroup: '고등', assignedArea: 2200,
+            floorTotalArea: 2200, height: 3.9,
+            zones: [
+                { 
+                    id: 'z_4_1', name: '고등학습영역', zoneTotalArea: 1000, 
+                    rooms: [
+                        { id: 'r_7', name: '고등 일반교실', netArea: 700, commonArea: 300, totalArea: 1000, isRequired: true }
+                    ] 
+                },
+                { 
+                    id: 'z_4_2', name: '직업훈련영역', zoneTotalArea: 1200, 
+                    rooms: [
+                        { id: 'r_8', name: '바리스타실', netArea: 400, commonArea: 200, totalArea: 600, isRequired: false },
+                        { id: 'r_9', name: '목공실', netArea: 400, commonArea: 200, totalArea: 600, isRequired: false }
+                    ] 
+                }
+            ]
+        },
+    ],
+
+    setBarrierFreeChecklist: (data) => set(state => ({ 
+        barrierFreeChecklist: { ...state.barrierFreeChecklist, ...data } 
+    })),
+    updateFloorZoning: (id, data) => set(state => ({
+        floorZoning: state.floorZoning.map(f => f.id === id ? { ...f, ...data } : f)
+    })),
+    addFloorZoning: (data) => set(state => ({
+        floorZoning: [...state.floorZoning, { 
+            ...data, 
+            id: 'f_' + Date.now(),
+            zones: [{ id: 'z_' + Date.now(), name: '기본 영역', rooms: [], zoneTotalArea: 0 }],
+            floorTotalArea: 0
+        }]
+    })),
+    removeFloorZoning: (id) => set(state => ({
+        floorZoning: state.floorZoning.filter(f => f.id !== id)
+    })),
+
+    addRoomToFloor: (floorId, room) => set(state => {
+        const newRoom = { ...room, id: 'r_' + Date.now() };
+        const newZoning = state.floorZoning.map(f => {
+            if (f.id !== floorId) return f;
+            
+            // 기존 zone이 없으면 생성
+            const zones = f.zones.length > 0 ? f.zones : [{ id: 'z_' + Date.now(), name: '기본 영역', rooms: [], zoneTotalArea: 0 }];
+            const newZones = [...zones];
+            
+            // 첫번째 zone에 추가
+            newZones[0] = {
+                ...newZones[0],
+                rooms: [...newZones[0].rooms, newRoom],
+                zoneTotalArea: newZones[0].zoneTotalArea + newRoom.totalArea
+            };
+            
+            const newTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+            return { ...f, zones: newZones, floorTotalArea: newTotal, assignedArea: newTotal };
+        });
+        return { floorZoning: newZoning };
+    }),
+
+    removeRoomFromFloor: (floorId, roomId) => set(state => {
+        const newZoning = state.floorZoning.map(f => {
+            if (f.id !== floorId) return f;
+            
+            const newZones = f.zones.map(z => {
+                const filteredRooms = z.rooms.filter(r => r.id !== roomId);
+                const zoneTotal = filteredRooms.reduce((acc, r) => acc + r.totalArea, 0);
+                return { ...z, rooms: filteredRooms, zoneTotalArea: zoneTotal };
+            });
+            
+            const newTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+            return { ...f, zones: newZones, floorTotalArea: newTotal, assignedArea: newTotal };
+        });
+        return { floorZoning: newZoning };
+    }),
+
+    moveRoomToFloor: (roomId, sourceFloorId, targetFloorId) => set(state => {
+        if (sourceFloorId === targetFloorId) return state; // 동일 층 내 이동 무시
+
+        let roomToMove: Pick<Room, 'id' | 'name' | 'netArea' | 'commonArea' | 'totalArea' | 'isRequired'> | null = null;
+        
+        // 1. 소스 층에서 실(Room) 찾고 제거
+        const withoutSource = state.floorZoning.map(f => {
+            if (f.id !== sourceFloorId) return f;
+            
+            const newZones = f.zones.map(z => {
+                const r = z.rooms.find(r => r.id === roomId);
+                if (r) roomToMove = r;
+                
+                const newRooms = z.rooms.filter(r => r.id !== roomId);
+                const zoneTotal = newRooms.reduce((acc, r) => acc + r.totalArea, 0);
+                return { ...z, rooms: newRooms, zoneTotalArea: zoneTotal };
+            });
+            const newTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+            return { ...f, zones: newZones, floorTotalArea: newTotal, assignedArea: newTotal };
+        });
+
+        if (!roomToMove) return state; // 방을 찾지 못한 경우
+
+        // 2. 타겟 층에 실(Room) 추가
+        const withTarget = withoutSource.map(f => {
+            if (f.id !== targetFloorId) return f;
+            
+            const zones = f.zones.length > 0 ? f.zones : [{ id: 'z_' + Date.now(), name: '추가된 영역', rooms: [], zoneTotalArea: 0 }];
+            const newZones = [...zones];
+            
+            // 첫번째 Zone에 추가
+            const targetZone = newZones[0];
+            const newRooms = [...targetZone.rooms, roomToMove!];
+            const zoneTotal = newRooms.reduce((acc, r) => acc + r.totalArea, 0);
+            
+            newZones[0] = { ...targetZone, rooms: newRooms, zoneTotalArea: zoneTotal };
+            
+            const newTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+            return { ...f, zones: newZones, floorTotalArea: newTotal, assignedArea: newTotal };
+        });
+
+        return { floorZoning: withTarget };
+    }),
+
+    updateRoomArea: (floorId, zoneId, roomId, field, value) => {
+        set(state => {
+            const newFloorZoning = state.floorZoning.map(floor => {
+                if (floor.id !== floorId) return floor;
+
+                const newZones = floor.zones.map(zone => {
+                    if (zone.id !== zoneId) return zone;
+
+                    const newRooms = zone.rooms.map(room => {
+                        if (room.id !== roomId) return room;
+                        
+                        const updatedRoom = { ...room, [field]: value };
+                        updatedRoom.totalArea = updatedRoom.netArea + updatedRoom.commonArea;
+                        return updatedRoom;
+                    });
+
+                    const newZoneTotal = newRooms.reduce((acc, r) => acc + r.totalArea, 0);
+                    return { ...zone, rooms: newRooms, zoneTotalArea: newZoneTotal };
+                });
+
+                const newFloorTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+                return { ...floor, zones: newZones, floorTotalArea: newFloorTotal, assignedArea: newFloorTotal };
+            });
+
+            return { floorZoning: newFloorZoning };
+        });
+        
+        // 차트 등을 위해 전체 계산 로직을 호출하거나, 연면적 경고 상태를 별도로 관리할 수 있음.
+    },
+
+    autoGenerateSpaceProgram: async () => {
+        const state = get();
+        const targetGFA = state.grossFloorArea > 0 ? state.grossFloorArea : (state.landArea * (state.floorAreaRatioLimit / 100));
+        const maxFootprint = state.landArea * (state.buildingCoverageLimit / 100);
+        
+        const constraints = {
+            grossFloorArea: targetGFA,
+            buildingFootprint: maxFootprint,
+            buildingCoverageLimit: state.buildingCoverageLimit,
+            floorAreaRatioLimit: state.floorAreaRatioLimit,
+            totalFloors: state.totalFloors > 0 ? state.totalFloors : 5
+        };
+
+        const rawText = (state.documentInfo as any)?.rawData?.rawText || '';
+        
+        try {
+            const aiResult = await generateSpaceProgramWithAI(constraints, rawText);
+            
+            if (aiResult && aiResult.length > 0) {
+                let roomIdCounter = 1;
+                let zoneIdCounter = 1;
+                
+                // 1차 파싱
+                const draftFloors = aiResult.map((f, i) => {
+                    const zones = f.zones.map(z => {
+                        const rooms = z.rooms.map(r => ({
+                            id: `r_ai_${roomIdCounter++}`,
+                            name: r.name,
+                            netArea: typeof r.netArea === 'number' ? r.netArea : 0,
+                            commonArea: typeof r.commonArea === 'number' ? r.commonArea : 0,
+                            totalArea: (typeof r.netArea === 'number' ? r.netArea : 0) + (typeof r.commonArea === 'number' ? r.commonArea : 0),
+                            isRequired: Boolean(r.isRequired)
+                        }));
+                        const zoneTotalArea = rooms.reduce((acc, r) => acc + r.totalArea, 0);
+                        return { id: `z_ai_${zoneIdCounter++}`, name: z.name, zoneTotalArea, rooms };
+                    });
+                    const floorTotalArea = zones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+                    return {
+                        id: `f_ai_${i}`,
+                        floor: f.floor || `${i + 1}F`,
+                        primaryUse: f.primaryUse || '용도 미지정',
+                        secondaryUse: [],
+                        targetAgeGroup: f.targetAgeGroup || '공통',
+                        height: f.height || 4.2,
+                        floorTotalArea,
+                        assignedArea: floorTotalArea,
+                        zones
+                    };
+                });
+
+                // Safety Normalization (오차 교정)
+                let finalFloors = draftFloors;
+
+                // 1. 개별 층 건축면적(Footprint) 오버 교정
+                finalFloors = finalFloors.map(f => {
+                    if (f.floorTotalArea > maxFootprint) {
+                        const coverageScale = (maxFootprint * 0.98) / f.floorTotalArea;
+                        const zones = f.zones.map(z => {
+                            const rooms = z.rooms.map(r => {
+                                const net = Math.round(r.netArea * coverageScale);
+                                const com = Math.round(r.commonArea * coverageScale);
+                                return { ...r, netArea: net, commonArea: com, totalArea: net + com };
+                            });
+                            return { ...z, rooms, zoneTotalArea: rooms.reduce((a, r) => a + r.totalArea, 0) };
+                        });
+                        const newZoneTotal = zones.reduce((a, z) => a + z.zoneTotalArea, 0);
+                        return { ...f, zones, floorTotalArea: newZoneTotal, assignedArea: newZoneTotal };
+                    }
+                    return f;
+                });
+
+                // 2. 전체 연면적 한도 교정
+                const generatedTotalArea = finalFloors.reduce((acc, f) => acc + f.floorTotalArea, 0);
+
+                if (generatedTotalArea > targetGFA) {
+                    console.warn(`[AI Area Warning] Generated ${generatedTotalArea} > Target ${targetGFA}. Normalizing...`);
+                    // 목표 연면적의 98%로 조정하여 "한도 초과" UI 방지
+                    const safetyScale = (targetGFA * 0.98) / generatedTotalArea;
+
+                    finalFloors = finalFloors.map(f => {
+                        const zones = f.zones.map(z => {
+                            const rooms = z.rooms.map(r => {
+                                const net = Math.round(r.netArea * safetyScale);
+                                const com = Math.round(r.commonArea * safetyScale);
+                                return { ...r, netArea: net, commonArea: com, totalArea: net + com };
+                            });
+                            return { ...z, rooms, zoneTotalArea: rooms.reduce((acc, r) => acc + r.totalArea, 0) };
+                        });
+                        return { ...f, zones, floorTotalArea: zones.reduce((acc, z) => acc + z.zoneTotalArea, 0), assignedArea: zones.reduce((acc, z) => acc + z.zoneTotalArea, 0) };
+                    });
+                } else if (generatedTotalArea === 0) {
+                    throw new Error("AI failed to allocate area.");
+                }
+
+                set({ floorZoning: finalFloors });
+                return;
+            }
+        } catch (e) {
+            console.error('[Space Program Generator] AI 실패, 기본 로직으로 폴백합니다.', e);
+        }
+
+        // --- Fallback (정적 스케일링 기반) ---
+        const baselineGFA = 16318;
+        const scale = (targetGFA * 0.95) / baselineGFA;
+
+        const REFERENCE_MODEL = [
+            {
+                floor: 'B1F', primaryUse: '주차장 / 기계실', targetAgeGroup: '공통', height: 4.5,
+                zones: [
+                    {
+                        name: '지하 공용 및 관리',
+                        rooms: [
+                            { name: '수중운동실', netArea: 236, commonArea: 80, isRequired: true },
+                            { name: '기계/전기실', netArea: 0, commonArea: 158, isRequired: true },
+                            { name: '주차장', netArea: 0, commonArea: 4121, isRequired: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                floor: '1F', primaryUse: '행정실 / 중앙로비', targetAgeGroup: '공통', height: 4.2,
+                zones: [
+                    {
+                        name: '학교운영 및 관리',
+                        rooms: [
+                            { name: '행정실/교장실', netArea: 91, commonArea: 30, isRequired: true },
+                            { name: '식당/돌봄교실', netArea: 540, commonArea: 170, isRequired: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                floor: '2F', primaryUse: '일반학급', targetAgeGroup: '학생', height: 3.9,
+                zones: [
+                    {
+                        name: '교육',
+                        rooms: [
+                            { name: '일반초등 1~6', netArea: 759, commonArea: 250, isRequired: true },
+                            { name: '체육관', netArea: 451, commonArea: 150, isRequired: true }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let roomIdCounter = 1;
+        let zoneIdCounter = 1;
+
+        const newFloorZoning = REFERENCE_MODEL.map((f, i) => {
+            const zones = f.zones.map(z => {
+                const rooms = z.rooms.map(r => {
+                    const mappedNet = Math.round(r.netArea * scale);
+                    const mappedCommon = Math.round(r.commonArea * scale);
+                    return {
+                        id: `r_ai_${roomIdCounter++}`, name: r.name,
+                        netArea: mappedNet, commonArea: mappedCommon,
+                        totalArea: mappedNet + mappedCommon,
+                        isRequired: r.isRequired
+                    };
+                });
+                return { id: `z_ai_${zoneIdCounter++}`, name: z.name, zoneTotalArea: rooms.reduce((a, r) => a + r.totalArea, 0), rooms };
+            });
+            const floorTotalArea = zones.reduce((a, z) => a + z.zoneTotalArea, 0);
+            return {
+                id: `f_ai_${i}`, floor: f.floor, primaryUse: f.primaryUse,
+                secondaryUse: [],
+                targetAgeGroup: f.targetAgeGroup, height: f.height,
+                floorTotalArea, assignedArea: floorTotalArea, zones
+            };
+        });
+
+        set({ floorZoning: newFloorZoning });
+    },
+
 
     selectedParcelId: defaultParcel.id,
     roadWidth: defaultParcel.roadWidth,
@@ -909,4 +1369,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const result = regulationCalculate(state);
         set(result);
     },
-}));
+        }),
+        {
+            name: 'haema-project-store', // 로컬 스토리지 키 이름
+        }
+    )
+);

@@ -8,10 +8,11 @@ declare const L: any; // Leaflet from CDN
 const VWORLD_API_KEY = process.env.VWORLD_API_KEY || '';
 
 // Vworld 타일 레이어 URL 템플릿
+// ⚠️ 반드시 /vworld-api 프록시 경로 사용 (브라우저 직접 요청 시 도메인 인증 오류 발생)
 const TILE_LAYERS = {
-    base: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Base/{z}/{y}/{x}.png`,
-    satellite: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Satellite/{z}/{y}/{x}.jpeg`,
-    hybrid: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Hybrid/{z}/{y}/{x}.png`,
+    base: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Base/{z}/{y}/{x}.png`,
+    satellite: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Satellite/{z}/{y}/{x}.jpeg`,
+    hybrid: `/vworld-api/req/wmts/1.0.0/${VWORLD_API_KEY}/Hybrid/{z}/{y}/{x}.png`,
 };
 
 // OSM 타일 (Vworld 실패 시 Fallback)

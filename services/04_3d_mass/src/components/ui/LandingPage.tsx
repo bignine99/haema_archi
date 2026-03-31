@@ -180,12 +180,28 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
     const nextSlide = () => setSlide(s => (s + 1) % SLIDES.length);
     const prevSlide = () => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length);
 
+    const bypassTriggered = useRef(false);
+
     useEffect(() => {
-        const envKey = process.env.GEMINI_API_KEY;
-        if (envKey && envKey.startsWith('AIza')) {
-            console.log('[LandingPage-3DMass] .env에서 Gemini API 키 감지');
-            setApiKey(envKey);
+        if (bypassTriggered.current) return;
+        
+        const savedKey = localStorage.getItem('haema_gemini_key');
+        if (savedKey && savedKey.startsWith('AIza')) {
+            setApiKey(savedKey);
+            setStoreApiKey(savedKey);
+
+            // [개발 편의] 로컬호스트 및 사용자님 IP는 비밀번호/클릭 없이 자동 통과
+            const host = window.location.hostname;
+            if (host === 'localhost' || host === '127.0.0.1' || host === '106.248.76.93') {
+                console.log('[Dev] 자동 로그인(Bypass) 활성화됨:', host);
+                bypassTriggered.current = true;
+                // 0.5초 대기 후 자동 진입(화면이 로딩되는 연출 유지)
+                setTimeout(() => {
+                    onEnter();
+                }, 500);
+            }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const validateApiKey = async (key: string) => {
@@ -216,19 +232,28 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
             setError('비밀번호가 일치하지 않습니다.');
             return;
         }
-        if (!apiKey.trim()) {
-            setError('API 키를 기입해주세요.');
-            return;
-        }
 
-        setIsLoading(true);
-        const isValid = await validateApiKey(apiKey.trim());
-        setIsLoading(false);
+        if (apiKey.trim()) {
+            setIsLoading(true);
+            const isValid = await validateApiKey(apiKey.trim());
+            setIsLoading(false);
+            
+            if (!isValid) {
+                setError('API 키 인증에 실패했으나, 디버깅을 위해 강제 접속합니다.');
+                // 잠시 후 진입
+                setTimeout(() => {
+                    localStorage.setItem('haema_gemini_key', apiKey.trim());
+                    setStoreApiKey(apiKey.trim());
+                    onEnter();
+                }, 1500);
+                return;
+            }
 
-        if (isValid) {
+            localStorage.setItem('haema_gemini_key', apiKey.trim());
             setStoreApiKey(apiKey.trim());
-            onEnter();
         }
+        
+        onEnter();
     };
 
     return (
@@ -236,7 +261,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
             <EditorialStyle />
 
             {/* ─── SECTION 01: HERO (Like refernece top image) ─── */}
-            <section className="relative w-full h-[100svh] min-h-[700px] flex flex-col md:flex-row items-center pt-20 px-8 md:px-16 lg:px-24 bg-[#f1f2f3]">
+            <section className="relative w-full h-[100svh] min-h-[700px] flex flex-col md:flex-row items-center md:justify-end pt-20 px-8 md:px-16 lg:px-24 bg-[#f1f2f3]">
                 
                 {/* Editorial Top Nav */}
                 <div className="absolute top-10 left-8 md:left-24 text-[9px] tracking-[0.3em] uppercase font-bold text-slate-800">
@@ -248,8 +273,8 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                     <span className="cursor-pointer hover:text-black transition-colors">Contact</span>
                 </div>
 
-                {/* Left side Abstract 3D Canvas */}
-                <div className="absolute inset-0 md:relative md:w-1/2 h-full z-0 pointer-events-none opacity-40 md:opacity-100">
+                {/* Full-screen Abstract 3D Canvas — z-20 to float above text */}
+                <div className="absolute inset-0 h-full z-20 pointer-events-none opacity-40 md:opacity-100">
                     <Canvas camera={{ position: [0, 0, 9], fov: 45 }} shadows>
                         <ambientLight intensity={0.6} />
                         <directionalLight position={[10, 15, 10]} intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />

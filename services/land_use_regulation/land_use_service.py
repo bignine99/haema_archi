@@ -954,7 +954,7 @@ if __name__ == "__main__":
         print(f"[API  ] VWorld getLandUseAttr (PNU → 용도지역/건폐율/용적률)")
         print(f"[DOCS ] http://localhost:{SERVICE_PORT}/docs\n")
         # uvicorn.run()에 reload=True를 명시적으로 주려면 파일 문자열을 넘겨야 함
-        uvicorn.run("land_use_service:create_app", host="127.0.0.1", port=SERVICE_PORT, reload=True)
+        uvicorn.run("land_use_service:app", host="127.0.0.1", port=SERVICE_PORT, reload=True)
     else:
         # ── 테스트 모드: 직접 주소 입력 ──
         # Windows 콘솔 UTF-8 출력 설정 (테스트 모드에서만)

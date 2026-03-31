@@ -130,11 +130,17 @@ function SwotCard({ category, items }: { category: string; items: string[] }) {
 // ══════════════════════════════════════
 export default function SiteAnalysisPanel() {
     const store = useProjectStore();
-    const [result, setResult] = useState<SiteAnalysisResult | null>(null);
+    const result = store.siteAnalysisResult;
+    const setResult = store.setSiteAnalysisResult;
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleAnalyze = useCallback(async () => {
+        if (!store.geminiApiKey) {
+            setError('API 키가 입력되지 않았습니다. 메인 화면 또는 설정에서 API 키를 입력해주세요.');
+            return;
+        }
+
         setIsAnalyzing(true);
         setError(null);
         try {
@@ -158,7 +164,7 @@ export default function SiteAnalysisPanel() {
             if (res) {
                 setResult(res);
             } else {
-                setError('AI 대지분석에 실패했습니다. 다시 시도해주세요.');
+                setError('AI 대지분석에 실패했습니다. (API 키 확인 요망)');
             }
         } catch (err: any) {
             setError(err?.message || '대지분석 중 오류가 발생했습니다.');

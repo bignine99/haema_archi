@@ -1,12 +1,12 @@
 import { Suspense, lazy, useState, useCallback, useRef, useEffect } from 'react';
 import MapPanel from '@/components/ui/MapPanel';
-import Dashboard from '@/components/ui/Dashboard';
 import SiteAnalysisPanel from '@/components/ui/SiteAnalysisPanel';
 import RegulationPanel from '@/components/ui/RegulationPanel';
 import LandingPage from '@/components/ui/LandingPage';
 import SunlightPanel from '@/components/ui/SunlightPanel';
 import SunlightGuide from '@/components/ui/SunlightGuide';
 import ShadowAnalysisPanel from '@/components/ui/ShadowAnalysisPanel';
+import BarrierFreePanel from '@/components/ui/BarrierFreePanel';
 import { type ShadowAnalysisResult } from '@/components/three/ShadowAnalysis';
 import { useProjectStore, TYPOLOGY_LABELS, type TypologyType } from '@/store/projectStore';
 import { type KakaoAddressResult } from '@/services/gisApi';
@@ -14,33 +14,52 @@ import { calculateSunPosition, type SunPosition } from '@/utils/sunCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Box, MapPin, ShieldCheck, BarChart3, FileText,
-    ChevronLeft, ChevronRight, Search, Loader2, Globe, RotateCw, Eye, EyeOff, Boxes, Sun, LogOut
+    ChevronLeft, ChevronRight, Search, Loader2, Globe, RotateCw, Eye, EyeOff, Boxes, Sun, LogOut,
+    ClipboardList, Home, Wrench, Leaf, Coins,
+    Scale, Compass, Network, Grid, Lightbulb, ImageIcon, Layers
 } from 'lucide-react';
 
 const SceneViewer = lazy(() => import('@/components/three/SceneViewer'));
 const AIMassPanel = lazy(() => import('@/components/ui/AIMassPanel'));
+const SpecsAnalysisPanel = lazy(() => import('@/components/ui/SpecsAnalysisPanel'));
+const SpaceProgrammingPanel = lazy(() => import('@/components/ui/SpaceProgrammingPanel'));
+const Dashboard = lazy(() => import('@/components/ui/Dashboard'));
 
-type MenuId = '3dmass' | 'site' | 'regulation' | 'aimass' | 'profitability' | 'documents';
+type MenuId = 'dashboard' | 'site' | 'regulation' | 'bf_special' | 'space_program' | '3dmass' | 'siteplan' | 'bubble' | 'floorplan' | 'concept_diagram';
 
-interface MenuItem {
-    id: MenuId;
-    label: string;
-    icon: React.ElementType;
-    available: boolean;
-}
-
-const MENU_ITEMS: MenuItem[] = [
-    { id: 'documents', label: '과업지시서', icon: FileText, available: true },
-    { id: 'site', label: '대지 분석', icon: MapPin, available: true },
-    { id: 'regulation', label: '법규 검토', icon: ShieldCheck, available: true },
-    { id: '3dmass', label: '3D 사이트', icon: Globe, available: true },
-    { id: 'aimass', label: 'AI 매스 설계', icon: Boxes, available: true },
-    { id: 'profitability', label: '사업성 분석', icon: BarChart3, available: false },
+const MENU_GROUPS = [
+    {
+        title: 'Phase A. 기획 및 분석',
+        items: [
+            { id: 'dashboard', label: '과업지시서 & 개요', icon: <FileText size={18} /> },
+            { id: 'site', label: '대지현황 분석', icon: <MapPin size={18} /> },
+            { id: 'regulation', label: '법규/조례 검토', icon: <Scale size={18} /> },
+        ]
+    },
+    {
+        title: 'Phase B. 공간 프로그래밍',
+        items: [
+            { id: 'bf_special', label: '특화설계 & BF 검증', icon: <ShieldCheck size={18} /> },
+            { id: 'space_program', label: '층별 조닝 & 스페이스', icon: <Layers size={18} /> },
+        ]
+    },
+    {
+        title: 'Phase C. 시각화 및 제안',
+        items: [
+            { id: '3dmass', label: '3D 매스', icon: <Box size={18} /> },
+            { id: 'siteplan', label: '배치도', icon: <Compass size={18} /> },
+            { id: 'bubble', label: '버블다이어그램', icon: <Network size={18} /> },
+            { id: 'floorplan', label: '평면/입면/단면도', icon: <Grid size={18} /> },
+            { id: 'concept_diagram', label: '개념도 및 시각화', icon: <Lightbulb size={18} /> },
+        ]
+    }
 ];
+
+const allMenuItems = MENU_GROUPS.flatMap(g => g.items);
 
 function LoadingSpinner() {
     return (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center h-full w-full">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
                 <p className="text-xs text-slate-500">3D 엔진 로딩 중...</p>
@@ -56,7 +75,6 @@ function Floating3DToolbar() {
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
     const [kakaoResults, setKakaoResults] = useState<KakaoAddressResult[]>([]);
-    const [showTypology, setShowTypology] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -98,7 +116,7 @@ function Floating3DToolbar() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && executeSearch()}
                         className="bg-transparent border-none outline-none text-[11px] text-slate-800 placeholder:text-slate-400 w-[180px]"
-                        placeholder="주소 검색..."
+                        placeholder={store.address || "주소 검색..."}
                     />
                     <button
                         onClick={executeSearch}
@@ -127,11 +145,9 @@ function Floating3DToolbar() {
                 </AnimatePresence>
             </div>
 
-            {/* ── 매스 타입 도구바 (제거됨 - AIMassPanel로 이동) ── */}
-
             {/* ── 매스 메트릭 (좌하단 플로팅) ── */}
             {store.massingResult && !store.massingResult.error && (
-                <div className="absolute bottom-16 left-3 z-20 bg-white/85 backdrop-blur-xl rounded-xl shadow-lg border border-white/60 px-3 py-2 text-[10px]">
+                <div className="absolute bottom-6 left-3 z-30 bg-white/85 backdrop-blur-xl rounded-xl shadow-lg border border-white/60 px-3 py-2 text-[10px]">
                     <div className="flex items-center gap-3">
                         <div><span className="text-slate-400">건폐율</span> <span className="font-bold text-orange-700">{store.massingResult.calculated_coverage_pct}%</span></div>
                         <div><span className="text-slate-400">용적률</span> <span className="font-bold text-amber-700">{store.massingResult.calculated_far_pct}%</span></div>
@@ -146,8 +162,7 @@ function Floating3DToolbar() {
 
 export default function App() {
     const [entered, setEntered] = useState(false);
-    const [activeMenu, setActiveMenu] = useState<MenuId>('documents');
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [activeMenu, setActiveMenu] = useState<MenuId>('space_program');
 
     // 일조 시뮬레이션 상태
     const [sunlightEnabled, setSunlightEnabled] = useState(false);
@@ -156,366 +171,228 @@ export default function App() {
 
     // 그림자 분석 상태
     const [shadowAnalysisRequest, setShadowAnalysisRequest] = useState(0);
-    const [showShadowHeatmap, setShowShadowHeatmap] = useState(true);
+    const [showShadowHeatmap, setShowShadowHeatmap] = useState(false);
     const [shadowResult, setShadowResult] = useState<ShadowAnalysisResult | null>(null);
     const [showShadowPanel, setShowShadowPanel] = useState(false);
 
     const store = useProjectStore();
 
-    // API 키 입력 전 랜딩 페이지
     if (!entered) {
         return <LandingPage onEnter={() => setEntered(true)} />;
     }
 
-    const handleNavigate = (menuId: string) => {
-        const item = MENU_ITEMS.find(m => m.id === menuId);
-        if (item?.available) setActiveMenu(menuId as MenuId);
-    };
+    // 3D 매스 전용 뷰 
+    const render3DMassView = () => (
+        <div className="h-full w-full relative overflow-hidden bg-slate-50 flex-1 flex flex-col min-h-0">
+            {/* 3D Viewer Full Area */}
+            <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-200">
+                <Suspense fallback={<LoadingSpinner />}>
+                    <SceneViewer
+                        sunPosition={sunPosition}
+                        sunlightEnabled={sunlightEnabled}
+                        shadowAnalysisRequest={shadowAnalysisRequest}
+                        showShadowHeatmap={showShadowHeatmap}
+                        onShadowResult={setShadowResult}
+                    />
+                </Suspense>
 
-    // 3D 뷰어가 필요한 메뉴 ('3dmass'와 'aimass' 모두 3D 캔버스를 공유)
-    const needs3D = activeMenu === '3dmass' || activeMenu === 'aimass';
-
-    return (
-        <div className="h-screen w-screen flex overflow-hidden bg-slate-100">
-            {/* ════ 좌측 네비게이션 바 ════ */}
-            <motion.div
-                animate={{ width: sidebarCollapsed ? 56 : 220 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="h-full bg-white border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-30"
-            >
-                {/* 로고 */}
-                <div className="flex items-center gap-2.5 px-3 py-4 border-b border-slate-100">
-                    <div
-                        className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center font-bold text-white text-sm shrink-0"
-                        style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
-                    >H</div>
-                    {!sidebarCollapsed && (
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="min-w-0"
-                        >
-                            <h1
-                                className="text-sm font-bold bg-clip-text text-transparent whitespace-nowrap"
-                                style={{
-                                    backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15)',
-                                    backgroundSize: '200% 100%',
-                                    animation: 'haemaColorShift 3s linear infinite',
-                                }}
-                            >HAEMA ARCHI</h1>
-                            <p className="text-[9px] text-slate-400 -mt-0.5">AI 건축기획설계</p>
-                        </motion.div>
+                {/* 플로팅 검색바 및 메트릭 오버레이 */}
+                <Floating3DToolbar />
+                
+                {/* 3D UI Panels */}
+                <AnimatePresence>
+                    {showShadowPanel && shadowResult && (
+                        <ShadowAnalysisPanel
+                            result={shadowResult}
+                            onClose={() => setShowShadowPanel(false)}
+                        />
                     )}
-                </div>
+                </AnimatePresence>
 
-                {/* 메뉴 */}
-                <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
-                    {MENU_ITEMS.map(item => {
-                        const isActive = activeMenu === item.id;
-                        const show3DTools = item.id === '3dmass' && (activeMenu === '3dmass' || activeMenu === 'aimass') && !sidebarCollapsed;
-                        return (
-                            <div key={item.id}>
-                                <button
-                                    onClick={() => item.available && setActiveMenu(item.id)}
-                                    disabled={!item.available}
-                                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all ${isActive
-                                        ? 'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 shadow-sm border border-orange-100'
-                                        : item.available
-                                            ? 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-                                            : 'text-slate-300 cursor-not-allowed'
-                                        }`}
-                                    title={item.label}
-                                >
-                                    <item.icon size={16} className={isActive ? 'text-orange-500' : ''} />
-                                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                                    {!item.available && !sidebarCollapsed && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 ml-auto">준비중</span>
-                                    )}
-                                </button>
-
-                                {/* ── 3D 사이트 서브메뉴: 분석 도구 ── */}
-                                <AnimatePresence>
-                                    {show3DTools && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.25 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="ml-4 mt-1 mb-1 pl-3 border-l-2 border-orange-200 space-y-0.5">
-                                                <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest px-2 pt-1 pb-1.5">Analysis Tools</p>
-                                                
-                                                {/* 일조 시뮬레이션 */}
-                                                <button
-                                                    onClick={() => setSunlightEnabled(!sunlightEnabled)}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                                                        sunlightEnabled
-                                                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                                    }`}
-                                                >
-                                                    <Sun size={13} className={sunlightEnabled ? 'text-amber-500' : 'text-slate-400'} />
-                                                    <span>일조 시뮬레이션</span>
-                                                    <span className={`ml-auto w-6 h-3.5 rounded-full relative transition-colors ${sunlightEnabled ? 'bg-amber-400' : 'bg-slate-200'}`}>
-                                                        <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-all ${sunlightEnabled ? 'left-3' : 'left-0.5'}`} />
-                                                    </span>
-                                                </button>
-
-                                                {/* 그림자 분석 */}
-                                                <button
-                                                    onClick={() => {
-                                                        if (!sunlightEnabled) setSunlightEnabled(true);
-                                                        if (shadowResult?.status === 'done') {
-                                                            setShowShadowPanel(!showShadowPanel);
-                                                        } else {
-                                                            setShadowAnalysisRequest(Date.now());
-                                                            setShowShadowPanel(true);
-                                                        }
-                                                    }}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                                                        shadowResult?.status === 'done'
-                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                            : shadowResult?.status === 'running'
-                                                                ? 'bg-blue-50 text-blue-600 border border-blue-200 animate-pulse'
-                                                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                                    }`}
-                                                >
-                                                    <BarChart3 size={13} className={shadowResult?.status === 'done' ? 'text-emerald-500' : 'text-slate-400'} />
-                                                    <span>{shadowResult?.status === 'running' ? '분석 중...' : shadowResult?.status === 'done' ? '그림자 분석 ✓' : '그림자 분석'}</span>
-                                                </button>
-
-                                                {/* 히트맵 표시 */}
-                                                {shadowResult?.status === 'done' && (
-                                                    <button
-                                                        onClick={() => setShowShadowHeatmap(!showShadowHeatmap)}
-                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                                                            showShadowHeatmap
-                                                                ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                                                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                                        }`}
-                                                    >
-                                                        {showShadowHeatmap ? <Eye size={13} className="text-orange-500" /> : <EyeOff size={13} className="text-slate-400" />}
-                                                        <span>히트맵 표시</span>
-                                                        <span className={`ml-auto w-6 h-3.5 rounded-full relative transition-colors ${showShadowHeatmap ? 'bg-orange-400' : 'bg-slate-200'}`}>
-                                                            <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-all ${showShadowHeatmap ? 'left-3' : 'left-0.5'}`} />
-                                                        </span>
-                                                    </button>
-                                                )}
-
-                                                {/* 매스 가시성 */}
-                                                {store.massingResult && (
-                                                    <button
-                                                        onClick={() => store.setShowMassing(!store.showMassing)}
-                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                                                            store.showMassing
-                                                                ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                                                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                                        }`}
-                                                    >
-                                                        {store.showMassing ? <Eye size={13} className="text-orange-500" /> : <EyeOff size={13} className="text-slate-400" />}
-                                                        <span>매스 표시</span>
-                                                        <span className={`ml-auto w-6 h-3.5 rounded-full relative transition-colors ${store.showMassing ? 'bg-orange-400' : 'bg-slate-200'}`}>
-                                                            <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-all ${store.showMassing ? 'left-3' : 'left-0.5'}`} />
-                                                        </span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        );
-                    })}
-                </nav>
-
-                {/* 하단 유틸 (로그아웃 버튼 등) */}
-                <div className="p-2 border-t border-slate-100 flex flex-col gap-2">
-                    <button
-                        onClick={() => setEntered(false)}
-                        className="w-full py-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
-                        title="랜딩 페이지로 가기"
-                    >
-                        <LogOut size={16} />
-                        {!sidebarCollapsed && <span className="text-xs font-medium">로그아웃</span>}
-                    </button>
-                    {/* 접기 버튼 */}
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full py-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all flex items-center justify-center"
-                    >
-                        {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                    </button>
-                </div>
-            </motion.div>
-
-            {/* ════ 메인 콘텐츠 영역 ════ */}
-            <div className="flex-1 flex overflow-hidden relative">
-                <AnimatePresence mode="wait">
-                    {needs3D ? (
-                        /* ── 3D 매스 뷰: 전체 화면 + 플로팅 도구바 ── */
-                        <motion.div
-                            key="3dmass"
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="flex-1 relative overflow-hidden"
-                        >
-                            <Suspense fallback={<LoadingSpinner />}>
-                                <SceneViewer
-                                    sunlightEnabled={sunlightEnabled}
-                                    sunPosition={sunPosition}
-                                    sunlightDate={sunlightDate}
-                                    lat={store.centerLat || 37.5}
-                                    lng={store.centerLng || 127.0}
-                                    shadowAnalysisRequest={shadowAnalysisRequest}
-                                    showShadowHeatmap={showShadowHeatmap}
-                                    onShadowAnalysisResult={(r) => {
-                                        setShadowResult(r);
-                                    }}
-                                />
-                            </Suspense>
-
-                            {/* 플로팅 검색바 */}
-                            <Floating3DToolbar />
-
-                            {/* ── AI 매스 설계 제어 패널 ── */}
-                            <AnimatePresence>
-                                {activeMenu === 'aimass' && (
-                                    <Suspense fallback={<div className="absolute left-4 top-20 text-xs text-slate-400">Loading AI Mass Generator...</div>}>
-                                        <AIMassPanel onClose={() => setActiveMenu('3dmass')} />
-                                    </Suspense>
-                                )}
-                            </AnimatePresence>
-
-                            {/* ═══ 우측 상단: 기능 토글바 ═══ */}
-                            <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5">
-                                {/* 매스 가시성 토글 (매스 생성된 경우에만 표시) */}
-                                {store.massingResult && (
-                                    <button
-                                        onClick={() => store.setShowMassing(!store.showMassing)}
-                                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium shadow-lg border transition-all ${store.showMassing
-                                            ? 'bg-orange-500 text-white border-orange-400'
-                                            : 'bg-white/90 text-slate-500 border-white/60 backdrop-blur-xl'
-                                            }`}
-                                    >
-                                        {store.showMassing ? <Eye size={12} /> : <EyeOff size={12} />}
-                                        매스
-                                    </button>
-                                )}
-
-                                {/* ☀️ 일조 */}
-                                <button
-                                    onClick={() => setSunlightEnabled(!sunlightEnabled)}
-                                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium shadow-lg border transition-all ${
-                                        sunlightEnabled
-                                            ? 'bg-amber-500 text-white border-amber-400'
-                                            : 'bg-white/90 text-slate-500 border-white/60 backdrop-blur-xl hover:bg-amber-50'
-                                    }`}
-                                    title="일조 시뮬레이션 ON/OFF"
-                                >
-                                    <Sun size={12} />
-                                    일조
-                                </button>
-
-                                {/* 📊 그림자 분석 */}
-                                {sunlightEnabled && (
-                                    <button
-                                        onClick={() => {
-                                            if (shadowResult?.status === 'done') {
-                                                // 완료 상태: 패널 토글
-                                                setShowShadowPanel(!showShadowPanel);
-                                            } else {
-                                                // 분석 실행
-                                                setShadowAnalysisRequest(Date.now());
-                                                setShowShadowPanel(true);
-                                            }
-                                        }}
-                                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium shadow-lg border transition-all ${
-                                            shadowResult?.status === 'done'
-                                                ? 'bg-emerald-500 text-white border-emerald-400'
-                                                : shadowResult?.status === 'running'
-                                                    ? 'bg-blue-500 text-white border-blue-400 animate-pulse'
-                                                    : 'bg-white/90 text-slate-500 border-white/60 backdrop-blur-xl hover:bg-emerald-50'
-                                        }`}
-                                        title="그림자 히트맵 분석"
-                                        disabled={shadowResult?.status === 'running'}
-                                    >
-                                        <BarChart3 size={12} />
-                                        {shadowResult?.status === 'running' ? '분석중...' : shadowResult?.status === 'done' ? '분석완료' : '그림자'}
-                                    </button>
-                                )}
-
-                                {/* 🗺️ 히트맵 토글 */}
-                                {sunlightEnabled && shadowResult?.status === 'done' && (
-                                    <button
-                                        onClick={() => setShowShadowHeatmap(!showShadowHeatmap)}
-                                        className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-medium shadow-lg border transition-all ${
-                                            showShadowHeatmap
-                                                ? 'bg-orange-500 text-white border-orange-400'
-                                                : 'bg-white/90 text-slate-500 border-white/60 backdrop-blur-xl'
-                                        }`}
-                                        title="히트맵 표시/숨기기"
-                                    >
-                                        {showShadowHeatmap ? <Eye size={12} /> : <EyeOff size={12} />}
-                                    </button>
-                                )}
-
-                                {/* ❓ 가이드 */}
-                                {sunlightEnabled && (
-                                    <SunlightGuide visible={true} />
-                                )}
-                            </div>
-
-                            {/* ═══ 그림자 분석 결과 패널 (분석 완료 + 패널 열림 시) ═══ */}
-                            {sunlightEnabled && shadowResult?.status === 'done' && showShadowPanel && (
-                                <ShadowAnalysisPanel
-                                    enabled={true}
-                                    analysisResult={shadowResult}
-                                    onRunAnalysis={() => { setShadowAnalysisRequest(Date.now()); setShowShadowPanel(true); }}
-                                    onClear={() => setShowShadowPanel(false)}
-                                    onToggleHeatmap={() => setShowShadowHeatmap(!showShadowHeatmap)}
-                                    showHeatmap={showShadowHeatmap}
-                                />
-                            )}
-
-                            {/* 일조 시뮬레이션 UI 패널 */}
+                <AnimatePresence>
+                    {sunlightEnabled && (
+                        <>
                             <SunlightPanel
-                                enabled={sunlightEnabled}
-                                onToggle={() => setSunlightEnabled(!sunlightEnabled)}
-                                lat={store.centerLat || 37.5}
-                                lng={store.centerLng || 127.0}
-                                onSunPositionChange={(pos) => {
-                                    setSunPosition(pos);
-                                }}
+                                date={sunlightDate}
+                                onChangeDate={setSunlightDate}
+                                onCalculate={setSunPosition}
                             />
-
-                            <MapPanel isRightAligned={activeMenu === 'aimass'} />
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass-panel px-6 py-2 flex items-center gap-4 z-10 shadow-sm border border-white/40">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-16 h-[2px] bg-slate-400" />
-                                    <span className="text-[10px] text-slate-600 font-medium">10m</span>
-                                </div>
-                                <span className="text-[11px] text-slate-600 font-medium">[MSA] 3D Mass Engine</span>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        /* ── 대시보드/분석 패널 ── */
-                        <motion.div
-                            key={activeMenu}
-                            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="flex-1 overflow-hidden"
-                        >
-                            {activeMenu === 'documents' && <Dashboard onNavigate={handleNavigate} />}
-                            {activeMenu === 'site' && <SiteAnalysisPanel />}
-                            {activeMenu === 'regulation' && <RegulationPanel />}
-                            {activeMenu === 'profitability' && (
-                                <div className="flex-1 flex items-center justify-center h-full">
-                                    <p className="text-slate-400 text-sm">사업성 분석 모듈 — 준비중</p>
-                                </div>
-                            )}
-                        </motion.div>
+                            <SunlightGuide />
+                        </>
                     )}
                 </AnimatePresence>
             </div>
+        </div>
+    );
+
+    // 단일 패널 뷰 (주소검색, 대지분석, 프로젝트 대시보드, 법규분석)
+    const renderSingleView = (Component: React.ComponentType<any>, componentProps?: Record<string, any>) => (
+        <div className="flex-1 flex overflow-hidden bg-slate-100 relative p-4 lg:p-8">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
+            <div className="flex-1 h-full w-full max-w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col transition-all hover:shadow-2xl relative z-10">
+                <Suspense fallback={<LoadingSpinner />}>
+                    <Component {...(componentProps || {})} />
+                </Suspense>
+            </div>
+        </div>
+    );
+
+    // 준비 중인 메뉴 뷰
+    const renderPlaceholder = () => (
+        <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50 h-full w-full">
+            <div className="w-24 h-24 mb-6 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-4xl transform hover:scale-105 transition-transform">
+                {allMenuItems.find(m => m.id === activeMenu)?.icon}
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">
+                {allMenuItems.find(m => m.id === activeMenu)?.label}
+            </h2>
+            <p className="text-slate-500 text-sm">해당 모듈은 구성 중이거나 다음 프로세스에서 제공될 예정입니다.</p>
+        </div>
+    );
+
+    const renderContent = () => {
+        switch (activeMenu) {
+            case 'dashboard':
+                return renderSingleView(Dashboard);
+            case '3dmass':
+                return render3DMassView();
+            case 'regulation':
+                return renderSingleView(RegulationPanel);
+            case 'site':
+                return renderSingleView(SiteAnalysisPanel);
+            case 'bf_special':
+                return renderSingleView(BarrierFreePanel);
+            case 'space_program':
+                return renderSingleView(SpaceProgrammingPanel);
+            default:
+                return renderPlaceholder();
+        }
+    }
+
+    return (
+        <div className="h-screen w-screen flex overflow-hidden font-sans text-slate-800" style={{ background: 'var(--bg-primary)' }}>
+
+            {/* ════ 좌측 네비게이션 바 (Dark Theme) ════ */}
+            <aside
+                className="text-slate-300 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.15)] z-50 border-r border-slate-800 shrink-0"
+                style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '220px', backgroundColor: '#0f172a' }}
+            >
+                <div className="px-6" style={{ paddingTop: '28px', paddingBottom: '28px' }}>
+                    <style>{`
+                        @keyframes haemaColorShift {
+                            0% { background-position: 0% 50%; }
+                            100% { background-position: 200% 50%; }
+                        }
+                        @keyframes haemaGlow {
+                            0%, 100% { box-shadow: 0 0 12px rgba(251,146,60,0.3); }
+                            50% { box-shadow: 0 0 24px rgba(251,146,60,0.7), 0 0 48px rgba(251,146,60,0.3); }
+                        }
+                    `}</style>
+                    <h1 className="text-lg font-bold tracking-widest flex items-center gap-2">
+                        <span
+                            className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm shadow-lg shrink-0"
+                            style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
+                        >H</span>
+                        <span
+                            className="bg-clip-text text-transparent whitespace-nowrap"
+                            style={{
+                                backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
+                                backgroundSize: '200% 100%',
+                                animation: 'haemaColorShift 3s linear infinite',
+                            }}
+                        >HAEMA ARCHI</span>
+                    </h1>
+                    <p className="mt-2 mb-2 text-[10px] text-slate-500 tracking-wider">AI ARCHITECTURE PLATFORM</p>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto px-4 py-2" style={{ scrollbarWidth: 'none' }}>
+                    <style>{`
+                        nav::-webkit-scrollbar {
+                            display: none;
+                        }
+                    `}</style>
+                    <ul className="space-y-6">
+                        {MENU_GROUPS.map((group, gIdx) => (
+                            <li key={gIdx} className="space-y-2">
+                                <div className="px-5 text-[10px] font-bold tracking-wider text-slate-500 mb-2">
+                                    {group.title}
+                                </div>
+                                <ul className="space-y-1">
+                                    {group.items.map(item => {
+                                        const isActive = item.id === activeMenu;
+                                        return (
+                                            <li key={item.id}>
+                                                <button
+                                                    onClick={() => setActiveMenu(item.id as MenuId)}
+                                                    className={`w-full text-left px-5 py-2.5 rounded-xl flex items-center transition-all duration-200 ${isActive
+                                                        ? 'bg-blue-600 font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]'
+                                                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                                        }`}
+                                                >
+                                                    <span className={`w-5 flex flex-shrink-0 items-center justify-center ${isActive ? 'text-white' : 'text-slate-400'}`} style={{ marginRight: '14px' }}>
+                                                        {item.icon}
+                                                    </span>
+                                                    <span className={`text-[12px] tracking-wide whitespace-nowrap ${isActive ? 'opacity-100' : 'opacity-90'}`}>{item.label}</span>
+                                                </button>
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                <div className="p-6 border-t border-slate-800/60 bg-slate-900/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 flex items-center justify-center text-slate-300 font-bold text-sm shadow-inner">
+                            AD
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-white text-xs font-semibold">Admin User</span>
+                            <span className="text-[10px] text-emerald-400">Enterprise Plan</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            {/* ════ 메인 프레젠테이션 캔버스 ════ */}
+            <main
+                className="h-full bg-white relative flex flex-col min-h-0"
+                style={{ flex: 1, minWidth: 0, marginLeft: '220px' }}
+            >
+                {/* 상단 공통 헤더 */}
+                <header className="border-b border-slate-200 shrink-0 flex items-center justify-between px-6 bg-white z-20" style={{ height: '60px' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md">
+                            {allMenuItems.find(m => m.id === activeMenu)?.icon}
+                        </div>
+                        <h2 className="font-bold text-slate-800" style={{ fontSize: '18px' }}>
+                            {allMenuItems.find(m => m.id === activeMenu)?.label} 모듈
+                        </h2>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium border border-emerald-100 flex items-center gap-1.5 shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            API 연동 완료
+                        </span>
+                        <button 
+                            className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors shadow-sm"
+                            onClick={() => setEntered(false)}
+                        >
+                            <LogOut size={14} />
+                            <span>랜딩 페이지로 이동</span>
+                        </button>
+                    </div>
+                </header>
+
+                {/* 컨텐츠 렌더링 영역 */}
+                <div
+                    className="flex-1 overflow-hidden bg-slate-50/30 flex flex-col min-h-0"
+                >
+                    {renderContent()}
+                </div>
+            </main>
         </div>
     );
 }

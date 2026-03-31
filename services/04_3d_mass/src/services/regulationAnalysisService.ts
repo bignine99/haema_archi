@@ -368,7 +368,7 @@ export async function analyzeSingleBatch(
       return categories;
     } catch (error: any) {
       attempt++;
-      const isRetryable = error.message.includes('503') || error.message.includes('429') || error.message.includes('500') || error.message.includes('fetch');
+      const isRetryable = error.message.includes('503') || error.message.includes('429') || error.message.includes('500') || error.message.includes('fetch') || error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('overloaded');
       if (attempt > maxRetries || !isRetryable) {
         console.error(`[법규분석] 배치 ${batch.batchId} 최종 오류:`, error);
         throw error;

@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
 
   return {
+    base: '/haema/',   // ← ninetynine99.co.kr/haema/ 서브패스 배포용
     plugins: [
       react(),
       // 건축물대장 API 서버 사이드 미들웨어 (프록시 대신 직접 Node.js 요청)
@@ -60,7 +61,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+      // ⚠️ GEMINI_API_KEY는 define에서 제거 — 빌드 번들에 키가 포함되는 것을 원천 차단
+      // 키는 런타임에 사용자가 입력 후 localStorage에 저장됨
       'process.env.KAKAO_REST_KEY': JSON.stringify(env.KAKAO_REST_KEY || ''),
       'process.env.VWORLD_API_KEY': JSON.stringify(env.VWORLD_API_KEY || ''),
       'process.env.BUILDING_REGISTER_API_KEY': JSON.stringify(env.BUILDING_REGISTER_API_KEY || ''),
