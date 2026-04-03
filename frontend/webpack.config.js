@@ -28,7 +28,8 @@ module.exports = {
     entry: './src/main.tsx',
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'bundle.js',
+        filename: 'bundle.[contenthash].js',
+        publicPath: process.env.PUBLIC_PATH || '/',
         clean: true,
     },
     resolve: {

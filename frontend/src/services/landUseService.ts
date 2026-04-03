@@ -14,7 +14,7 @@
  */
 
 // ─── API Base URL ───
-const LAND_USE_API_BASE = 'http://localhost:8010';
+const LAND_USE_API_BASE = '/land-use-api';
 
 // ─── 규제 항목 상세 정보 ───
 export interface RegulationDetail {
