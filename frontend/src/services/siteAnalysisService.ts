@@ -249,7 +249,10 @@ export async function analyzeSite(
       return null;
     }
 
-    const parsed = JSON.parse(content);
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleanContent = match ? match[1].trim() : content.trim();
+
+    const parsed = JSON.parse(cleanContent);
 
     console.log('[대지분석] 분석 완료:', {
       sections: parsed.sections?.length,

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import { ZONE_REGULATIONS } from '@/services/regulationEngine';
 import {
@@ -20,420 +20,24 @@ import {
     ChevronDown, ChevronRight, Building, Shield, Leaf,
     Car, Heart, Zap, ClipboardList, Loader2, CheckCircle2,
     Info, X, Database, MapPinned, Target, Compass, Mountain,
-    BarChart3, GitBranch,
+    BarChart3, GitBranch, RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ────── 리스크 등급 배지 ──────
-const RISK_CONFIG = {
-    required: { label: '필수', color: 'bg-red-100 text-red-700 border-red-200', dot: '🔴' },
-    review: { label: '검토', color: 'bg-amber-100 text-amber-700 border-amber-200', dot: '🟡' },
-    info: { label: '참고', color: 'bg-blue-100 text-blue-700 border-blue-200', dot: '🔵' },
-    na: { label: '해당없음', color: 'bg-slate-100 text-slate-500 border-slate-200', dot: '⚪' },
-};
+import { CategoryAccordion } from './RegulationPanel/CategoryAccordion';
+import { RegulationCatalogModal } from './RegulationPanel/RegulationCatalogModal';
+import { SummaryCard } from './RegulationPanel/SummaryCard';
+import { REGULATION_CATALOG } from './RegulationPanel/constants';
 
-function RiskBadge({ risk }: { risk: string }) {
-    const cfg = RISK_CONFIG[risk as keyof typeof RISK_CONFIG] || RISK_CONFIG.info;
-    return (
-        <span className={`text-[12px] px-2.5 py-1 rounded-full border font-semibold ${cfg.color}`}>
-            {cfg.dot} {cfg.label}
-        </span>
-    );
-}
-
-// ────── 카테고리 아이콘 ──────
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
-    B1: Building, B2: Car, B3: Shield, B4: Heart,
-    B5: Leaf, B6: Zap, B7: ClipboardList,
-};
-
-// ────── 법규 상세 분석 모달 ──────
-function LawDetailModal({ law, items, onClose }: { law: RegulationLaw; items: string[]; onClose: () => void }) {
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg max-h-[75vh] flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* 헤더 */}
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-blue-50 shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-                        <BookOpen size={14} className="text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-[14px] font-bold text-slate-800 truncate">{law.name}</h3>
-                        <p className="text-[12px] text-slate-500">AI 상세 분석 · {items.length}개 조항</p>
-                    </div>
-                    <RiskBadge risk={law.risk} />
-                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors ml-1">
-                        <X size={16} className="text-slate-400" />
-                    </button>
-                </div>
-                {/* 본문 */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
-                    <ol className="space-y-3">
-                        {items.map((item, i) => (
-                            <li key={i} className="flex items-start gap-3 text-[13px] text-slate-700 leading-relaxed">
-                                <span className="text-indigo-400 font-mono shrink-0 mt-px text-[12px] w-5 text-right font-bold">
-                                    {i + 1}.
-                                </span>
-                                <span>{item.replace(/^\d+\.\s*/, '')}</span>
-                            </li>
-                        ))}
-                    </ol>
-                </div>
-                {/* 푸터 */}
-                <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2 bg-slate-50 shrink-0">
-                    <Info size={11} className="text-slate-400" />
-                    <span className="text-[11px] text-slate-400 italic">AI 분석 결과 · temperature=0 · 설계 참고용</span>
-                </div>
-            </motion.div>
-        </div>
-    );
-}
-
-// ────── 법규 카드 (개별 법률 + 세부내용 모달) ──────
-function LawCard({ law }: { law: RegulationLaw }) {
-    const store = useProjectStore();
-    const [showDetail, setShowDetail] = useState(false);
-    const [detailItems, setDetailItems] = useState<string[] | null>(null);
-    const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-
-    const handleDetailClick = async () => {
-        // 이미 로드된 경우 토글만
-        if (detailItems) {
-            setShowDetail(!showDetail);
-            return;
-        }
-
-        setIsLoadingDetail(true);
-        try {
-            const projectInfo: ProjectInfoForRegulation = {
-                projectName: store.projectName,
-                address: store.address,
-                zoneType: store.zoneType,
-                buildingUse: store.buildingUse,
-                landArea: store.landArea,
-                grossFloorArea: store.grossFloorArea,
-                totalFloors: store.totalFloors,
-                buildingCoverageLimit: store.buildingCoverageLimit,
-                floorAreaRatioLimit: store.floorAreaRatioLimit,
-                maxHeight: store.maxHeight,
-                certifications: store.certifications,
-            };
-            const items = await analyzeSingleLawDetail(projectInfo, law.name);
-            setDetailItems(items);
-            setShowDetail(true);
-        } catch (err) {
-            console.error('세부 분석 오류:', err);
-        } finally {
-            setIsLoadingDetail(false);
-        }
-    };
-
-    return (
-        <div className={`rounded-xl border transition-all flex flex-col h-full ${law.risk === 'required' ? 'bg-red-50/50 border-red-200' :
-            law.risk === 'review' ? 'bg-amber-50/50 border-amber-200' :
-                law.risk === 'na' ? 'bg-slate-50/50 border-slate-200 opacity-50' :
-                    'bg-blue-50/30 border-blue-200'
-            }`}>
-            <div className="p-4 flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[14px] font-bold text-slate-800">{law.name}</span>
-                    <RiskBadge risk={law.risk} />
-                </div>
-                <ul className="space-y-1.5 flex-1">
-                    {law.items.slice(0, 3).map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[13px] text-slate-700">
-                            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                            <span className="leading-relaxed line-clamp-2">{item}</span>
-                        </li>
-                    ))}
-                    {law.items.length > 3 && (
-                        <li className="text-[12px] text-slate-400 italic pl-4">
-                            외 {law.items.length - 3}건...
-                        </li>
-                    )}
-                </ul>
-
-                {/* 세부내용보기 버튼 */}
-                {law.risk !== 'na' && (
-                    <button
-                        onClick={handleDetailClick}
-                        disabled={isLoadingDetail}
-                        className="mt-3 w-full py-2 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-2 transition-all
-                            bg-white/80 text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 hover:shadow-sm"
-                    >
-                        {isLoadingDetail ? (
-                            <>
-                                <Loader2 size={13} className="animate-spin" />
-                                AI 상세 분석 중...
-                            </>
-                        ) : (
-                            <>
-                                <Search size={13} />
-                                세부내용보기
-                            </>
-                        )}
-                    </button>
-                )}
-            </div>
-
-            {/* 상세 분석 결과 모달 */}
-            <AnimatePresence>
-                {showDetail && detailItems && detailItems.length > 0 && (
-                    <LawDetailModal law={law} items={detailItems} onClose={() => setShowDetail(false)} />
-                )}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-// ────── 카테고리 아코디언 ──────
-function CategoryAccordion({ category }: { category: RegulationCategory }) {
-    const [open, setOpen] = useState(category.requiredCount > 0);
-    const Icon = CATEGORY_ICONS[category.id] || ClipboardList;
-    const applicableLaws = category.laws.filter(l => l.risk !== 'na');
-    const naLaws = category.laws.filter(l => l.risk === 'na');
-
-    return (
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
-            <button
-                onClick={() => setOpen(!open)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 bg-white hover:bg-slate-50 transition-colors text-left"
-            >
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                    <Icon size={16} className="text-slate-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <span className="text-[14px] font-bold text-slate-800 block">{category.title}</span>
-                    <span className="text-[12px] text-slate-500">
-                        {category.totalCount}개 법규 적용
-                        {category.requiredCount > 0 && (
-                            <span className="text-red-600 font-semibold ml-2">
-                                {category.requiredCount}건 필수
-                            </span>
-                        )}
-                    </span>
-                </div>
-                {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
-            </button>
-
-            <AnimatePresence>
-                {open && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="px-4 pb-4 bg-slate-50/50 border-t border-slate-100">
-                            <div className="pt-3 grid grid-cols-2 gap-3">
-                                {applicableLaws.map((law, i) => (
-                                    <LawCard key={i} law={law} />
-                                ))}
-                            </div>
-                            {naLaws.length > 0 && (
-                                <div className="text-[12px] text-slate-400 italic pt-2 mt-2 border-t border-slate-100">
-                                    해당없음: {naLaws.map(l => l.name).join(', ')}
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-// ────── 요약 대시보드 카드 ──────
-function SummaryCard({ label, count, color }: { label: string; count: number; color: string }) {
-    return (
-        <div className={`rounded-xl px-4 py-3.5 text-center border ${color}`}>
-            <p className="text-3xl font-bold">{count}</p>
-            <span className="text-[13px] font-semibold">{label}</span>
-        </div>
-    );
-}
-
-// ────── 분석 법규 설명 데이터 ──────
-const REGULATION_CATALOG = [
-    {
-        id: 'B1', title: '입지 및 도시계획 관련 법규', icon: '🏙️',
-        laws: [
-            { name: '국토의 계획 및 이용에 관한 법률', desc: '용도지역별 건축제한(건폐율/용적률/높이), 지구단위계획, 개발행위허가 기준' },
-            { name: '도시공원 및 녹지 등에 관한 법률', desc: '대지 내 녹지 확보 의무, 공원·녹지 조성 기준, 생태면적률' },
-            { name: '도로법 및 사도법', desc: '접도 의무(대지와 도로 접합 기준), 도로 점용, 시거 확보, 진입도로 폭원' },
-            { name: '문화재보호법', desc: '문화재 현상변경 허가 대상 여부, 매장문화재 지표조사 실시 의무' },
-            { name: '항공안전법', desc: '비행안전구역 내 건축물 높이 제한, 장애물 표지 설치 기준' },
-        ],
-    },
-    {
-        id: 'B5', title: '환경 및 에너지 관련 법규', icon: '🌿',
-        laws: [
-            { name: '녹색건축물 조성 지원법', desc: '에너지절약계획서, EPI, 녹색건축 인증, ZEB(제로에너지) 인증, BEMS 설치' },
-            { name: '대기/물환경보전법', desc: '비산먼지 억제, 수질오염 방지, 폐수 배출 관리' },
-            { name: '소음·진동관리법', desc: '공사중 소음 규제, 층간소음, 실내소음, 교통소음 기준' },
-            { name: '환경영향평가법', desc: '소규모 환경영향평가 대상 여부(연면적 10,000㎡ 이상 시)' },
-        ],
-    },
-    {
-        id: 'B3', title: '안전 및 방재 관련 법규', icon: '🔥',
-        laws: [
-            { name: '소방시설법', desc: '스프링클러, 옥내소화전, 비상방송, 소방차 진입로, 피난기구, 배연설비 설치 기준' },
-            { name: '화재예방법', desc: '방화구획(면적/내화시간), 방화문, 내화구조, 내장재 불연 기준, 피난계단 설치' },
-            { name: '다중이용업소 안전관리법', desc: '비상구, 완강기, 피난유도등 — 다중이용업소 해당 시 적용' },
-            { name: '지진·화산재해대책법', desc: '내진등급, 중요도계수(학교 1.5), 내진설계 기준, 구조안전확인서' },
-        ],
-    },
-    {
-        id: 'B4', title: '복지 및 보건 관련 법규', icon: '♿',
-        laws: [
-            { name: '장애인등편의법', desc: '출입구 유효폭, 경사로 기울기, 점자블록, 장애인 화장실·승강기, BF인증' },
-            { name: '노인복지법 / 영유아보육법', desc: '노유자시설 층수 제한, 피난구, 조리실 규격 — 해당 용도일 때 적용' },
-        ],
-    },
-    {
-        id: 'B2', title: '기능 및 교통 관련 법규', icon: '🚗',
-        laws: [
-            { name: '주차장법', desc: '부설주차장 설치 대수·규격·차로 폭, 장애인 주차면, 전기차 충전시설, 경사로 기준' },
-            { name: '도시교통정비 촉진법', desc: '교통영향평가 대상 여부, 진출입구 설계, 가감속차로, 대중교통 연계' },
-        ],
-    },
-    {
-        id: 'B6', title: '기반시설 및 기술 관련 법규', icon: '⚡',
-        laws: [
-            { name: '하수도법', desc: '정화조 용량 산정, 공공하수도 연결 의무, 빗물 이용시설' },
-            { name: '수도법', desc: '저수조 설치 기준, 절수설비 설치 의무, 음용수 수질 관리' },
-            { name: '신재생에너지법', desc: '공공건축물 신재생에너지 의무설치 비율(총 에너지의 15% 이상)' },
-            { name: '정보통신 / 전기공사업법', desc: '구내통신선로, 초고속통신 인증, 전기설비 안전 기준, 비상발전설비' },
-        ],
-    },
-    {
-        id: 'B7', title: '기타 특수 관련 법규', icon: '📋',
-        laws: [
-            { name: '주택법', desc: '공동주택 건설 기준 — 주택 용도일 때 적용' },
-            { name: '교육환경 보호법', desc: '학교 경계 200m 상대정화구역, 교육환경평가서 제출 — 교육시설 시 적용' },
-            { name: '건축물관리법', desc: '해체계획서, 유지관리 설계, 정기 안전점검' },
-            { name: '학교시설사업 촉진법', desc: '교실 면적·채광·환기 기준, 운동장 확보, 특수교실 — 교육시설 시 적용' },
-            { name: '학교보건법', desc: '환기량(21.6㎥/인·h), 조도(교실 300lux), 음용수, 냉난방 — 교육시설 시 적용' },
-        ],
-    },
-    {
-        id: 'B8', title: '공공데이터 기반 지역 조례 분석', icon: '🏛️',
-        laws: [
-            { name: '토지이용규제 정보서비스', desc: 'VWorld API를 통한 토지이용규제 조회 — 용도지역, 용도지구, 용도구역, 도시계획시설 등' },
-            { name: '지역 건축 조례', desc: '지자체별 건폐율·용적률 상한, 높이 제한, 대지 안 공지 기준 등 조례 수치 확인' },
-            { name: '개별 규제 항목 상세', desc: '각 규제 코드별 관련 법령, 행위 제한, 설계 영향, 관리기관 정보 제공' },
-        ],
-    },
-];
-
-// ────── 분석 법규 설명 모달 ──────
-function RegulationCatalogModal({ onClose }: { onClose: () => void }) {
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={onClose}>
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <div
-                className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full mx-4 max-h-[85vh] flex flex-col"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* 모달 헤더 */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                            <BookOpen size={18} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-slate-800">분석 법규 목록 (8대 카테고리)</h3>
-                            <p className="text-[10px] text-slate-500">총 26+개 법규를 프로젝트 정보 기반으로 AI가 종합 분석합니다</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                        <X size={18} className="text-slate-500" />
-                    </button>
-                </div>
-
-                {/* 모달 본문 */}
-                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4 custom-scrollbar">
-                    {/* 안내 배너 */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
-                        <Info size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                        <div className="text-[11px] text-blue-800 leading-relaxed">
-                            <strong>분석 방식:</strong> 프로젝트 정보(용도, 면적, 층수, 인증 등)를 Gemini AI에 전달하여 각 법규별 적용 여부와
-                            구체적 수치 기준을 생성합니다. <code className="bg-blue-100 px-1 rounded">temperature=0</code> 설정으로 동일 입력에 대해 항상 일관된 결과를 보장합니다.
-                        </div>
-                    </div>
-
-                    {/* 리스크 등급 범례 */}
-                    <div className="flex items-center gap-4 text-[10px]">
-                        <span className="font-semibold text-slate-600">리스크 등급:</span>
-                        <span className="flex items-center gap-1"><span className="text-red-500">🔴</span><strong>필수</strong> — 위반 시 인허가 불가</span>
-                        <span className="flex items-center gap-1"><span className="text-amber-500">🟡</span><strong>검토</strong> — 설계 단계 확인 필요</span>
-                        <span className="flex items-center gap-1"><span className="text-blue-500">🔵</span><strong>참고</strong> — 권장사항</span>
-                        <span className="flex items-center gap-1"><span className="text-slate-400">⚪</span><strong>해당없음</strong></span>
-                    </div>
-
-                    {/* 카테고리별 법규 목록 */}
-                    {REGULATION_CATALOG.map(cat => (
-                        <div key={cat.id} className="rounded-xl border border-slate-200 overflow-hidden">
-                            <div className="bg-slate-50 px-4 py-2.5 flex items-center gap-2 border-b border-slate-200">
-                                <span className="text-base">{cat.icon}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">{cat.id}</span>
-                                <span className="text-[12px] font-bold text-slate-800">{cat.title}</span>
-                                <span className="ml-auto text-[10px] text-slate-500">{cat.laws.length}개 법규</span>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {cat.laws.map((law, i) => (
-                                    <div key={i} className="px-4 py-2.5 flex items-start gap-3 hover:bg-slate-50/50 transition-colors">
-                                        <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                                            {i + 1}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[11px] font-bold text-slate-800">{law.name}</p>
-                                            <p className="text-[10px] text-slate-500 leading-relaxed">{law.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* 하단 참고 */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
-                        <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                        <div className="text-[10px] text-amber-800 leading-relaxed">
-                            <strong>참고:</strong> 프로젝트 용도가 '교육연구시설'인 경우, B7 카테고리에 학교시설사업촉진법·학교보건법이 자동 추가됩니다.
-                            AI 분석 결과는 설계 참고용이며, 최종 법규 적합 여부는 관할 구청 및 건축사의 확인이 필요합니다.
-                        </div>
-                    </div>
-                </div>
-
-                {/* 모달 푸터 */}
-                <div className="px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-5 py-2 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition-colors"
-                    >
-                        닫기
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 // ══════════════════════════════════════════════
 // ███ 법규분석 패널 v2
 // ══════════════════════════════════════════════
 export default function RegulationPanel() {
     const store = useProjectStore();
-    const [analysisResult, setAnalysisResult] = useState<RegulationAnalysisResult | null>(null);
+    const analysisResult = store.regulationAnalysisResult;
+    const setAnalysisResult = store.setRegulationAnalysisResult;
+
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showCatalog, setShowCatalog] = useState(false);
@@ -536,13 +140,28 @@ export default function RegulationPanel() {
                         8대 카테고리 · 26+ 법규 · Gemini AI 분석 · <code className="bg-slate-100 px-1 rounded">t=0</code>
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowCatalog(true)}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-[13px] font-semibold hover:bg-blue-100 transition-colors shrink-0"
-                >
-                    <Info size={14} />
-                    분석 법규 설명
-                </button>
+                <div className="ml-auto flex items-center gap-2">
+                    {analysisResult && (
+                        <button
+                            onClick={() => {
+                                setAnalysisResult(null);
+                                setError(null);
+                                setBatchProgress(0);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-[13px] font-semibold transition-colors shrink-0"
+                        >
+                            <RotateCcw size={14} />
+                            새로고침
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowCatalog(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-[13px] font-semibold hover:bg-blue-100 transition-colors shrink-0"
+                    >
+                        <Info size={14} />
+                        분석 법규 설명
+                    </button>
+                </div>
             </div>
 
             {/* 분석 법규 카탈로그 모달 */}

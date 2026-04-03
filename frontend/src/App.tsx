@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import LandingPage from '@/components/ui/LandingPage';
 import Dashboard from '@/components/ui/Dashboard';
 import RegulationPanel from '@/components/ui/RegulationPanel';
@@ -6,16 +6,33 @@ import SiteAnalysisPanel from '@/components/ui/SiteAnalysisPanel';
 import MapPanel from '@/components/ui/MapPanel';
 import BarrierFreePanel from '@/components/ui/BarrierFreePanel';
 import SpaceProgrammingPanel from '@/components/ui/SpaceProgrammingPanel';
+import { BubbleDiagramPanel } from '@/components/ui/BubbleDiagramPanel';
+import { SpatialStrategyPanel } from '@/components/ui/SpatialStrategyPanel';
+import CirculationLayoutPanel from '@/components/ui/CirculationLayoutPanel';
+import SpecialDesignPanel from '@/components/ui/SpecialDesignPanel';
+import DesignConceptGeneratorPanel from '@/components/ui/DesignConceptGeneratorPanel';
+import ProjectCharacteristicsPanel from '@/components/ui/ProjectCharacteristicsPanel';
 import {
     Search, LayoutDashboard, Scale, MapPin, Compass,
-    Network, Grid, Building, Ruler, Box,
-    Lightbulb, ImageIcon, LogOut, ShieldCheck, Layers
+    Network, Grid, Building, Ruler, Box, PieChart,
+    Lightbulb, ImageIcon, LogOut, ShieldCheck, Layers,
+    FileText, Target, Milestone, Wrench, Settings, Leaf, Zap
 } from 'lucide-react';
 
 import { useProjectStore } from '@/store/projectStore';
 import { type KakaoAddressResult } from '@/services/gisApi';
+import { type ShadowAnalysisResult } from '@/components/three/ShadowAnalysis';
+import { type SunPosition } from '@/utils/sunCalculator';
+import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
+import { Globe, Loader2 } from 'lucide-react';
 
 const SceneViewer = lazy(() => import('@/components/three/SceneViewer'));
+const AIMassPanel = lazy(() => import('@/components/ui/AIMassPanel'));
+const ShadowAnalysisPanel = lazy(() => import('@/components/ui/ShadowAnalysisPanel'));
+const SunlightPanel = lazy(() => import('@/components/ui/SunlightPanel'));
+
+import { parseDocument } from '@/services/documentParser';
 
 function LoadingSpinner() {
     return (
@@ -28,149 +45,153 @@ function LoadingSpinner() {
     );
 }
 
-// ─── 3D 매스 헤더 주소검색 컴포넌트 ───
-function MassAddressSearch() {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<KakaoAddressResult[]>([]);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [searching, setSearching] = useState(false);
-    const searchRealAddress = useProjectStore(s => s.searchRealAddress);
-    const loadRealParcel = useProjectStore(s => s.loadRealParcel);
-    const address = useProjectStore(s => s.address);
-    const isLoading = useProjectStore(s => s.isLoading);
-    const apiError = useProjectStore(s => s.apiError);
+import Sidebar from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
+import { allMenuItems } from '@/components/layout/navigation';
 
-    const handleSearch = async () => {
-        if (!query.trim()) return;
-        setSearching(true);
-        try {
-            const res = await searchRealAddress(query);
-            setResults(res);
-            if (res && res.length > 0) {
-                // 첫 번째 검색 결과를 자동으로 선택
-                setQuery(res[0].address_name);
-                await loadRealParcel(res[0]);
-                setShowDropdown(false);
-            } else {
-                setShowDropdown(false);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setSearching(false);
-        }
-    };
-
-    const handleSelect = async (result: KakaoAddressResult) => {
-        setShowDropdown(false);
-        setQuery(result.address_name);
-        await loadRealParcel(result);
-    };
-
-    return (
-        <div className="relative flex items-center gap-2">
-            <input
-                type="text"
-                placeholder={address || "주소 검색 (예: 김해시 삼계동)"}
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 w-64 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
-            />
-            <button
-                onClick={handleSearch}
-                disabled={searching || isLoading}
-                style={{ backgroundColor: '#2563eb', color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' as any }}
-            >
-                <Search size={14} />
-                {searching ? '검색중...' : '검색'}
-            </button>
-            {isLoading && (
-                <span className="text-xs text-blue-500 animate-pulse">대지 로딩중...</span>
-            )}
-            {apiError && (
-                <span className="text-xs text-red-500 font-medium pl-1">{apiError}</span>
-            )}
-
-            {/* 카카오 검색 결과 드롭다운 */}
-            {showDropdown && results.length > 0 && (
-                <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
-                    <div className="px-3 py-1.5 bg-slate-50 border-b">
-                        <span className="text-[10px] text-blue-600 font-semibold">카카오 검색 결과 ({results.length}건)</span>
-                    </div>
-                    {results.map((r, i) => (
-                        <button
-                            key={i}
-                            onClick={() => handleSelect(r)}
-                            className="w-full px-3 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-b-0"
-                        >
-                            <div className="text-sm text-slate-800">{r.address_name}</div>
-                            {r.road_address && (
-                                <div className="text-[10px] text-slate-500">{r.road_address.address_name}</div>
-                            )}
-                        </button>
-                    ))}
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="text-rose-500 mb-2"><Globe size={32} /></div>
+                    <h3 className="text-sm font-bold text-slate-700">3D 엔진 로딩 오류</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                        {this.state.error?.message?.includes?.('Context Lost') 
+                            ? 'WebGL 렌더러가 메모리 초과로 해제되었습니다. 새 탭에서 열어주시거나 새로고침 해주세요.' 
+                            : '3D 렌더링 중 오류가 발생했습니다.'}
+                    </p>
+                    <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600">
+                        페이지 새로고침
+                    </button>
                 </div>
-            )}
+            );
+        }
+        return this.props.children;
+    }
+}
+
+function Floating3DMetrics() {
+    const store = useProjectStore();
+    if (!store.massingResult || store.massingResult.error) return null;
+    return (
+        <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 z-30 bg-white/85 backdrop-blur-xl rounded-full shadow-lg border border-white/60 px-4 py-2 text-[11px]">
+            <div className="flex items-center gap-4">
+                <div><span className="text-slate-400">건폐율</span> <span className="font-bold text-orange-700">{store.massingResult.calculated_coverage_pct?.toFixed(1) || 0}%</span></div>
+                <div><span className="text-slate-400">용적률</span> <span className="font-bold text-amber-700">{store.massingResult.calculated_far_pct?.toFixed(1) || 0}%</span></div>
+                <div><span className="text-slate-400">GFA</span> <span className="font-bold text-slate-700">{store.massingResult.total_gfa_sqm?.toLocaleString() || 0}㎡</span></div>
+                <div><span className="text-slate-400">높이</span> <span className="font-bold text-slate-700">{store.massingResult.max_height_m || 0}m/{store.massingResult.total_floors || 0}F</span></div>
+            </div>
         </div>
     );
 }
 
-const MENU_GROUPS = [
-    {
-        title: 'Phase A. 기획 및 분석',
-        items: [
-            { id: 'dashboard', label: '과업지시서 분석', icon: <LayoutDashboard size={18} /> },
-            { id: 'site', label: '대지현황 분석', icon: <MapPin size={18} /> },
-            { id: 'regulation', label: '법규/조례 검토', icon: <Scale size={18} /> },
-        ]
-    },
-    {
-        title: 'Phase B. 공간 프로그래밍',
-        items: [
-            { id: 'bf_special', label: '특화설계 & BF 검증', icon: <ShieldCheck size={18} /> },
-            { id: 'space_program', label: '층별 조닝 & 스페이스', icon: <Layers size={18} /> },
-        ]
-    },
-    {
-        title: 'Phase C. 시각화 및 제안',
-        items: [
-            { id: '3dmass', label: '3D 매스', icon: <Box size={18} /> },
-            { id: 'siteplan', label: '배치도', icon: <Compass size={18} /> },
-            { id: 'bubble', label: '버블다이어그램', icon: <Network size={18} /> },
-            { id: 'floorplan', label: '평면/입면/단면도', icon: <Grid size={18} /> },
-            { id: 'concept_diagram', label: '개념도 및 시각화', icon: <Lightbulb size={18} /> },
-        ]
-    }
-];
-
-const allMenuItems = MENU_GROUPS.flatMap(g => g.items);
-
 export default function App() {
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const [activeMenu, setActiveMenu] = useState('dashboard');
-    const geminiApiKey = useProjectStore(s => s.geminiApiKey);
-    const setGeminiApiKey = useProjectStore(s => s.setGeminiApiKey);
+    // 개발 편의상 기본 로그인 상태 true
+    const [isAuthorized, setIsAuthorized] = useState(true);
+    const [activeMenu, setActiveMenu] = useState('task_analysis');
+    const store = useProjectStore();
+    
+    // 자동 초기 데이터 세팅 (항상 과업지시서 기본값 활용)
+    useEffect(() => {
+        if (!store.documentInfo) {
+            console.log("Loading default test RFP data...");
+            fetch('/test_data/default_rfp.pdf')
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File(
+                        [blob], 
+                        '김해제2특수학교 교사 신축사업_설계용역과업지시서.pdf', 
+                        { type: 'application/pdf' }
+                    );
+                    parseDocument(file).then(parsedData => {
+                        store.updateFromDocument(file.name, parsedData);
+                        console.log("Default RFP loaded and basic data populated!");
+                    }).catch(console.error);
+                })
+                .catch(console.error);
+        }
+    }, []);
 
-    // 3D 매스 전용 뷰 (패널 제거, 3D 화면만 풀스크린 - MSA 컨테이너 연동)
+    // ─── 3D 시뮬레이션 상태 ───
+    const sunlightEnabled = store.showSunlight;
+    const showShadowHeatmap = store.showShadowAnalysis;
+    const shadowAnalysisRequest = store.showShadowAnalysis ? 1 : 0;
+    
+    const sunlightDate = { 
+        year: new Date().getFullYear(), 
+        month: store.simulationMonth, 
+        day: store.simulationDay 
+    };
+
+    const [sunPosition, setSunPosition] = useState<SunPosition | null>(null);
+    const [shadowResult, setShadowResult] = useState<ShadowAnalysisResult | null>(null);
+    const [showShadowPanel, setShowShadowPanel] = useState(false);
+    
+    useEffect(() => {
+        if (store.showShadowAnalysis) setShowShadowPanel(true);
+        else setShowShadowPanel(false);
+    }, [store.showShadowAnalysis]);
+
+    // 3D 매스 전용 뷰 (네이티브 렌더링)
     const render3DMassView = () => (
-        <div className="h-full w-full relative overflow-hidden bg-slate-50">
-            {/* MSA 분리된 컨테이너를 Iframe으로 통합 */}
-            <iframe
-                src="http://localhost:3004"
-                title="3D Mass MSA Container"
-                className="w-full h-full border-0 absolute inset-0 z-0"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            />
+        <div className="h-full w-full relative overflow-hidden flex-1 flex flex-col">
+            <AppErrorBoundary>
+                <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-200">
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <SceneViewer
+                            sunPosition={sunPosition}
+                            sunlightEnabled={sunlightEnabled}
+                            sunlightDate={sunlightDate}
+                            shadowAnalysisRequest={shadowAnalysisRequest}
+                            showShadowHeatmap={showShadowHeatmap}
+                            onShadowAnalysisResult={setShadowResult}
+                        />
+                    </Suspense>
 
-            {/* 하단 축척 바 (메인 Host 껍데기 UI에 유지) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass-panel px-6 py-2 flex items-center gap-4 z-10 shadow-sm border border-slate-300 pointer-events-none bg-white/80 backdrop-blur-md rounded-full">
-                <div className="flex items-center gap-2">
-                    <div className="w-16 h-[2px] bg-slate-400" />
-                    <span className="text-[10px] text-slate-600 font-medium">10m</span>
+                    <Floating3DMetrics />
+                    
+                    <Suspense fallback={null}>
+                        <AIMassPanel />
+                    </Suspense>
+
+                    <AnimatePresence>
+                        {showShadowPanel && shadowResult && (
+                            <Suspense fallback={null}>
+                                <ShadowAnalysisPanel
+                                    enabled={store.showShadowAnalysis}
+                                    analysisResult={shadowResult}
+                                    onRunAnalysis={() => {}}
+                                    onClear={() => setShadowResult(null)}
+                                    onToggleHeatmap={() => store.setShowShadowAnalysis(!store.showShadowAnalysis)}
+                                    showHeatmap={store.showShadowAnalysis}
+                                />
+                            </Suspense>
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {sunlightEnabled && (
+                            <Suspense fallback={null}>
+                                <SunlightPanel
+                                    enabled={sunlightEnabled}
+                                    onToggle={() => store.setShowSunlight(!store.showSunlight)}
+                                    lat={store.centerLat}
+                                    lng={store.centerLng}
+                                    onSunPositionChange={setSunPosition}
+                                />
+                            </Suspense>
+                        )}
+                    </AnimatePresence>
                 </div>
-                <span className="text-[11px] text-slate-600 font-medium whitespace-nowrap">MSA Container: 04_3d_mass</span>
-            </div>
+            </AppErrorBoundary>
         </div>
     );
 
@@ -203,16 +224,28 @@ export default function App() {
         switch (activeMenu) {
             case '3dmass':
                 return render3DMassView();
-            case 'dashboard':
+            case 'task_analysis':
                 return renderSingleView(Dashboard, { onNavigate: setActiveMenu });
+            case 'project_characteristics':
+                return renderSingleView(ProjectCharacteristicsPanel);
+            case 'concept_generator':
+                return renderSingleView(DesignConceptGeneratorPanel);
             case 'regulation':
                 return renderSingleView(RegulationPanel);
             case 'site':
                 return renderSingleView(SiteAnalysisPanel);
-            case 'bf_special':
+            case 'bf_strategy':
                 return renderSingleView(BarrierFreePanel);
-            case 'space_program':
+            case 'space_zoning':
                 return renderSingleView(SpaceProgrammingPanel);
+            case 'bubble_b':
+                return renderSingleView(BubbleDiagramPanel);
+            case 'spatial_strategy':
+                return renderSingleView(SpatialStrategyPanel);
+            case 'circulation_layout':
+                return renderSingleView(CirculationLayoutPanel);
+            case 'special_design':
+                return renderSingleView(SpecialDesignPanel);
             default:
                 return renderPlaceholder();
         }
@@ -225,96 +258,8 @@ export default function App() {
     return (
         <div className="h-screen w-screen flex overflow-hidden font-sans text-slate-800" style={{ background: 'var(--bg-primary)' }}>
 
-            {/* 최좌측 공통 네비게이션 메뉴 - position:fixed로 항상 전체 높이 고정 */}
-            <aside
-                className="text-slate-300 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.15)] z-50 border-r border-slate-800"
-                style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '220px', backgroundColor: '#0f172a' }}
-            >
-                <div className="px-6" style={{ paddingTop: '28px', paddingBottom: '28px' }}>
-                    <style>{`
-                        @keyframes haemaColorShift {
-                            0% { background-position: 0% 50%; }
-                            100% { background-position: 200% 50%; }
-                        }
-                        @keyframes haemaGlow {
-                            0%, 100% { box-shadow: 0 0 12px rgba(251,146,60,0.3); }
-                            50% { box-shadow: 0 0 24px rgba(251,146,60,0.7), 0 0 48px rgba(251,146,60,0.3); }
-                        }
-                    `}</style>
-                    <h1 className="text-lg font-bold tracking-widest flex items-center gap-2">
-                        <span
-                            className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm shadow-lg shrink-0"
-                            style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
-                        >H</span>
-                        <span
-                            className="bg-clip-text text-transparent whitespace-nowrap"
-                            style={{
-                                backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
-                                backgroundSize: '200% 100%',
-                                animation: 'haemaColorShift 3s linear infinite',
-                            }}
-                        >HAEMA ARCHI</span>
-                    </h1>
-                    <p className="mt-2 mb-2 text-[10px] text-slate-500 tracking-wider">AI ARCHITECTURE PLATFORM</p>
-                </div>
-
-                <nav className="flex-1 overflow-y-auto px-4 py-2" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                    <style>{`
-                        nav::-webkit-scrollbar {
-                            display: none;
-                        }
-                    `}</style>
-                    <ul className="space-y-6">
-                        {MENU_GROUPS.map((group, gIdx) => (
-                            <li key={gIdx} className="space-y-2">
-                                <div className="px-5 text-[10px] font-bold tracking-wider text-slate-500 mb-2">
-                                    {group.title}
-                                </div>
-                                <ul className="space-y-1">
-                                    {group.items.map(item => {
-                                        const isActive = item.id === activeMenu;
-                                        return (
-                                            <li key={item.id}>
-                                                <button
-                                                    onClick={() => setActiveMenu(item.id)}
-                                                    className={`w-full text-left px-5 py-2.5 rounded-xl flex items-center transition-all duration-200 ${isActive
-                                                        ? 'bg-blue-600 font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]'
-                                                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                                        }`}
-                                                >
-                                                    <span className={`w-5 flex flex-shrink-0 items-center justify-center ${isActive ? 'text-white' : 'text-slate-400'}`} style={{ marginRight: '14px' }}>
-                                                        {item.icon}
-                                                    </span>
-                                                    <span className={`text-[12px] tracking-wide whitespace-nowrap ${isActive ? 'opacity-100' : 'opacity-90'}`}>{item.label}</span>
-                                                </button>
-                                            </li>
-                                        )
-                                    })}
-                                </ul>
-                            </li>
-                        ))}
-                    </ul>
-                </nav>
-
-                <div className="p-6 border-t border-slate-800/60 bg-slate-900/50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 flex items-center justify-center text-slate-300 font-bold text-sm shadow-inner">
-                            AD
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-white text-xs font-semibold">Admin User</span>
-                            <span className="text-[10px] text-emerald-400">Enterprise Plan</span>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setIsAuthorized(false)}
-                        className="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-xs font-medium border border-slate-700"
-                    >
-                        <LogOut size={14} />
-                        <span>랜딩 페이지로 이동</span>
-                    </button>
-                </div>
-            </aside>
+            {/* 최좌측 공통 네비게이션 메뉴 */}
+            <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsAuthorized={setIsAuthorized} />
 
             {/* 우측 메인 프레젠테이션 캔버스 */}
             <main
@@ -322,32 +267,7 @@ export default function App() {
                 style={{ flex: 1, minWidth: 0, marginLeft: '220px' }}
             >
                 {/* 상단 공통 헤더 */}
-                <header className="border-b border-slate-200 shrink-0 flex items-center justify-between px-6 bg-white z-20" style={{ height: '60px' }}>
-                    <div className="flex items-center gap-3">
-                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md">
-                            {allMenuItems.find(m => m.id === activeMenu)?.icon}
-                        </div>
-                        <h2 className="font-bold text-slate-800" style={{ fontSize: '18px' }}>
-                            {allMenuItems.find(m => m.id === activeMenu)?.label} 모듈
-                        </h2>
-                        {/* 3D 매스 모드일 때 주소검색창 표시 */}
-                        {activeMenu === '3dmass' && (
-                            <>
-                                <div className="h-5 w-px bg-slate-300 mx-1" />
-                                <MassAddressSearch />
-                            </>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium border border-emerald-100 flex items-center gap-1.5 shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            API 연동 완료
-                        </span>
-                        <button className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors shadow-sm">
-                            <span>프로젝트 내보내기</span>
-                        </button>
-                    </div>
-                </header>
+                <Header activeMenu={activeMenu} />
 
                 {/* 컨텐츠 렌더링 영역 */}
                 <div

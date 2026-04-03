@@ -1,9 +1,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useProjectStore, MOCK_PARCELS, type ParcelData, type BuildingUse } from '@/store/projectStore';
+import { useProjectStore, MOCK_PARCELS, type ParcelData, type BuildingUse, TYPOLOGY_LABELS, type TypologyType } from '@/store/projectStore';
 import { type KakaoAddressResult } from '@/services/gisApi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Building2, Layers, Ruler, Compass, ChevronDown, Globe, Loader2, AlertCircle, Box, Eye, EyeOff, ShieldCheck, ShieldAlert, UploadCloud, FileText, CheckCircle2, X, Award } from 'lucide-react';
+import { Search, MapPin, Building2, Layers, Ruler, Compass, ChevronDown, Globe, Loader2, AlertCircle, Box, Eye, EyeOff, ShieldCheck, ShieldAlert, UploadCloud, FileText, CheckCircle2, X, Award, Boxes, RotateCw, Sun } from 'lucide-react';
 import DocumentUploader from '@/components/ui/DocumentUploader';
 
 const ZONE_TYPES = [
@@ -528,6 +528,176 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                         </div>
                     </>
                 )}
+            </div>
+
+            {/* ─── 매스 타입 선택 (Skill 7) ─── */}
+            <div className="glass-panel p-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <Boxes size={14} className="text-orange-500" />
+                    <span className="text-xs font-semibold text-slate-700">매스 타입 선택</span>
+                    <button
+                        onClick={() => store.setShowMassing(!store.showMassing)}
+                        className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${store.showMassing
+                                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        {store.showMassing ? <Eye size={10} /> : <EyeOff size={10} />}
+                        {store.showMassing ? '표시중' : '숨김'}
+                    </button>
+                </div>
+
+                {/* 7종 타입 그리드 */}
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
+                    {(Object.keys(TYPOLOGY_LABELS) as TypologyType[]).map(type => {
+                        const isSelected = store.selectedTypology === type;
+                        const result = store.allTypologyResults.find(r => r.typology_type === type);
+                        return (
+                            <button
+                                key={type}
+                                onClick={() => store.setSelectedTypology(type)}
+                                className={`text-left px-2.5 py-2 rounded-lg text-[10px] transition-all border ${isSelected
+                                        ? 'bg-orange-50 border-orange-300 shadow-md shadow-orange-100'
+                                        : 'bg-slate-50 border-transparent hover:bg-slate-100 hover:border-slate-200'
+                                    }`}
+                            >
+                                <div className={`font-semibold ${isSelected ? 'text-orange-700' : 'text-slate-700'}`}>
+                                    {TYPOLOGY_LABELS[type]}
+                                </div>
+                                {result && !result.error && (
+                                    <div className="text-[9px] text-slate-500 mt-0.5">
+                                        {result.calculated_coverage_pct}% / {result.calculated_far_pct}%
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* 생성 버튼 */}
+                <button
+                    onClick={() => store.generateMassing(store.selectedTypology)}
+                    disabled={store.massingLoading}
+                    className="w-full py-2.5 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                >
+                    {store.massingLoading ? (
+                        <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                        <RotateCw size={14} />
+                    )}
+                    {store.massingLoading ? '생성 중...' : `${TYPOLOGY_LABELS[store.selectedTypology]} 매스 생성`}
+                </button>
+
+                {/* 매스 에러 */}
+                {store.massingError && (
+                    <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                        <AlertCircle size={12} className="text-red-500 shrink-0 mt-0.5" />
+                        <span className="text-[10px] text-red-600">{store.massingError}</span>
+                    </div>
+                )}
+
+                {/* 매스 메트릭 */}
+                {store.massingResult && !store.massingResult.error && (
+                    <div className="mt-3 grid grid-cols-2 gap-1.5">
+                        <div className="bg-orange-50 rounded-lg px-2.5 py-2">
+                            <span className="text-[9px] text-orange-600">건폐율</span>
+                            <p className="text-xs font-bold text-orange-800">{store.massingResult.calculated_coverage_pct}%</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-lg px-2.5 py-2">
+                            <span className="text-[9px] text-amber-600">용적률</span>
+                            <p className="text-xs font-bold text-amber-800">{store.massingResult.calculated_far_pct}%</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg px-2.5 py-2">
+                            <span className="text-[9px] text-slate-500">연면적</span>
+                            <p className="text-xs font-bold text-slate-800">{store.massingResult.total_gfa_sqm.toLocaleString()} ㎡</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg px-2.5 py-2">
+                            <span className="text-[9px] text-slate-500">높이</span>
+                            <p className="text-xs font-bold text-slate-800">{store.massingResult.max_height_m}m / {store.massingResult.total_floors}F</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg px-2.5 py-2 col-span-2">
+                            <span className="text-[9px] text-green-600">예상 세대수</span>
+                            <p className="text-xs font-bold text-green-800">{store.massingResult.estimated_units}세대</p>
+                        </div>
+                        {store.massingResult.warnings.length > 0 && (
+                            <div className="col-span-2 bg-amber-50 rounded-lg px-2.5 py-2">
+                                {store.massingResult.warnings.map((w, i) => (
+                                    <p key={i} className="text-[9px] text-amber-700">{w}</p>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ─── 일조 시뮬레이션 (Phase 1-D) ─── */}
+            <div className="glass-panel p-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <Sun size={14} className="text-amber-500" />
+                    <span className="text-xs font-semibold text-slate-700">일조 시뮬레이션</span>
+                    <button
+                        onClick={() => store.setShowSunlight(!store.showSunlight)}
+                        className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${store.showSunlight
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        {store.showSunlight ? <Eye size={10} /> : <EyeOff size={10} />}
+                        {store.showSunlight ? '태양 ON' : '태양 OFF'}
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {/* 날짜 선택 (월) */}
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] text-slate-500">월 선택 (매월 21일 기준)</label>
+                            <span className="text-[11px] text-amber-600 font-semibold">{store.simulationMonth}월 21일</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1"
+                            max="12"
+                            step="1"
+                            value={store.simulationMonth}
+                            onChange={(e) => store.setSimulationDate(parseInt(e.target.value), 21)} // 보통 21일이 하지, 동지, 춘분, 추분과 가까움
+                            className="w-full accent-amber-500"
+                        />
+                    </div>
+                    {/* 시간 선택 */}
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] text-slate-500">시간 {store.showSunlight ? '' : '(태양 ON 필요)'}</label>
+                            <span className="text-[11px] text-blue-600 font-semibold">
+                                {Math.floor(store.simulationHour).toString().padStart(2, '0')}:{(store.simulationHour % 1 * 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min="6"
+                            max="19"
+                            step="0.5"
+                            value={store.simulationHour}
+                            onChange={(e) => store.setSimulationHour(parseFloat(e.target.value))}
+                            disabled={!store.showSunlight}
+                            className={`w-full ${store.showSunlight ? 'accent-amber-500' : 'grayscale opacity-50 cursor-not-allowed'}`}
+                        />
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-3 mt-3">
+                        <button
+                            onClick={() => store.setShowShadowAnalysis(!store.showShadowAnalysis)}
+                            className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                                store.showShadowAnalysis 
+                                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                            }`}
+                        >
+                            <Globe size={14} />
+                            {store.showShadowAnalysis ? '그림자 히트맵 끄기' : '그림자 히트맵 분석 (동지 기준)'}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* ─── 범례 ─── */}

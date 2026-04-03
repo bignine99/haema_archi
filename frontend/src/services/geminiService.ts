@@ -99,7 +99,9 @@ export async function analyzeWithGemini(documentText: string): Promise<GeminiAna
         }
 
         // JSON 파싱
-        const parsed = JSON.parse(content);
+        const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        const cleanContent = match ? match[1].trim() : content.trim();
+        const parsed = JSON.parse(cleanContent);
 
         console.log('[Gemini] 분석 완료:', {
             designDirection: parsed.designDirection?.length || 0,

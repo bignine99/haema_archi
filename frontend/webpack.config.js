@@ -55,10 +55,14 @@ module.exports = {
             template: './index.html',
         }),
         // 환경변수를 빌드 시 코드에 주입 (API 키를 소스코드에 넣지 않음)
+        // 환경변수를 빌드 시 코드에 주입 (Vite 호환성을 위해 import.meta.env도 주입)
         new webpack.DefinePlugin({
             'process.env.GEMINI_API_KEY': JSON.stringify(dotenv.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
             'process.env.KAKAO_REST_KEY': JSON.stringify(dotenv.KAKAO_REST_KEY || process.env.KAKAO_REST_KEY || ''),
             'process.env.VWORLD_API_KEY': JSON.stringify(dotenv.VWORLD_API_KEY || process.env.VWORLD_API_KEY || ''),
+            'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(dotenv.VITE_GEMINI_API_KEY || dotenv.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
+            'import.meta.env.VITE_KAKAO_REST_KEY': JSON.stringify(dotenv.VITE_KAKAO_REST_KEY || dotenv.KAKAO_REST_KEY || process.env.KAKAO_REST_KEY || ''),
+            'import.meta.env.VITE_VWORLD_API_KEY': JSON.stringify(dotenv.VITE_VWORLD_API_KEY || dotenv.VWORLD_API_KEY || process.env.VWORLD_API_KEY || ''),
         }),
     ],
     devServer: {

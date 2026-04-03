@@ -229,7 +229,9 @@ export async function analyzeRegulations(
       return null;
     }
 
-    const parsed = JSON.parse(content);
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleanContent = match ? match[1].trim() : content.trim();
+    const parsed = JSON.parse(cleanContent);
 
     // 카테고리별 아이콘 및 통계 보강
     const icons: Record<string, string> = {
@@ -452,7 +454,9 @@ export async function analyzeSingleBatch(
     const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) return [];
 
-    const parsed = JSON.parse(content);
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleanContent = match ? match[1].trim() : content.trim();
+    const parsed = JSON.parse(cleanContent);
     const icons: Record<string, string> = {
       B1: '🏙️', B2: '🚗', B3: '🔥', B4: '♿', B5: '🌿', B6: '⚡', B7: '📋',
     };
@@ -555,7 +559,9 @@ export async function analyzeSingleLawDetail(
     const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) return [];
 
-    const parsed = JSON.parse(content);
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleanContent = match ? match[1].trim() : content.trim();
+    const parsed = JSON.parse(cleanContent);
     const items = parsed.detailItems || parsed.items || [];
 
     console.log(`[법규분석] "${lawName}" 상세 분석 완료: ${items.length}개 항목`);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import {
     analyzeSite,
@@ -134,6 +134,15 @@ export default function SiteAnalysisPanel() {
     const setResult = store.setSiteAnalysisResult;
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // 프로젝트 데이터(이름, 주소, 면적, 용도)가 변경되면 이전 분석 결과 초기화
+    useEffect(() => {
+        setResult(null);
+        setError(null);
+    }, [
+        store.projectName, store.address, store.landArea, store.grossFloorArea,
+        store.buildingUse, store.zoneType, setResult
+    ]);
 
     const handleAnalyze = useCallback(async () => {
         if (!store.geminiApiKey) {

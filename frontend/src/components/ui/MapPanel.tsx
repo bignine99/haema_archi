@@ -5,7 +5,7 @@ import { MapPin, Maximize2, Minimize2, Layers, X } from 'lucide-react';
 
 declare const L: any; // Leaflet from CDN
 
-const VWORLD_API_KEY = process.env.VWORLD_API_KEY || '';
+const VWORLD_API_KEY = import.meta.env.VITE_VWORLD_API_KEY || '';
 
 // Vworld 타일 레이어 URL 템플릿
 const TILE_LAYERS = {

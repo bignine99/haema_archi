@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useCallback, useRef, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useCallback, useRef, useEffect } from 'react';
 import MapPanel from '@/components/ui/MapPanel';
 import SiteAnalysisPanel from '@/components/ui/SiteAnalysisPanel';
 import RegulationPanel from '@/components/ui/RegulationPanel';
@@ -16,22 +16,24 @@ import {
     LayoutDashboard, Box, MapPin, ShieldCheck, BarChart3, FileText,
     ChevronLeft, ChevronRight, Search, Loader2, Globe, RotateCw, Eye, EyeOff, Boxes, Sun, LogOut,
     ClipboardList, Home, Wrench, Leaf, Coins,
-    Scale, Compass, Network, Grid, Lightbulb, ImageIcon, Layers
+    Scale, Compass, Network, Grid, Lightbulb, ImageIcon, Layers,
+    Target, Zap, Settings, Milestone
 } from 'lucide-react';
 
 const SceneViewer = lazy(() => import('@/components/three/SceneViewer'));
 const AIMassPanel = lazy(() => import('@/components/ui/AIMassPanel'));
+const ControlPanel = lazy(() => import('@/components/ui/ControlPanel'));
 const SpecsAnalysisPanel = lazy(() => import('@/components/ui/SpecsAnalysisPanel'));
 const SpaceProgrammingPanel = lazy(() => import('@/components/ui/SpaceProgrammingPanel'));
 const Dashboard = lazy(() => import('@/components/ui/Dashboard'));
 
-type MenuId = 'dashboard' | 'site' | 'regulation' | 'bf_special' | 'space_program' | '3dmass' | 'siteplan' | 'bubble' | 'floorplan' | 'concept_diagram';
+type MenuId = 'task_analysis' | 'site' | 'regulation' | 'space_zoning' | 'bubble_b' | 'spatial_strategy' | 'circulation_layout' | 'special_design' | 'structural_engineering' | 'eco_strategy' | 'energy_strategy' | 'bf_strategy' | '3dmass' | 'siteplan' | 'bubble_d' | 'floorplan' | 'concept_diagram';
 
 const MENU_GROUPS = [
     {
         title: 'Phase A. 기획 및 분석',
         items: [
-            { id: 'dashboard', label: '과업지시서 & 개요', icon: <FileText size={18} /> },
+            { id: 'task_analysis', label: '과업지시서 분석', icon: <FileText size={18} /> },
             { id: 'site', label: '대지현황 분석', icon: <MapPin size={18} /> },
             { id: 'regulation', label: '법규/조례 검토', icon: <Scale size={18} /> },
         ]
@@ -39,16 +41,27 @@ const MENU_GROUPS = [
     {
         title: 'Phase B. 공간 프로그래밍',
         items: [
-            { id: 'bf_special', label: '특화설계 & BF 검증', icon: <ShieldCheck size={18} /> },
-            { id: 'space_program', label: '층별 조닝 & 스페이스', icon: <Layers size={18} /> },
+            { id: 'space_zoning', label: '층별 조닝 & 스페이스', icon: <Layers size={18} /> },
+            { id: 'bubble_b', label: '버블다이어그램', icon: <Network size={18} /> },
+            { id: 'spatial_strategy', label: '맞춤형 공간 특화 전략', icon: <Target size={18} /> },
+            { id: 'circulation_layout', label: '동선 및 프로그램 배치', icon: <Milestone size={18} /> },
         ]
     },
     {
-        title: 'Phase C. 시각화 및 제안',
+        title: 'Phase C. 전문엔지니어링 분석',
+        items: [
+            { id: 'special_design', label: '특화설계 제안', icon: <Wrench size={18} /> },
+            { id: 'structural_engineering', label: '구조 및 엔지니어링', icon: <Settings size={18} /> },
+            { id: 'eco_strategy', label: '친환경 특화 전략', icon: <Leaf size={18} /> },
+            { id: 'energy_strategy', label: '에너지 특화전략', icon: <Zap size={18} /> },
+            { id: 'bf_strategy', label: 'BF 특화전략', icon: <ShieldCheck size={18} /> },
+        ]
+    },
+    {
+        title: 'Phase D. 시각화 및 제안',
         items: [
             { id: '3dmass', label: '3D 매스', icon: <Box size={18} /> },
             { id: 'siteplan', label: '배치도', icon: <Compass size={18} /> },
-            { id: 'bubble', label: '버블다이어그램', icon: <Network size={18} /> },
             { id: 'floorplan', label: '평면/입면/단면도', icon: <Grid size={18} /> },
             { id: 'concept_diagram', label: '개념도 및 시각화', icon: <Lightbulb size={18} /> },
         ]
@@ -149,10 +162,10 @@ function Floating3DToolbar() {
             {store.massingResult && !store.massingResult.error && (
                 <div className="absolute bottom-6 left-3 z-30 bg-white/85 backdrop-blur-xl rounded-xl shadow-lg border border-white/60 px-3 py-2 text-[10px]">
                     <div className="flex items-center gap-3">
-                        <div><span className="text-slate-400">건폐율</span> <span className="font-bold text-orange-700">{store.massingResult.calculated_coverage_pct}%</span></div>
-                        <div><span className="text-slate-400">용적률</span> <span className="font-bold text-amber-700">{store.massingResult.calculated_far_pct}%</span></div>
-                        <div><span className="text-slate-400">GFA</span> <span className="font-bold text-slate-700">{store.massingResult.total_gfa_sqm.toLocaleString()}㎡</span></div>
-                        <div><span className="text-slate-400">높이</span> <span className="font-bold text-slate-700">{store.massingResult.max_height_m}m/{store.massingResult.total_floors}F</span></div>
+                        <div><span className="text-slate-400">건폐율</span> <span className="font-bold text-orange-700">{store.massingResult.calculated_coverage_pct?.toFixed(1) || 0}%</span></div>
+                        <div><span className="text-slate-400">용적률</span> <span className="font-bold text-amber-700">{store.massingResult.calculated_far_pct?.toFixed(1) || 0}%</span></div>
+                        <div><span className="text-slate-400">GFA</span> <span className="font-bold text-slate-700">{store.massingResult.total_gfa_sqm?.toLocaleString() || 0}㎡</span></div>
+                        <div><span className="text-slate-400">높이</span> <span className="font-bold text-slate-700">{store.massingResult.max_height_m || 0}m/{store.massingResult.total_floors || 0}F</span></div>
                     </div>
                 </div>
             )}
@@ -162,49 +175,120 @@ function Floating3DToolbar() {
 
 export default function App() {
     const [entered, setEntered] = useState(false);
-    const [activeMenu, setActiveMenu] = useState<MenuId>('space_program');
-
-    // 일조 시뮬레이션 상태
-    const [sunlightEnabled, setSunlightEnabled] = useState(false);
-    const [sunPosition, setSunPosition] = useState<SunPosition | null>(null);
-    const [sunlightDate, setSunlightDate] = useState({ year: new Date().getFullYear(), month: 12, day: 22 });
-
-    // 그림자 분석 상태
-    const [shadowAnalysisRequest, setShadowAnalysisRequest] = useState(0);
-    const [showShadowHeatmap, setShowShadowHeatmap] = useState(false);
-    const [shadowResult, setShadowResult] = useState<ShadowAnalysisResult | null>(null);
-    const [showShadowPanel, setShowShadowPanel] = useState(false);
-
+    const [isEmbedded, setIsEmbedded] = useState(false);
+    const [activeMenu, setActiveMenu] = useState<MenuId>('task_analysis');
     const store = useProjectStore();
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const apiKey = params.get('apiKey');
+        const embed = params.get('embed');
+        const menu = params.get('menu');
+        
+        if (apiKey) {
+            store.setGeminiApiKey(apiKey);
+            setEntered(true);
+        }
+        if (embed === 'true') {
+            setIsEmbedded(true);
+            setEntered(true); // iframe 내부는 로그인 바이패스
+        }
+        if (menu) {
+            setActiveMenu(menu as MenuId);
+        }
+    }, [store]);
+
+    // 일조 및 그림자 시뮬레이션 상태 (Zustand 스토어 연동)
+    const sunlightEnabled = store.showSunlight;
+    const showShadowHeatmap = store.showShadowAnalysis;
+    const shadowAnalysisRequest = store.showShadowAnalysis ? 1 : 0;
+    
+    // store.simulationMonth, store.simulationDay를 이용해 날짜 객체 생성
+    const sunlightDate = { 
+        year: new Date().getFullYear(), 
+        month: store.simulationMonth, 
+        day: store.simulationDay 
+    };
+
+    const [sunPosition, setSunPosition] = useState<SunPosition | null>(null);
+    const [shadowResult, setShadowResult] = useState<ShadowAnalysisResult | null>(null);
+    const [showShadowPanel, setShowShadowPanel] = useState(false);
+    
+    // 그림자 분석 결과 패널 표시 로직
+    useEffect(() => {
+        if (store.showShadowAnalysis) {
+            setShowShadowPanel(true);
+        } else {
+            setShowShadowPanel(false);
+        }
+    }, [store.showShadowAnalysis]);
+
+    // const store variables merged above
     if (!entered) {
         return <LandingPage onEnter={() => setEntered(true)} />;
     }
+
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="text-rose-500 mb-2"><Globe size={32} /></div>
+                    <h3 className="text-sm font-bold text-slate-700">3D 엔진 로딩 오류</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                        {this.state.error?.message?.includes?.('Context Lost') 
+                            ? 'WebGL 렌더러가 메모리 초과로 해제되었습니다. 새 탭에서 열어주시거나 새로고침 해주세요.' 
+                            : '3D 렌더링 중 오류가 발생했습니다.'}
+                    </p>
+                    <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600">
+                        페이지 새로고침
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
     // 3D 매스 전용 뷰 
     const render3DMassView = () => (
         <div className="h-full w-full relative overflow-hidden bg-slate-50 flex-1 flex flex-col min-h-0">
             {/* 3D Viewer Full Area */}
-            <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-200">
-                <Suspense fallback={<LoadingSpinner />}>
-                    <SceneViewer
-                        sunPosition={sunPosition}
-                        sunlightEnabled={sunlightEnabled}
-                        shadowAnalysisRequest={shadowAnalysisRequest}
-                        showShadowHeatmap={showShadowHeatmap}
-                        onShadowResult={setShadowResult}
-                    />
-                </Suspense>
+            <AppErrorBoundary>
+                <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-200">
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <SceneViewer
+                            sunPosition={sunPosition}
+                            sunlightEnabled={sunlightEnabled}
+                            sunlightDate={sunlightDate}
+                            shadowAnalysisRequest={shadowAnalysisRequest}
+                            showShadowHeatmap={showShadowHeatmap}
+                            onShadowAnalysisResult={setShadowResult}
+                        />
+                    </Suspense>
 
-                {/* 플로팅 검색바 및 메트릭 오버레이 */}
-                <Floating3DToolbar />
-                
-                {/* 3D UI Panels */}
+                    {/* 플로팅 검색바 및 메트릭 오버레이 */}
+                    <Floating3DToolbar />
+                    
+                    {/* 3D UI Panels */}
+                <AIMassPanel />
+
                 <AnimatePresence>
                     {showShadowPanel && shadowResult && (
                         <ShadowAnalysisPanel
-                            result={shadowResult}
-                            onClose={() => setShowShadowPanel(false)}
+                            enabled={store.showShadowAnalysis}
+                            analysisResult={shadowResult}
+                            onRunAnalysis={() => {}}
+                            onClear={() => setShadowResult(null)}
+                            onToggleHeatmap={() => store.setShowShadowAnalysis(!store.showShadowAnalysis)}
+                            showHeatmap={store.showShadowAnalysis}
                         />
                     )}
                 </AnimatePresence>
@@ -213,15 +297,17 @@ export default function App() {
                     {sunlightEnabled && (
                         <>
                             <SunlightPanel
-                                date={sunlightDate}
-                                onChangeDate={setSunlightDate}
-                                onCalculate={setSunPosition}
+                                enabled={sunlightEnabled}
+                                onToggle={() => store.setShowSunlight(!store.showSunlight)}
+                                lat={store.centerLat}
+                                lng={store.centerLng}
+                                onSunPositionChange={setSunPosition}
                             />
-                            <SunlightGuide />
                         </>
                     )}
                 </AnimatePresence>
-            </div>
+                </div>
+            </AppErrorBoundary>
         </div>
     );
 
@@ -252,21 +338,45 @@ export default function App() {
 
     const renderContent = () => {
         switch (activeMenu) {
-            case 'dashboard':
+            case 'task_analysis':
                 return renderSingleView(Dashboard);
             case '3dmass':
+            case 'siteplan':
                 return render3DMassView();
             case 'regulation':
                 return renderSingleView(RegulationPanel);
             case 'site':
                 return renderSingleView(SiteAnalysisPanel);
-            case 'bf_special':
+            case 'bf_strategy':
                 return renderSingleView(BarrierFreePanel);
-            case 'space_program':
+            case 'space_zoning':
                 return renderSingleView(SpaceProgrammingPanel);
             default:
                 return renderPlaceholder();
         }
+    }
+
+    if (isEmbedded) {
+        return (
+            <div className="h-screen w-screen flex overflow-hidden font-sans text-slate-800 bg-white">
+                <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                    <AppErrorBoundary>
+                        <Suspense fallback={<LoadingSpinner />}>{renderContent()}</Suspense>
+                    </AppErrorBoundary>
+                </main>
+                {/* ════ 우측 통합 컨트롤 패널 ════ */}
+                <aside
+                    className="w-[300px] flex-shrink-0 z-40 bg-[#0f172a] overflow-y-auto custom-scrollbar"
+                    style={{ borderLeft: '1px solid #1e293b', boxShadow: '-4px 0 24px rgba(0,0,0,0.2)' }}
+                >
+                    <AppErrorBoundary>
+                        <Suspense fallback={<LoadingSpinner />}>
+                            <ControlPanel onNavigate={(id) => setActiveMenu(id as MenuId)} />
+                        </Suspense>
+                    </AppErrorBoundary>
+                </aside>
+            </div>
+        );
     }
 
     return (
@@ -372,10 +482,17 @@ export default function App() {
                         </h2>
                     </div>
                     <div className="flex items-center gap-4">
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium border border-emerald-100 flex items-center gap-1.5 shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            API 연동 완료
-                        </span>
+                        {store.geminiApiKey ? (
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium border border-emerald-100 flex items-center gap-1.5 shadow-sm" title="Gemini API 연동 됨">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                API 연동 완료
+                            </span>
+                        ) : (
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 font-medium border border-rose-100 flex items-center gap-1.5 shadow-sm" title="Gemini API 미연동">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                API 미연동 (재로그인 필요)
+                            </span>
+                        )}
                         <button 
                             className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors shadow-sm"
                             onClick={() => setEntered(false)}

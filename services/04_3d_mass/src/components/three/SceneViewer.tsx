@@ -802,7 +802,7 @@ function UrbanGroundPlane() {
     const [activeZoom, setActiveZoom] = useState(18);
 
     const imgSize = 1024;
-    const key = process.env.VWORLD_API_KEY || '';
+    const key = import.meta.env.VITE_VWORLD_API_KEY || '';
 
     // ─── 동적 planeSize 계산 (Web Mercator 지상해상도 공식) ───
     // ground_resolution = 156543.03 * cos(lat) / 2^zoom [m/px]

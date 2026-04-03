@@ -181,7 +181,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
     const prevSlide = () => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length);
 
     useEffect(() => {
-        const envKey = process.env.GEMINI_API_KEY;
+        const envKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (envKey && envKey.startsWith('AIza')) {
             console.log('[LandingPage] .env에서 Gemini API 키 감지');
             setApiKey(envKey);

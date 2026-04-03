@@ -351,8 +351,10 @@ export async function extractSiteParameters(
             return null;
         }
 
-        const parsed: SiteParameters = JSON.parse(content);
+        const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        const cleanContent = match ? match[1].trim() : content.trim();
 
+        const parsed: SiteParameters = JSON.parse(cleanContent);
         // 타임스탬프 보정
         if (!parsed.generated_at) {
             parsed.generated_at = new Date().toISOString();

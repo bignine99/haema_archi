@@ -1,9 +1,13 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { searchKakaoAddress, getVworldParcel, fetchSurroundingBuildings, type KakaoAddressResult, type ParcelResult, type RealBuilding } from '@/services/gisApi';
 import { calculateMaxEnvelope, ZONE_REGULATIONS, type MaxEnvelopeResult, type SetbackResult } from '@/services/regulationEngine';
 import { type ParsedProjectData } from '@/services/documentParser';
 import { fetchLandUseRegulation, type LandUseRegulationResult } from '@/services/landUseService';
 import { type SiteParameters } from '@/services/siteParameterService';
+import { generateSpaceProgramWithAI } from '@/services/geminiSpaceService';
+import { type SiteAnalysisResult } from '@/services/siteAnalysisService';
+import { type RegulationAnalysisResult } from '@/services/regulationAnalysisService';
 
 // ─── 건축 용도 타입 ───
 export type BuildingUse =
@@ -88,9 +92,10 @@ export interface NearbyBuilding {
     width: number; depth: number;
     height: number;              // 건물 높이 (m)
     floors: number;
-    use: 'residential' | 'commercial' | 'office' | 'mixed' | 'parking';
+    use: 'residential' | 'commercial' | 'office' | 'mixed' | 'parking' | 'school' | 'public' | 'industrial' | 'natural';
     color?: string;
-    polygon?: [number, number][]; // 건물의 실제 형태 폴리곤 (로컬 미터 기준, 건물 중심으로부터의 상대 좌표)
+    polygon?: [number, number][]; // WGS84 좌표계 폴리곤
+    heightSource?: 'register' | 'floors' | 'estimate' | 'vworld' | 'kakao' | 'estimated'; // 높이 데이터 출처
 }
 
 export interface RoadSegment {
@@ -113,6 +118,55 @@ export interface SiteContext {
     roads: RoadSegment[];
     trees: TreeData[];
 }
+
+// ─── 매스 엔진 Wing 데이터 (Skill 7 백엔드 응답) ───
+export interface MassingWing {
+    id: string;
+    label: string;
+    width: number;
+    depth: number;
+    height: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    floors: number;
+    floor_height: number;
+    floor_area_sqm: number;
+    primary_use: string;
+    footprint_coords: number[][];
+}
+
+export interface MassingResult {
+    typology_type: string;
+    typology_label: string;
+    wings: MassingWing[];
+    total_footprint_area_sqm: number;
+    total_gfa_sqm: number;
+    calculated_coverage_pct: number;
+    calculated_far_pct: number;
+    max_height_m: number;
+    total_floors: number;
+    estimated_units: number;
+    buildable_polygon: number[][];
+    buildable_area_sqm: number;
+    site_area_sqm: number;
+    error?: string;
+    warnings: string[];
+}
+
+export type TypologyType = 'SINGLE_BLOCK' | 'TOWER_PODIUM' | 'L_SHAPE' | 'U_SHAPE' | 'H_SHAPE' | 'PARALLEL' | 'COURTYARD' | 'STAGGERED';
+
+export const TYPOLOGY_LABELS: Record<TypologyType, string> = {
+    SINGLE_BLOCK: '단일 블록',
+    TOWER_PODIUM: '타워 + 포디엄',
+    L_SHAPE: 'ㄱ자형',
+    U_SHAPE: 'ㄷ자형',
+    H_SHAPE: 'H자형',
+    PARALLEL: '평행동',
+    COURTYARD: '중정형',
+    STAGGERED: '엇갈림',
+};
 
 // ─── Mock 필지별 주변 환경 데이터 ───
 export const MOCK_SITE_CONTEXTS: Record<string, SiteContext> = {
@@ -268,6 +322,7 @@ export interface ProjectState {
     totalFloors: number;
 
     grossFloorArea: number;
+    manualGrossFloorArea: number | null;
     achievedFAR: number;
     parkingRequired: number;
 
@@ -315,9 +370,38 @@ export interface ProjectState {
     selectedFloor: number | null;
     isLoading: boolean;
 
+    // AI 종합 분석 결과 상태 유지
+    siteAnalysisResult: SiteAnalysisResult | null;
+    regulationAnalysisResult: RegulationAnalysisResult | null;
+
     // Phase B: 공간 프로그래밍
     barrierFreeChecklist: BarrierFreeChecklist;
     floorZoning: FloorZoning[];
+
+    // ── 매스 엔진 (Skill 7-8) ──
+    massingWings: MassingWing[];
+    selectedTypology: TypologyType;
+    massingResult: MassingResult | null;
+    allTypologyResults: MassingResult[];
+    massingLoading: boolean;
+    massingError: string | null;
+    showMassing: boolean;
+
+    // ── 법규 완화 (인센티브) 적용 ──
+    incentives: {
+        publicOpenSpace: boolean;    // 공개공지 (용적률, 높이 +20%)
+        greenBuilding: boolean;      // 녹색건축/ZEB 등 (건폐, 용적, 높이 +15%)
+        intelligentBuilding: boolean;// 지능형건축물 (건폐, 용적, 높이 +15%)
+        greenRoof: boolean;          // 옥상녹화 (건폐율, 용적률 +5%)
+    };
+    setIncentives: (updates: Partial<ProjectState['incentives']>) => void;
+
+    // ── 시뮬레이션 (일조, 그림자) ──
+    showSunlight: boolean;
+    simulationMonth: number;
+    simulationDay: number;
+    simulationHour: number;
+    showShadowAnalysis: boolean;
 
     // 액션
     setAddress: (address: string) => void;
@@ -339,9 +423,32 @@ export interface ProjectState {
     setSiteParamsError: (error: string | null) => void;
     recalculate: () => void;
 
+    // AI 분석 액션
+    setSiteAnalysisResult: (result: SiteAnalysisResult | null) => void;
+    setRegulationAnalysisResult: (result: RegulationAnalysisResult | null) => void;
+
     // 사용자 입력 API 키
     geminiApiKey: string;
     setGeminiApiKey: (key: string) => void;
+
+    // 수동 연면적 지정
+    setManualGrossFloorArea: (area: number | null) => void;
+
+    // ── 매스 액션 ──
+    setSelectedTypology: (type: TypologyType) => void;
+    generateMassing: (typology?: TypologyType | 'ALL') => Promise<void>;
+    setShowMassing: (show: boolean) => void;
+
+    // ── 시뮬레이션 액션 ──
+    setShowSunlight: (show: boolean) => void;
+    setSimulationDate: (month: number, day: number) => void;
+    setSimulationHour: (hour: number) => void;
+    setShowShadowAnalysis: (show: boolean) => void;
+
+    // ── AI 코파일럿 채팅 상태 ──
+    chatLoading: boolean;
+    aiComment: string | null;
+    sendMassingChat: (msg: string) => Promise<void>;
 
     // Phase B 액션
     setBarrierFreeChecklist: (data: Partial<BarrierFreeChecklist>) => void;
@@ -353,6 +460,9 @@ export interface ProjectState {
     addRoomToFloor: (floorId: string, room: Omit<Room, 'id'>) => void;
     removeRoomFromFloor: (floorId: string, roomId: string) => void;
     moveRoomToFloor: (roomId: string, sourceFloorId: string, targetFloorId: string) => void;
+    updateRoomArea: (floorId: string, zoneId: string, roomId: string, field: 'netArea' | 'commonArea', value: number) => void;
+    autoGenerateSpaceProgram: () => Promise<void>;
+    rescaleSpaceProgram: () => boolean;
 }
 
 // ─── 법규 기반 계산 로직 ───
@@ -377,9 +487,11 @@ function regulationCalculate(state: Partial<ProjectState>) {
 
     const totalFloors = documentTotalFloors || (commercialFloors + residentialFloors);
 
-    // 연면적: 과업지시서 값이 있으면 사용, 없으면 계산
+    // 연면적: 수동 입력 값 우선, 그 다음 과업지시서 값, 없으면 자동 계산
     let grossFloorArea: number;
-    if (documentGrossFloorArea && documentGrossFloorArea > 0) {
+    if ((state as any).manualGrossFloorArea && (state as any).manualGrossFloorArea > 0) {
+        grossFloorArea = (state as any).manualGrossFloorArea;
+    } else if (documentGrossFloorArea && documentGrossFloorArea > 0) {
         grossFloorArea = documentGrossFloorArea;
     } else {
         const footprint = landArea * coverageLimit;
@@ -414,8 +526,10 @@ function regulationCalculate(state: Partial<ProjectState>) {
 
 const defaultParcel = MOCK_PARCELS[0];
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
-    projectName: '미정 프로젝트',
+export const useProjectStore = create<ProjectState>()(
+    persist(
+        (set, get) => ({
+            projectName: '미정 프로젝트',
     address: defaultParcel.address,
     pnu: defaultParcel.pnu,
     landArea: defaultParcel.landArea,
@@ -433,6 +547,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     totalFloors: 10,
 
     grossFloorArea: 0,
+    manualGrossFloorArea: null,
     achievedFAR: 0,
     parkingRequired: 0,
 
@@ -478,6 +593,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     selectedFloor: null,
     isLoading: false,
+
+    // ── 매스 엔진 (Skill 7-8) ──
+    massingWings: [],
+    selectedTypology: 'SINGLE_BLOCK',
+    massingResult: null,
+    allTypologyResults: [],
+    massingLoading: false,
+    massingError: null,
+    showMassing: true,
+
+    incentives: {
+        publicOpenSpace: false,
+        greenBuilding: false,
+        intelligentBuilding: false,
+        greenRoof: false,
+    },
+    setIncentives: (updates) => set((state) => ({ incentives: { ...state.incentives, ...updates } })),
+
+    showSunlight: false,
+    simulationMonth: 6,
+    simulationDay: 21,
+    simulationHour: 12,
+    showShadowAnalysis: false,
+
+    chatLoading: false,
+    aiComment: null,
 
     // Phase B: 공간 프로그래밍 초기값
     barrierFreeChecklist: {
@@ -563,7 +704,152 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
     ],
 
-    geminiApiKey: '',
+    siteAnalysisResult: null,
+    regulationAnalysisResult: null,
+    setSiteAnalysisResult: (result) => set({ siteAnalysisResult: result }),
+    setRegulationAnalysisResult: (result) => set({ regulationAnalysisResult: result }),
+
+    geminiApiKey: typeof window !== 'undefined' 
+        ? (localStorage.getItem('haema_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '') 
+        : '',
+    setGeminiApiKey: (key: string) => {
+        if (typeof window !== 'undefined') localStorage.setItem('haema_gemini_api_key', key);
+        set({ geminiApiKey: key });
+    },
+
+    setManualGrossFloorArea: (manualGrossFloorArea) => {
+        set({ manualGrossFloorArea });
+        get().recalculate();
+    },
+
+    // ── 매스 액션 ──
+    setSelectedTypology: (type) => set({ selectedTypology: type }),
+    setShowMassing: (show) => set({ showMassing: show }),
+    
+    generateMassing: async (typology?: string) => {
+        const state = get();
+        set({ massingLoading: true, massingError: null });
+        try {
+            const currentTypology = typology === 'ALL' ? state.selectedTypology : (typology || state.selectedTypology);
+            
+            // 법규 엔진 결과가 없으면 강제 재계산
+            let envelope = state.maxEnvelope;
+            if (!envelope) {
+                state.recalculate();
+                envelope = get().maxEnvelope;
+            }
+
+            if (!envelope) {
+                throw new Error("법규 검토 결과를 생성할 수 없습니다.");
+            }
+
+            const targetGfa = state.grossFloorArea > 0 ? state.grossFloorArea : (state.landArea * state.floorAreaRatioLimit / 100);
+
+            // API 호출
+            const payload = {
+                site_area_sqm: state.landArea,
+                buildable_polygon: envelope.buildablePolygon,
+                max_coverage_pct: state.buildingCoverageLimit,
+                max_far_pct: state.floorAreaRatioLimit,
+                target_gfa_sqm: targetGfa,
+                max_height_m: state.maxHeight || 100,
+                typology: currentTypology,
+                generate_all: typology === 'ALL',
+                incentives: state.incentives
+            };
+
+            const response = await fetch('http://localhost:8000/api/massing/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.detail || `서버 오류 (${response.status})`);
+            }
+
+            const data = await response.json();
+            
+            if (typology === 'ALL') {
+                set({ 
+                    allTypologyResults: data.results,
+                    massingResult: data.results.find((r: any) => r.typology_type === currentTypology) || data.results[0],
+                    massingWings: data.results.find((r: any) => r.typology_type === currentTypology)?.wings || data.results[0]?.wings || [],
+                    selectedTypology: currentTypology as TypologyType
+                });
+            } else {
+                set({ 
+                    massingResult: data, 
+                    massingWings: data.wings || [],
+                    selectedTypology: currentTypology as TypologyType
+                });
+            }
+        } catch (err: any) {
+            console.error("[Massing Error]", err);
+            set({ massingError: err.message || '매스 생성에 실패했습니다.' });
+        } finally {
+            set({ massingLoading: false });
+        }
+    },
+
+    // ── 시뮬레이션 액션 ──
+    setShowSunlight: (show) => set({ showSunlight: show }),
+    setSimulationDate: (month, day) => set({ simulationMonth: month, simulationDay: day }),
+    setSimulationHour: (hour) => set({ simulationHour: hour }),
+    setShowShadowAnalysis: (show) => set({ showShadowAnalysis: show }),
+
+    // ── 코파일럿 채팅 ──
+    sendMassingChat: async (msg: string) => {
+        const state = get();
+        if (!msg.trim() || state.chatLoading) return;
+        
+        set({ chatLoading: true });
+        try {
+            const contextPayload = {
+                site_area: state.landArea,
+                max_coverage: state.buildingCoverageLimit,
+                max_far: state.floorAreaRatioLimit,
+                current_typology: state.selectedTypology,
+                wings: state.massingWings,
+                incentives: state.incentives
+            };
+
+            const response = await fetch('http://localhost:8000/api/copilot/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: msg,
+                    context: contextPayload
+                })
+            });
+
+            if (!response.ok) throw new Error('채팅 요청 실패');
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const action = data.action;
+                // Apply requested changes
+                if (action.typology) set({ selectedTypology: action.typology });
+                if (action.incentives) state.setIncentives(action.incentives);
+                if (action.max_coverage_pct) set({ buildingCoverageLimit: action.max_coverage_pct });
+                if (action.max_far_pct) set({ floorAreaRatioLimit: action.max_far_pct });
+                
+                console.log("AI 코멘트:", action.ai_comment);
+                set({ aiComment: action.ai_comment });
+
+                await get().generateMassing(action.typology as TypologyType || state.selectedTypology);
+            } else {
+                throw new Error(data.message || data.error || 'AI 응답 오류');
+            }
+        } catch (err: any) {
+             console.error('[Massing Chat] 오류:', err);
+             set({ aiComment: `오류 발생: ${err.message}` });
+        } finally {
+            set({ chatLoading: false });
+        }
+    },
 
     setSiteParameters: (params) => set({ siteParameters: params }),
     setSiteParamsLoading: (loading) => set({ siteParamsLoading: loading }),
@@ -593,8 +879,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     setSelectedFloor: (selectedFloor) => set({ selectedFloor }),
     setShowMaxEnvelope: (showMaxEnvelope) => set({ showMaxEnvelope }),
     setNorthAngle: (northAngle) => { set({ northAngle }); get().recalculate(); },
-    setGeminiApiKey: (geminiApiKey: string) => set({ geminiApiKey }),
-
     // Phase B 액션
     setBarrierFreeChecklist: (data) => set(state => ({ 
         barrierFreeChecklist: { ...state.barrierFreeChecklist, ...data } 
@@ -696,6 +980,158 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         return { floorZoning: withTarget };
     }),
 
+    updateRoomArea: (floorId, zoneId, roomId, field, value) => {
+        set(state => {
+            const newFloorZoning = state.floorZoning.map(floor => {
+                if (floor.id !== floorId) return floor;
+
+                const newZones = floor.zones.map(zone => {
+                    if (zone.id !== zoneId) return zone;
+
+                    const newRooms = zone.rooms.map(room => {
+                        if (room.id !== roomId) return room;
+                        
+                        const updatedRoom = { ...room, [field]: value };
+                        updatedRoom.totalArea = updatedRoom.netArea + updatedRoom.commonArea;
+                        return updatedRoom;
+                    });
+
+                    const newZoneTotal = newRooms.reduce((acc, r) => acc + r.totalArea, 0);
+                    return { ...zone, rooms: newRooms, zoneTotalArea: newZoneTotal };
+                });
+
+                const newFloorTotal = newZones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+                return { ...floor, zones: newZones, floorTotalArea: newFloorTotal, assignedArea: newFloorTotal };
+            });
+
+            return { floorZoning: newFloorZoning };
+        });
+    },
+
+    autoGenerateSpaceProgram: async () => {
+        const state = get();
+        const targetGFA = state.grossFloorArea > 0 ? state.grossFloorArea : (state.landArea * (state.floorAreaRatioLimit / 100));
+        const maxFootprint = state.landArea * (state.buildingCoverageLimit / 100);
+        
+        const constraints = {
+            grossFloorArea: targetGFA,
+            buildingFootprint: maxFootprint,
+            buildingCoverageLimit: state.buildingCoverageLimit,
+            floorAreaRatioLimit: state.floorAreaRatioLimit,
+            totalFloors: state.totalFloors > 0 ? state.totalFloors : 5
+        };
+
+        const rawText = (state.documentInfo as any)?.rawData?.rawText || '';
+        
+        try {
+            const aiResult = await generateSpaceProgramWithAI(constraints, rawText);
+            
+            if (aiResult && aiResult.length > 0) {
+                let roomIdCounter = 1;
+                let zoneIdCounter = 1;
+                
+                // 파싱 (원본 AI 데이터 그대로 사용)
+                const draftFloors = aiResult.map((f, i) => {
+                    const zones = f.zones.map(z => {
+                        const rooms = z.rooms.map(r => {
+                            const nArea = typeof r.netArea === 'number' ? r.netArea : 0;
+                            const cArea = typeof r.commonArea === 'number' ? r.commonArea : 0;
+                            const tArea = nArea + cArea;
+                            return {
+                                id: `r_ai_${roomIdCounter++}`,
+                                name: r.name,
+                                netArea: nArea,
+                                commonArea: cArea,
+                                totalArea: tArea,
+                                isRequired: Boolean(r.isRequired)
+                            };
+                        });
+                        const zoneTotalArea = rooms.reduce((acc, r) => acc + r.totalArea, 0);
+                        return { id: `z_ai_${zoneIdCounter++}`, name: z.name, zoneTotalArea, rooms };
+                    });
+                    
+                    const floorTotalArea = zones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+                    
+                    return {
+                        id: `f_ai_${i}`,
+                        floor: f.floor || `${i+1}F`,
+                        primaryUse: f.primaryUse || '용도 미지정',
+                        secondaryUse: [],
+                        targetAgeGroup: f.targetAgeGroup || '공통',
+                        assignedArea: floorTotalArea,
+                        floorTotalArea: floorTotalArea,
+                        height: f.height || 3.9,
+                        zones
+                    };
+                });
+                
+                // AI가 생성한 '랜덤' 연면적 배분 그대로 적용
+                set({ floorZoning: draftFloors });
+            }
+        } catch (error) {
+            console.error('[ProjectStore] 자동 프로그래밍 실패:', error);
+            throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    rescaleSpaceProgram: () => {
+        const state = get();
+        if (state.floorZoning.length === 0) return false;
+        
+        const targetGFA = state.grossFloorArea > 0 ? state.grossFloorArea : (state.landArea * (state.floorAreaRatioLimit / 100));
+        
+        let totalCurrentArea = 0;
+        state.floorZoning.forEach(f => {
+            f.zones.forEach(z => {
+                z.rooms.forEach(r => {
+                    totalCurrentArea += r.totalArea;
+                });
+            });
+        });
+        
+        if (totalCurrentArea <= 0) return false;
+        if (Math.abs(totalCurrentArea - targetGFA) < 1) return true;
+        
+        const scaleFactor = targetGFA / totalCurrentArea;
+        let currentTotalAccumulated = 0;
+        
+        const scaledFloors = state.floorZoning.map((f, fIdx) => {
+            const zones = f.zones.map((z, zIdx) => {
+                const rooms = z.rooms.map((r, rIdx) => {
+                    const isLast = (fIdx === state.floorZoning.length - 1 && zIdx === f.zones.length - 1 && rIdx === z.rooms.length - 1);
+                    
+                    const newNet = Math.round(r.netArea * scaleFactor);
+                    let newCommon = Math.round(r.commonArea * scaleFactor);
+                    let newTotal = newNet + newCommon;
+                    
+                    if (isLast) {
+                        const diff = targetGFA - (currentTotalAccumulated + newTotal);
+                        newCommon += diff;
+                        newTotal += diff;
+                    }
+                    
+                    currentTotalAccumulated += newTotal;
+                    
+                    return {
+                        ...r,
+                        netArea: newNet,
+                        commonArea: newCommon,
+                        totalArea: newTotal
+                    };
+                });
+                const zoneTotalArea = rooms.reduce((acc, r) => acc + r.totalArea, 0);
+                return { ...z, rooms, zoneTotalArea };
+            });
+            const floorTotalArea = zones.reduce((acc, z) => acc + z.zoneTotalArea, 0);
+            return { ...f, zones, assignedArea: floorTotalArea, floorTotalArea };
+        });
+        
+        set({ floorZoning: scaledFloors });
+        return true;
+    },
+
     selectParcel: (id: string) => {
         const parcel = MOCK_PARCELS.find(p => p.id === id);
         if (!parcel) return;
@@ -788,7 +1224,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 get().recalculate();
 
                 // 실제 주변 건물 데이터 비동기 로드
-                fetchSurroundingBuildings(parcel.centerLng, parcel.centerLat, 500)
+                fetchSurroundingBuildings(parcel.centerLng, parcel.centerLat, 200)
                     .then(buildings => {
                         console.log(`[Store] 실제 주변 건물 ${buildings.length}개 로드 완료`);
                         set({ realSurroundingBuildings: buildings });
@@ -932,4 +1368,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const result = regulationCalculate(state);
         set(result);
     },
-}));
+}),
+{
+    name: 'haema-frontend-storage',
+    partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => ![
+            'siteAnalysisResult', 'regulationAnalysisResult', 'maxEnvelope', 
+            'realSurroundingBuildings', 'kakaoResults',
+            'massingResult', 'allTypologyResults', 'massingLoading',
+            'showShadowAnalysis', 'showSunlight', 'massingError'
+        ].includes(key))
+    ),
+}
+));

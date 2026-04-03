@@ -44,10 +44,38 @@ export default function DocumentUploader({ compact = false, inline = false }: { 
         }
     };
 
+    const processDefaultFile = async () => {
+        setIsLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const response = await fetch('/test_data/default_rfp.pdf');
+            if (!response.ok) throw new Error('기본 테스트 파일을 불러올 수 없습니다.');
+            
+            const blob = await response.blob();
+            // File 객체로 변환 (기존 파서 로직과 호환을 위해)
+            const file = new File(
+                [blob], 
+                '김해제2특수학교 교사 신축사업_설계용역과업지시서.pdf', 
+                { type: 'application/pdf' }
+            );
+            
+            const parsedData = await parseDocument(file);
+            store.updateFromDocument(file.name, parsedData);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 5000);
+        } catch (err: any) {
+            setError(err.message || '기본 파일 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // ███ Inline 모드: 헤더 바에 삽입 가능한 콤팩트 버튼 ███
     if (inline) {
         return (
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex items-center gap-2">
                 <input
                     type="file"
                     ref={fileInputRef}
@@ -76,7 +104,19 @@ export default function DocumentUploader({ compact = false, inline = false }: { 
                     ) : (
                         <UploadCloud size={12} />
                     )}
-                    {isLoading ? '분석 중...' : success ? '적용 완료' : error ? '오류' : '과업지시서'}
+                    {isLoading ? '분석 중...' : success ? '적용 완료' : error ? '오류' : '과업지시서 업로드'}
+                </button>
+                <button
+                    onClick={processDefaultFile}
+                    disabled={isLoading}
+                    title="개발용 김해제2특수학교 과업지시서 기본 테스트"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all shadow-sm ${isLoading
+                            ? 'bg-purple-100 text-purple-500 cursor-wait'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                        }`}
+                >
+                    {isLoading ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                    기본 분석 테스트
                 </button>
             </div>
         );
@@ -126,6 +166,20 @@ export default function DocumentUploader({ compact = false, inline = false }: { 
                         </div>
                     </>
                 )}
+            </div>
+
+            <div className="mt-3 flex justify-center w-full">
+                <button
+                    onClick={processDefaultFile}
+                    disabled={isLoading}
+                    className={`flex items-center justify-center w-full gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-sm ${isLoading
+                            ? 'bg-purple-100 text-purple-500 cursor-wait'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                        }`}
+                >
+                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                    🚀 개발용: 기본 테스트 파일로 즉시 분석하기
+                </button>
             </div>
 
             <AnimatePresence>

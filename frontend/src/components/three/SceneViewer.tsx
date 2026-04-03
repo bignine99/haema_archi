@@ -1,8 +1,12 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, ContactShadows, PerspectiveCamera, Line, Text, Html, Bounds } from '@react-three/drei';
 import { useProjectStore, polygonCentroid, polygonBBox, MOCK_SITE_CONTEXTS, type NearbyBuilding, type RoadSegment, type TreeData, type SiteContext } from '@/store/projectStore';
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { BUILDING_USE_COLORS } from '@/services/gisApi';
+import { useMemo, useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
+import { SunLight, SunOrb, SunPathArc } from './SunlightSimulation';
+import { ShadowHeatmap, useShadowAnalysis, type ShadowAnalysisResult } from './ShadowAnalysis';
+import { type SunPosition } from '@/utils/sunCalculator';
 
 // ─── 층별 색상 매핑 ───
 const FLOOR_COLORS: Record<string, string> = {
@@ -211,7 +215,104 @@ function LandBoundary() {
     );
 }
 
-// ─── 건물 매스 (Massing) ───
+// ─── 매스 Wing 1개 렌더링 (Skill 7 출력) ───
+function WingBlock({
+    wing, isSelected, onClick
+}: {
+    wing: { id: string; label: string; width: number; depth: number; height: number; x: number; y: number; z: number; rotation: number; floors: number; floor_height: number; floor_area_sqm: number; primary_use: string };
+    isSelected: boolean;
+    onClick: () => void;
+}) {
+    const WING_COLORS: Record<string, string> = {
+        parking: '#64748b',
+        commercial: '#2e8fff',
+        residential: '#f59e0b',
+        office: '#06b6d4',
+        mixed: '#a78bfa',
+    };
+
+    const color = WING_COLORS[wing.primary_use] || WING_COLORS.residential;
+
+    const materialProps = useMemo(() => {
+        if (wing.primary_use === 'parking') {
+            return { roughness: 0.8, metalness: 0.2, clearcoat: 0, clearcoatRoughness: 0 };
+        } else if (wing.primary_use === 'commercial') {
+            return { roughness: 0.15, metalness: 0.5, clearcoat: 0.8, clearcoatRoughness: 0.1 };
+        } else {
+            return { roughness: 0.35, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.3 };
+        }
+    }, [wing.primary_use]);
+
+    // 층 구분선 위치
+    const floorLines = useMemo(() => {
+        const lines: number[] = [];
+        for (let i = 1; i < wing.floors; i++) {
+            lines.push(i * wing.floor_height);
+        }
+        return lines;
+    }, [wing.floors, wing.floor_height]);
+
+    return (
+        <group
+            position={[wing.x, wing.y, wing.z]}
+            rotation={[0, (wing.rotation * Math.PI) / 180, 0]}
+        >
+            {/* 건물 매스 */}
+            <mesh
+                position={[0, wing.height / 2, 0]}
+                onClick={(e) => { e.stopPropagation(); onClick(); }}
+                castShadow
+                receiveShadow
+            >
+                <boxGeometry args={[wing.width, wing.height, wing.depth]} />
+                <meshPhysicalMaterial
+                    color={color}
+                    transparent
+                    opacity={isSelected ? 1 : 0.85}
+                    emissive={isSelected ? color : '#000000'}
+                    emissiveIntensity={isSelected ? 0.2 : 0}
+                    {...materialProps}
+                    envMapIntensity={1.2}
+                />
+            </mesh>
+
+            {/* 최소한의 윤곽선 */}
+            <lineSegments position={[0, wing.height / 2, 0]}>
+                <edgesGeometry args={[new THREE.BoxGeometry(wing.width, wing.height, wing.depth)]} />
+                <lineBasicMaterial color="#000000" transparent opacity={0.06} />
+            </lineSegments>
+
+            {/* 층 구분선 (전면만, 3층 이상) */}
+            {wing.floors >= 3 && floorLines.map((lineY, i) => (
+                <Line
+                    key={`fl-${i}`}
+                    points={[
+                        [-wing.width / 2 - 0.01, wing.y + lineY, wing.depth / 2 + 0.01] as [number, number, number],
+                        [wing.width / 2 + 0.01, wing.y + lineY, wing.depth / 2 + 0.01] as [number, number, number],
+                    ]}
+                    color="#00000020"
+                    lineWidth={0.5}
+                />
+            ))}
+
+            {/* Wing 라벨 (선택 시) */}
+            {isSelected && (
+                <Html position={[0, wing.height + 1.5, 0]} center style={{ pointerEvents: 'none' }}>
+                    <div style={{
+                        background: 'rgba(0,0,0,0.75)', color: '#fff',
+                        padding: '4px 10px', borderRadius: '6px',
+                        fontSize: '12px', whiteSpace: 'nowrap',
+                        backdropFilter: 'blur(8px)',
+                    }}>
+                        {wing.label} | {wing.floors}F | {wing.floor_area_sqm}㎡
+                    </div>
+                </Html>
+            )}
+        </group>
+    );
+}
+
+// ─── 건물 매스 (Massing) — Wing[] 기반 + 단일 박스 폴백 ───
 function BuildingMass() {
     const polygon = useProjectStore(s => s.landPolygon);
     const buildingCoverageLimit = useProjectStore(s => s.buildingCoverageLimit);
@@ -221,10 +322,16 @@ function BuildingMass() {
     const selectedFloor = useProjectStore(s => s.selectedFloor);
     const setSelectedFloor = useProjectStore(s => s.setSelectedFloor);
 
+    // 매스 엔진 데이터
+    const massingWings = useProjectStore(s => s.massingWings);
+    const showMassing = useProjectStore(s => s.showMassing);
+    const [selectedWingId, setSelectedWingId] = useState<string | null>(null);
+
+    // ★ 폴백: Wing 데이터 없으면 기존 단일 박스 방식 로직 (항상 Hook 실행 보장)
     const totalFloors = commercialFloors + residentialFloors;
 
-    // 동적으로 건축 폴리곤의 중심/바운딩 박스에서 건물 크기 계산
     const { buildW, buildD } = useMemo(() => {
+        if (!polygon || polygon.length < 3) return { buildW: 0, buildD: 0 };
         const center = polygonCentroid(polygon);
         const centered = polygon.map(([x, y]) => [x - center[0], y - center[1]] as [number, number]);
         const bbox = polygonBBox(centered);
@@ -253,6 +360,30 @@ function BuildingMass() {
         }
         return result;
     }, [totalFloors, commercialFloors, floorHeight, buildW, buildD]);
+
+    // ★ Wing[] 데이터가 있으면 Wing 기반 렌더링
+    if (massingWings.length > 0 && showMassing) {
+        const center = polygon && polygon.length > 0 ? polygonCentroid(polygon) : [0, 0];
+        return (
+            <group>
+                {massingWings.map((wing) => (
+                    <WingBlock
+                        key={wing.id}
+                        wing={{
+                            ...wing,
+                            x: wing.x - center[0],
+                            z: wing.z + center[1]
+                        }}
+                        isSelected={selectedWingId === wing.id}
+                        onClick={() => setSelectedWingId(selectedWingId === wing.id ? null : wing.id)}
+                    />
+                ))}
+            </group>
+        );
+    }
+
+    // showMassing이 false이면 건물 매스를 표시하지 않음 (대지 경계만 표시)
+    if (!showMassing) return null;
 
     return (
         <group>
@@ -340,66 +471,198 @@ function NorthIndicator() {
     );
 }
 
-// ─── 주변 건물 매스 (Forma/TestFit 스타일) ───
-const BUILDING_USE_COLORS: Record<string, string> = {
-    residential: '#e2e8f0',
-    commercial: '#cbd5e1',
-    office: '#d4d4d8',
-    mixed: '#d6d3d1',
-    parking: '#c7c7c7',
+// heightSource에 따른 색상 매핑
+const HEIGHT_SOURCE_COLORS: Record<string, string> = {
+    register: '#3b82f6',  // 🔵 건축물대장 실측 높이
+    floors: '#eab308',    // 🟡 평균 층고 기반 계산
+    estimate: '#94a3b8',  // ⚪ 기본 3m/층 추정
 };
 
 function SurroundingBuildings({ context }: { context: SiteContext }) {
+    const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+
+    // 선택된 건물 정보
+    const selectedBuilding = useMemo(() => {
+        if (!selectedBuildingId) return null;
+        return context.buildings.find(b => b.id === selectedBuildingId) || null;
+    }, [selectedBuildingId, context.buildings]);
+
     return (
-        <group>
+        <group onClick={(e) => {
+            // 빈 공간 클릭 시 선택 해제 (이벤트 버블링 활용)
+            if (e.object?.userData?.isBuildingMesh !== true) {
+                setSelectedBuildingId(null);
+            }
+        }}>
             {context.buildings.map((b) => {
-                const color = b.color || BUILDING_USE_COLORS[b.use] || '#e2e8f0';
+                // heightSource에 따른 색상 결정
+                const heightSource = (b as any).heightSource as string | undefined;
+                let buildingColor = b.color || BUILDING_USE_COLORS[b.use] || '#e2e8f0';
+                
+                // heightSource가 있으면 데이터 출처 기반 색상 사용
+                if (heightSource && HEIGHT_SOURCE_COLORS[heightSource]) {
+                    // 건물 본체는 밝은 톤으로, 출처 색상은 하단 링으로 표시
+                    buildingColor = heightSource === 'register' ? '#b3d1f7'
+                        : heightSource === 'floors' ? '#f5e6a3'
+                        : '#d4d9e0';
+                }
 
-                const shape = useMemo(() => {
-                    if (!b.polygon || b.polygon.length < 3) return null;
-                    const pts = b.polygon.map(([x, y]) => new THREE.Vector2(x, y));
-                    return new THREE.Shape(pts);
-                }, [b.polygon]);
+                const sourceRingColor = heightSource ? (HEIGHT_SOURCE_COLORS[heightSource] || '#94a3b8') : '#94a3b8';
 
+                // 1. WFS 폴리곤 데이터가 있을 경우 (실제 건물 외곽선)
+                const isSelected = selectedBuildingId === b.id;
+                const buildingName = (b as any).name || b.id;
+                const useLabel = b.use === 'residential' ? '주거' : 
+                                 b.use === 'commercial' ? '상업' : 
+                                 b.use === 'office' ? '업무' : 
+                                 b.use === 'school' ? '학교/교육' : 
+                                 b.use === 'public' ? '공공/문화/종교' : 
+                                 b.use === 'industrial' ? '산업/운수' : 
+                                 b.use === 'mixed' ? '복합' : b.use;
+                const sourceLabel = heightSource === 'register' ? '🔵 건축물대장 실측' : heightSource === 'floors' ? '🟡 층수 기반 계산' : '⚪ 기본 추정';
+
+                if (b.polygon && b.polygon.length >= 3) {
+                    const pts = b.polygon.map(([x, z]) => new THREE.Vector2(x, z));
+                    const shape = new THREE.Shape(pts);
+                    // 폴리곤 중심점 계산 (팝업 위치용)
+                    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+                    const cz = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+
+                    return (
+                        <group key={b.id}>
+                            <mesh
+                                rotation={[-Math.PI / 2, 0, 0]}
+                                castShadow receiveShadow
+                                onClick={(e) => { e.stopPropagation(); setSelectedBuildingId(isSelected ? null : b.id); }}
+                                onPointerOver={(e) => { (e.object as any).material.emissive?.set('#ffffff'); (e.object as any).material.emissiveIntensity = 0.1; document.body.style.cursor = 'pointer'; }}
+                                onPointerOut={(e) => { (e.object as any).material.emissive?.set('#000000'); (e.object as any).material.emissiveIntensity = 0; document.body.style.cursor = 'auto'; }}
+                                userData={{ isBuildingMesh: true }}
+                            >
+                                <extrudeGeometry args={[shape, { depth: b.height, bevelEnabled: false }]} />
+                                <meshStandardMaterial
+                                    color={isSelected ? '#60a5fa' : buildingColor}
+                                    roughness={0.85}
+                                    metalness={0.05}
+                                    emissive="#000000"
+                                    emissiveIntensity={0}
+                                />
+                            </mesh>
+                            {/* heightSource 표시 — 건물 하단 선 (폴리곤 기반) */}
+                            {heightSource && (
+                                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]}>
+                                    <extrudeGeometry args={[shape, { depth: 0.8, bevelEnabled: false }]} />
+                                    <meshBasicMaterial color={sourceRingColor} />
+                                </mesh>
+                            )}
+                            {/* 건물 클릭 시 상세 정보 팝업 */}
+                            {isSelected && (
+                                <Html position={[cx, b.height + 3, -cz]} center style={{ pointerEvents: 'none' }}>
+                                    <div style={{
+                                        background: 'rgba(15, 23, 42, 0.9)',
+                                        backdropFilter: 'blur(12px)',
+                                        color: '#f1f5f9',
+                                        padding: '10px 14px',
+                                        borderRadius: '10px',
+                                        fontSize: '12px',
+                                        lineHeight: '1.6',
+                                        whiteSpace: 'nowrap',
+                                        border: '1px solid rgba(148, 163, 184, 0.3)',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                        minWidth: '160px',
+                                    }}>
+                                        <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '4px', color: '#60a5fa' }}>{buildingName}</div>
+                                        <div>📏 높이: <b>{b.height.toFixed(1)}m</b></div>
+                                        <div>🏢 층수: <b>{b.floors}층</b></div>
+                                        <div>🏠 용도: <b>{useLabel}</b></div>
+                                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', borderTop: '1px solid rgba(148,163,184,0.2)', paddingTop: '4px' }}>
+                                            {sourceLabel}
+                                        </div>
+                                    </div>
+                                </Html>
+                            )}
+                        </group>
+                    );
+                }
+
+                // 2. 폴리곤 기반이 아닐 경우 기존 BoxGeometry 모델 렌더링
                 return (
                     <group key={b.id} position={[b.x, 0, -b.z]}>
                         {/* 건물 매스 */}
-                        {shape ? (
-                            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 50, 0]} castShadow receiveShadow>
-                                <extrudeGeometry args={[shape, { depth: b.height, bevelEnabled: false }]} />
-                                <meshBasicMaterial color="red" wireframe={true} />
+                        <mesh
+                            position={[0, b.height / 2, 0]}
+                            castShadow receiveShadow
+                            onClick={(e) => { e.stopPropagation(); setSelectedBuildingId(isSelected ? null : b.id); }}
+                            onPointerOver={(e) => { (e.object as any).material.emissive?.set('#ffffff'); (e.object as any).material.emissiveIntensity = 0.1; document.body.style.cursor = 'pointer'; }}
+                            onPointerOut={(e) => { (e.object as any).material.emissive?.set('#000000'); (e.object as any).material.emissiveIntensity = 0; document.body.style.cursor = 'auto'; }}
+                            userData={{ isBuildingMesh: true }}
+                        >
+                            <boxGeometry args={[b.width, b.height, b.depth]} />
+                            <meshStandardMaterial
+                                color={isSelected ? '#60a5fa' : buildingColor}
+                                roughness={0.85}
+                                metalness={0.05}
+                                emissive="#000000"
+                                emissiveIntensity={0}
+                            />
+                        </mesh>
+
+                        {/* heightSource 표시 — 건물 하단 색상 밴드 */}
+                        {heightSource && (
+                            <mesh position={[0, 0.4, 0]}>
+                                <boxGeometry args={[b.width + 0.3, 0.8, b.depth + 0.3]} />
+                                <meshBasicMaterial color={sourceRingColor} />
                             </mesh>
-                        ) : (
-                            <>
-                                <mesh position={[0, b.height / 2 + 50, 0]} castShadow receiveShadow>
-                                    <boxGeometry args={[b.width, b.height, b.depth]} />
-                                    <meshBasicMaterial color="red" wireframe={true} />
-                                </mesh>
+                        )}
 
-                                {/* 층 분리선 (3층 이상) - 박스 형태에만 표시 */}
-                                {b.floors >= 3 && Array.from({ length: Math.min(b.floors - 1, 15) }, (_, i) => {
-                                    const lineY = (i + 1) * (b.height / b.floors);
-                                    return (
-                                        <Line
-                                            key={`fl-${i}`}
-                                            points={[
-                                                [-b.width / 2 - 0.02, lineY, b.depth / 2 + 0.02] as [number, number, number],
-                                                [b.width / 2 + 0.02, lineY, b.depth / 2 + 0.02] as [number, number, number],
-                                            ]}
-                                            color="#b0b8c4"
-                                            lineWidth={0.5}
-                                        />
-                                    );
-                                })}
+                        {/* 층 분리선 (3층 이상) - 박스 기반일 때만 표시 */}
+                        {b.floors >= 3 && Array.from({ length: Math.min(b.floors - 1, 15) }, (_, i) => {
+                            const lineY = (i + 1) * (b.height / b.floors);
+                            return (
+                                <Line
+                                    key={`fl-${i}`}
+                                    points={[
+                                        [-b.width / 2 - 0.02, lineY, b.depth / 2 + 0.02] as [number, number, number],
+                                        [b.width / 2 + 0.02, lineY, b.depth / 2 + 0.02] as [number, number, number],
+                                    ]}
+                                    color="#b0b8c4"
+                                    lineWidth={0.5}
+                                />
+                            );
+                        })}
 
-                                {/* 옥상 디테일 (높은 건물) - 박스 형태에만 표시 */}
-                                {b.height > 20 && (
-                                    <mesh position={[b.width * 0.15, b.height + 1.2, -b.depth * 0.1]} castShadow>
-                                        <boxGeometry args={[b.width * 0.3, 2.4, b.depth * 0.25]} />
-                                        <meshStandardMaterial color="#94a3b8" roughness={0.9} />
-                                    </mesh>
-                                )}
-                            </>
+                        {/* 옥상 디테일 (높은 건물) */}
+                        {b.height > 20 && (
+                            <mesh position={[b.width * 0.15, b.height + 1.2, -b.depth * 0.1]} castShadow>
+                                <boxGeometry args={[b.width * 0.3, 2.4, b.depth * 0.25]} />
+                                <meshStandardMaterial color="#94a3b8" roughness={0.9} />
+                            </mesh>
+                        )}
+
+                        {/* 건물 클릭 시 상세 정보 팝업 */}
+                        {isSelected && (
+                            <Html position={[0, b.height + 3, 0]} center style={{ pointerEvents: 'none' }}>
+                                <div style={{
+                                    background: 'rgba(15, 23, 42, 0.9)',
+                                    backdropFilter: 'blur(12px)',
+                                    color: '#f1f5f9',
+                                    padding: '10px 14px',
+                                    borderRadius: '10px',
+                                    fontSize: '12px',
+                                    lineHeight: '1.6',
+                                    whiteSpace: 'nowrap',
+                                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                    minWidth: '160px',
+                                }}>
+                                    <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '4px', color: '#60a5fa' }}>{buildingName}</div>
+                                    <div>📏 높이: <b>{b.height.toFixed(1)}m</b></div>
+                                    <div>🏢 층수: <b>{b.floors}층</b></div>
+                                    <div>🏠 용도: <b>{useLabel}</b></div>
+                                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', borderTop: '1px solid rgba(148,163,184,0.2)', paddingTop: '4px' }}>
+                                        {sourceLabel}
+                                    </div>
+                                </div>
+                            </Html>
                         )}
                     </group>
                 );
@@ -535,69 +798,96 @@ function TreeInstances({ context }: { context: SiteContext }) {
 }
 
 // ─── 확장 지면 (도시 블록 느낌 / 위성 맵 텍스처) ───
+// ★ zoom 폴백 전략: 18 → 17 → 16 → 15 (지방/농촌 타일 미존재 대응)
+const ZOOM_FALLBACK_ORDER = [18, 17, 16, 15] as const;
+
 function UrbanGroundPlane() {
     const centerLng = useProjectStore(s => s.centerLng);
     const centerLat = useProjectStore(s => s.centerLat);
     const [texture, setTexture] = useState<THREE.Texture | null>(null);
+    const [activeZoom, setActiveZoom] = useState(18);
 
-    // 지면의 크기 (실제 미터 기준, 1:1 매칭)
-    const planeSize = 2000;
+    const imgSize = 1024;
+    const key = import.meta.env.VITE_VWORLD_API_KEY || '';
 
-    // VWorld API BBOX 정밀 생성
-    const url = useMemo(() => {
-        if (!centerLng || !centerLat) return '';
+    // ─── 동적 planeSize 계산 (Web Mercator 지상해상도 공식) ───
+    // ground_resolution = 156543.03 * cos(lat) / 2^zoom [m/px]
+    const groundResolution = useMemo(() => {
+        if (!centerLat) return 1;
+        return 156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, activeZoom);
+    }, [centerLat, activeZoom]);
 
-        const key = process.env.VWORLD_API_KEY || 'B8385331-2B58-3CEF-9209-33CB9AFD68A6';
-        const EARTH_RADIUS = 6378137.0;
-
-        // 1. 대지 중심의 절대 EPSG:3857 좌표
-        const latRad = centerLat * (Math.PI / 180.0);
-        const lngRad = centerLng * (Math.PI / 180.0);
-        const originX = EARTH_RADIUS * lngRad;
-        const originY = EARTH_RADIUS * Math.log(Math.tan(Math.PI / 4.0 + latRad / 2.0));
-
-        // 2. Real Meters 반경 -> Web Mercator 반경 (역 스케일 팩터)
-        const scale = Math.cos(latRad);
-        const mercatorRadius = (planeSize / 2) / scale;
-
-        const minX = originX - mercatorRadius;
-        const minY = originY - mercatorRadius;
-        const maxX = originX + mercatorRadius;
-        const maxY = originY + mercatorRadius;
-
-        // BBOX=minX,minY,maxX,maxY (정밀한 EPSG:3857 Bounding Box)
-        return `/vworld-api/req/image?service=image&request=getmap&key=${key}&basemap=PHOTO&bbox=${minX},${minY},${maxX},${maxY}&size=1024,1024&crs=epsg:3857&domain=${window.location.origin}`;
-    }, [centerLng, centerLat]);
+    const planeSize = imgSize * groundResolution;
 
     useEffect(() => {
-        if (!url) {
+        if (!centerLng || !centerLat) {
             setTexture(null);
             return;
         }
 
-        console.log(`[UrbanGroundPlane] Fetching satellite texture (PHOTO), url: ${url}`);
-
+        let cancelled = false;
         const loader = new THREE.TextureLoader();
         loader.setCrossOrigin('anonymous');
 
-        loader.load(url, (tex) => {
-            console.log(`[UrbanGroundPlane] Texture loaded successfully.`);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            tex.minFilter = THREE.LinearFilter;
-            tex.generateMipmaps = false;
-            tex.needsUpdate = true;
-            setTexture(tex);
-        }, undefined, (err) => {
-            console.warn('[3D] 위성 이미지 로드 실패:', err);
-            setTexture(null);
-        });
-    }, [url]);
+        // 순차 폴백: zoom 18 → 17 → 16 → 15
+        async function tryLoadWithFallback() {
+            for (const z of ZOOM_FALLBACK_ORDER) {
+                if (cancelled) return;
+
+                const url = `/vworld-api/req/image?service=image&request=getmap&key=${key}&basemap=PHOTO&center=${centerLng},${centerLat}&zoom=${z}&size=${imgSize},${imgSize}&crs=epsg:4326&domain=${encodeURIComponent('http://localhost')}`;
+                const zPlaneSize = imgSize * (156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, z));
+
+                console.log(`[UrbanGroundPlane] 시도 zoom=${z}, 예상 planeSize=${(imgSize * (156543.03 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, z))).toFixed(1)}m`);
+
+                const success = await new Promise<boolean>((resolve) => {
+                    loader.load(
+                        url,
+                        (tex) => {
+                            if (cancelled) { tex.dispose(); resolve(false); return; }
+                            // VWorld는 빈 타일에 대해 1x1 또는 매우 작은 이미지 반환 가능
+                            if (tex.image && tex.image.width > 2 && tex.image.height > 2) {
+                                tex.colorSpace = THREE.SRGBColorSpace;
+                                tex.minFilter = THREE.LinearMipmapLinearFilter;
+                                tex.magFilter = THREE.LinearFilter;
+                                tex.anisotropy = 16;
+                                tex.needsUpdate = true;
+                                setActiveZoom(z);
+                                setTexture(tex);
+                                console.log(`[UrbanGroundPlane] ✅ zoom=${z} 위성 텍스처 로드 성공`);
+                                resolve(true);
+                            } else {
+                                console.warn(`[UrbanGroundPlane] zoom=${z} 빈 타일 (${tex.image?.width}x${tex.image?.height}) → 낮은 줌으로 재시도`);
+                                tex.dispose();
+                                resolve(false);
+                            }
+                        },
+                        undefined,
+                        () => {
+                            console.warn(`[UrbanGroundPlane] zoom=${z} 로드 실패 → 다음 줌 시도`);
+                            resolve(false);
+                        }
+                    );
+                });
+
+                if (success) return;
+            }
+
+            // 모든 줌 실패
+            console.warn('[UrbanGroundPlane] ⚠️ 모든 줌 레벨 실패 — 기본 그라운드 표시');
+            if (!cancelled) {
+                setTexture(null);
+                setActiveZoom(16); // 적당한 축소 줌으로 plane 크기 유지
+            }
+        }
+
+        tryLoadWithFallback();
+        return () => { cancelled = true; };
+    }, [centerLng, centerLat, key]);
 
     return (
         <group>
-            {/* 1:1 스케일 매칭: planeGeometry args를 실제 물리적 거리와 정밀 일치 */}
-            {/* Y축 고도 안착: 건물 렌더링 시작점과 맞물리도록 정확히 0 에 안착 */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+            {/* 위성 지도 — planeSize가 실제 지리적 범위와 정확히 일치 */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
                 <planeGeometry args={[planeSize, planeSize]} />
                 {texture ? (
                     <meshBasicMaterial map={texture} color="#ffffff" side={THREE.DoubleSide} />
@@ -627,32 +917,19 @@ function SiteContextLayer() {
         if (realBuildings && realBuildings.length > 0) {
             console.log(`[3D] 실제 주변 건물 ${realBuildings.length}개 렌더링`);
 
-            const buildings: NearbyBuilding[] = realBuildings.map(rb => {
-                let poly = rb.polygon;
-                // 폴리곤 방향성 교정: Clockwise인 경우 ExtrudeGeometry가 안쪽 면을 뒤집을 수 있으므로 뒤집어 줌.
-                if (poly && poly.length >= 3) {
-                    const vecPts = poly.map(([x, y]) => new THREE.Vector2(x, y));
-                    if (THREE.ShapeUtils.isClockWise(vecPts)) {
-                        poly = [...poly].reverse();
-                    }
-                }
-                return {
-                    id: rb.id,
-                    x: rb.x,
-                    z: rb.z,
-                    width: rb.width,
-                    depth: rb.depth,
-                    height: rb.height,
-                    floors: rb.floors,
-                    use: rb.use === 'school' ? 'residential' :
-                        rb.use === 'public' ? 'office' :
-                            rb.use === 'industrial' ? 'mixed' :
-                                rb.use === 'natural' ? 'residential' :
-                                    rb.use as any,
-                    color: rb.color,
-                    polygon: poly,
-                };
-            });
+            const buildings: NearbyBuilding[] = realBuildings.map(rb => ({
+                id: rb.id,
+                x: rb.x,
+                z: rb.z,
+                width: rb.width,
+                depth: rb.depth,
+                height: rb.height,
+                floors: rb.floors,
+                use: rb.use,
+                color: rb.color,
+                polygon: rb.polygon,
+                heightSource: rb.heightSource,
+            }));
 
             return {
                 buildings,
@@ -674,15 +951,10 @@ function SiteContextLayer() {
             return MOCK_SITE_CONTEXTS[selectedParcelId];
         }
 
-        // API 필지이지만 실제 건물이 아직 로드 안 됐을 때 — 기본 Mock
+        // API 필지이지만 실제 건물이 아직 로드 안 됐을 때 (더미 박스 제거)
         if (isRealParcel && polygon.length >= 3) {
             return {
-                buildings: [
-                    { id: 'an1', x: -scale * 0.8, z: -scale * 0.6, width: scale * 0.4, depth: scale * 0.35, height: 15, floors: 5, use: 'residential' },
-                    { id: 'an2', x: scale * 0.5, z: -scale * 0.7, width: scale * 0.5, depth: scale * 0.3, height: 21, floors: 7, use: 'office' },
-                    { id: 'an3', x: -scale * 0.6, z: scale * 0.8, width: scale * 0.45, depth: scale * 0.3, height: 12, floors: 4, use: 'commercial' },
-                    { id: 'an4', x: scale * 0.7, z: scale * 0.5, width: scale * 0.3, depth: scale * 0.4, height: 18, floors: 6, use: 'mixed' },
-                ],
+                buildings: [], // 강제로 어떤 더미 데이터도 그리지 않음
                 roads: [
                     { id: 'ar1', points: [[-(scale * 3.5), bbox.minY - 5], [scale * 3.5, bbox.minY - 5]], width: 8, name: '전면도로', type: 'main' },
                     { id: 'ar2', points: [[bbox.minX - 8, -(scale * 3.5)], [bbox.minX - 8, scale * 3.5]], width: 6, type: 'local' },
@@ -691,7 +963,8 @@ function SiteContextLayer() {
             };
         }
 
-        return MOCK_SITE_CONTEXTS['gangnam-yeoksam'] || null;
+        // 아무 것도 없으면 빈 컨텍스트 반환
+        return { buildings: [], roads: [], trees: [] };
     }, [selectedParcelId, polygon, isRealParcel, realBuildings]);
 
     if (!context) return null;
@@ -710,6 +983,7 @@ function MaxEnvelopeVisualization() {
     const showMaxEnvelope = useProjectStore(s => s.showMaxEnvelope);
     const maxEnvelope = useProjectStore(s => s.maxEnvelope);
     const polygon = useProjectStore(s => s.landPolygon);
+    const northAngle = useProjectStore(s => s.northAngle);
 
     // 대지 중심점 기반 좌표 변환
     const { center, centeredLandPts } = useMemo(() => {
@@ -866,7 +1140,7 @@ function MaxEnvelopeVisualization() {
     const envH = maxEnvelope.effectiveMaxHeight;
 
     return (
-        <group>
+        <group rotation={[0, (northAngle * Math.PI) / 180, 0]}>
             {/* ── 건축가능영역 바닥면 (후퇴 적용) ── */}
             {centeredBuildable.length >= 3 && (
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
@@ -1044,18 +1318,215 @@ function ViewportFixer() {
     return null;
 }
 
-export default function SceneViewer() {
+// ─── heightSource 범례(Legend) 오버레이 UI ───
+function HeightSourceLegend() {
+    const [isVisible, setIsVisible] = useState(true);
+
+    if (!isVisible) {
+        return (
+            <div
+                onClick={() => setIsVisible(true)}
+                style={{
+                    position: 'absolute',
+                    top: 50,
+                    right: 16,
+                    zIndex: 20,
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    color: '#94a3b8',
+                    fontSize: '11px',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                }}
+            >
+                📊 범례
+            </div>
+        );
+    }
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: 50,
+            right: 16,
+            zIndex: 20,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            color: '#f1f5f9',
+            fontSize: '12px',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+            minWidth: '180px',
+            userSelect: 'none',
+        }}>
+            {/* 헤더 */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+            }}>
+                <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.3px' }}>건물 높이 출처</span>
+                <span
+                    onClick={() => setIsVisible(false)}
+                    style={{ cursor: 'pointer', color: '#64748b', fontSize: '14px', lineHeight: 1 }}
+                >
+                    ✕
+                </span>
+            </div>
+
+            {/* 범례 항목들 */}
+            {[
+                { color: '#3b82f6', bgColor: '#b3d1f7', label: '실측 (건축물대장)', icon: '🔵' },
+                { color: '#eab308', bgColor: '#f5e6a3', label: '층수 기반 계산', icon: '🟡' },
+                { color: '#94a3b8', bgColor: '#d4d9e0', label: '기본 추정', icon: '⚪' },
+            ].map((item, i) => (
+                <div key={i} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '5px 0',
+                }}>
+                    {/* 색상 칩 (건물 본체 + 하단 밴드 2톤) */}
+                    <div style={{
+                        width: '28px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        background: `linear-gradient(to bottom, ${item.bgColor} 75%, ${item.color} 75%)`,
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        flexShrink: 0,
+                    }} />
+                    <span style={{ color: '#cbd5e1', fontSize: '11.5px' }}>{item.label}</span>
+                </div>
+            ))}
+
+            {/* 안내 문구 */}
+            <div style={{
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+                color: '#64748b',
+                fontSize: '10.5px',
+                lineHeight: 1.5,
+            }}>
+                💡 건물 클릭 시 상세 정보 확인
+            </div>
+        </div>
+    );
+}
+
+interface SceneViewerProps {
+    sunlightEnabled?: boolean;
+    sunPosition?: SunPosition | null;
+    sunlightDate?: { year: number; month: number; day: number };
+    lat?: number;
+    lng?: number;
+    // 그림자 분석
+    shadowAnalysisRequest?: number;  // 변경 시 분석 실행
+    showShadowHeatmap?: boolean;
+    onShadowAnalysisResult?: (result: ShadowAnalysisResult) => void;
+}
+
+/** Canvas 내부에서 그림자 분석 실행하는 컨트롤러 */
+function ShadowAnalysisController({
+    lat, lng, sunlightDate,
+    analysisRequest,
+    showHeatmap,
+    onResult,
+}: {
+    lat: number;
+    lng: number;
+    sunlightDate?: { year: number; month: number; day: number };
+    analysisRequest?: number;
+    showHeatmap: boolean;
+    onResult?: (result: ShadowAnalysisResult) => void;
+}) {
+    const polygon = useProjectStore(s => s.landPolygon);
+    const { result, runAnalysis } = useShadowAnalysis();
+    const lastRequestRef = useRef(0);
+
+    // 대지 바운딩 박스 계산
+    const bounds = useMemo(() => {
+        if (!polygon || polygon.length < 3) return null;
+        const center = polygonCentroid(polygon);
+        const centered = polygon.map(([x, y]) => [x - center[0], y - center[1]] as [number, number]);
+        const bbox = polygonBBox(centered);
+        const pad = 30; // 30m 버퍼
+        return {
+            minX: -bbox.width / 2 - pad,
+            maxX: bbox.width / 2 + pad,
+            minZ: -bbox.height / 2 - pad,
+            maxZ: bbox.height / 2 + pad,
+        };
+    }, [polygon]);
+
+    // 분석 요청 감지
+    useEffect(() => {
+        if (!analysisRequest || analysisRequest === lastRequestRef.current || !bounds) return;
+        lastRequestRef.current = analysisRequest;
+
+        const year = sunlightDate?.year ?? new Date().getFullYear();
+        const month = sunlightDate?.month ?? 12;
+        const day = sunlightDate?.day ?? 22;
+
+        runAnalysis(lat, lng, year, month, day, bounds, 3, 9, 15, 30);
+    }, [analysisRequest, bounds, lat, lng, sunlightDate, runAnalysis]);
+
+    // 결과 전달 (ref 사용으로 onResult 참조 변경에 의한 루프 방지)
+    const onResultRef = useRef(onResult);
+    onResultRef.current = onResult;
+    const lastResultStatusRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!result) return;
+        // status가 변경되었을 때만 콜백
+        const key = `${result.status}-${result.progress}`;
+        if (key === lastResultStatusRef.current) return;
+        lastResultStatusRef.current = key;
+        onResultRef.current?.(result);
+    }, [result]);
+
+    if (!bounds) return null;
+
+    return (
+        <ShadowHeatmap
+            enabled={showHeatmap}
+            analysisResult={result}
+            bounds={bounds}
+        />
+    );
+}
+
+export default function SceneViewer({
+    sunlightEnabled = false,
+    sunPosition = null,
+    sunlightDate,
+    lat = 37.5,
+    lng = 127.0,
+    shadowAnalysisRequest,
+    showShadowHeatmap = false,
+    onShadowAnalysisResult,
+}: SceneViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     return (
         <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* heightSource 범례 오버레이 */}
+            <HeightSourceLegend />
+
             <Canvas
                 shadows
                 gl={{
                     antialias: true,
                     alpha: true,
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: 1.2,
+                    toneMappingExposure: sunlightEnabled ? 1.0 : 1.2,
                 }}
                 style={{ display: 'block' }}
                 onCreated={({ gl }) => {
@@ -1080,31 +1551,63 @@ export default function SceneViewer() {
                     maxPolarAngle={Math.PI / 2.1}
                 />
 
-                {/* === 3-Point Lighting === */}
-                {/* Key Light (메인 태양광) */}
-                <directionalLight
-                    position={[30, 50, 20]}
-                    intensity={2.0}
-                    castShadow
-                    shadow-mapSize={[4096, 4096]}
-                    shadow-camera-left={-100}
-                    shadow-camera-right={100}
-                    shadow-camera-top={100}
-                    shadow-camera-bottom={-100}
-                    shadow-camera-near={0.5}
-                    shadow-camera-far={500}
-                    shadow-bias={-0.0001}
-                />
-                {/* Fill Light (보조광) */}
-                <directionalLight position={[-20, 30, -10]} intensity={0.6} color="#b8d4ff" />
-                {/* Rim Light (윤곽광) */}
-                <directionalLight position={[0, 10, -30]} intensity={0.3} color="#ffd4a8" />
-                {/* Ambient */}
-                <ambientLight intensity={0.35} />
+                {/* === 조명 시스템 === */}
+                {sunlightEnabled && sunPosition ? (
+                    /* ── 일조 시뮬레이션 모드: 동적 태양광 ── */
+                    <>
+                        <SunLight enabled={true} sunPosition={sunPosition} shadowRadius={400} />
+                        <SunOrb enabled={true} sunPosition={sunPosition} />
+                        {sunlightDate && (
+                            <SunPathArc
+                                enabled={true}
+                                lat={lat}
+                                lng={lng}
+                                year={sunlightDate.year}
+                                month={sunlightDate.month}
+                                day={sunlightDate.day}
+                            />
+                        )}
+                        {/* 일조 모드 환경광 (약한 앰비언트) */}
+                        <ambientLight intensity={sunPosition.isDay ? 0.25 : 0.08} />
+                        <hemisphereLight args={[
+                            sunPosition.isDay ? '#b1e1ff' : '#1e293b',
+                            sunPosition.isDay ? '#b97a20' : '#0f172a',
+                            sunPosition.isDay ? 0.4 : 0.1
+                        ]} />
+                    </>
+                ) : (
+                    /* ── 기본 모드: 3-Point Lighting ── */
+                    <>
+                        {/* Key Light (메인 태양광) */}
+                        <directionalLight
+                            position={[30, 50, 20]}
+                            intensity={2.0}
+                            castShadow
+                            shadow-mapSize={[4096, 4096]}
+                            shadow-camera-left={-100}
+                            shadow-camera-right={100}
+                            shadow-camera-top={100}
+                            shadow-camera-bottom={-100}
+                            shadow-camera-near={0.5}
+                            shadow-camera-far={500}
+                            shadow-bias={-0.0001}
+                        />
+                        {/* Fill Light (보조광) */}
+                        <directionalLight position={[-20, 30, -10]} intensity={0.6} color="#b8d4ff" />
+                        {/* Rim Light (윤곽광) */}
+                        <directionalLight position={[0, 10, -30]} intensity={0.3} color="#ffd4a8" />
+                        {/* Ambient */}
+                        <ambientLight intensity={0.35} />
+                        {/* 환경 (hemisphereLight) */}
+                        <hemisphereLight args={['#b1e1ff', '#b97a20', 0.6]} />
+                    </>
+                )}
 
-                {/* === 환경 === */}
-                <Environment preset="city" />
-                <fog attach="fog" args={['#e8ecf0', 500, 2500]} />
+                <fog attach="fog" args={[
+                    sunlightEnabled && sunPosition && !sunPosition.isDay ? '#1e293b' : '#e8ecf0',
+                    500,
+                    2500
+                ]} />
 
                 {/* === 그리드 바닥 === */}
                 <Grid
@@ -1124,7 +1627,7 @@ export default function SceneViewer() {
                 <UrbanGroundPlane />
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
                     <planeGeometry args={[2000, 2000]} />
-                    <shadowMaterial transparent opacity={0.2} />
+                    <shadowMaterial transparent opacity={sunlightEnabled ? 0.45 : 0.2} />
                 </mesh>
 
                 {/* === 주변 환경 (Forma/TestFit 스타일) === */}
@@ -1142,15 +1645,29 @@ export default function SceneViewer() {
                 {/* Phase 1-C: 법적 최대 볼륨 (Max Envelope) */}
                 <MaxEnvelopeVisualization />
 
-                {/* Contact Shadows (부드러운 바닥 그림자) */}
-                <ContactShadows
-                    position={[0, 0, 0]}
-                    opacity={0.25}
-                    scale={500}
-                    blur={3}
-                    far={200}
-                    resolution={1024}
-                />
+                {/* Phase 1-D: 그림자 히트맵 분석 */}
+                {sunlightEnabled && (
+                    <ShadowAnalysisController
+                        lat={lat}
+                        lng={lng}
+                        sunlightDate={sunlightDate}
+                        analysisRequest={shadowAnalysisRequest}
+                        showHeatmap={showShadowHeatmap}
+                        onResult={onShadowAnalysisResult}
+                    />
+                )}
+
+                {/* Contact Shadows (기본 모드에서만) */}
+                {!sunlightEnabled && (
+                    <ContactShadows
+                        position={[0, 0, 0]}
+                        opacity={0.25}
+                        scale={500}
+                        blur={3}
+                        far={200}
+                        resolution={512}
+                    />
+                )}
             </Canvas>
         </div>
     );

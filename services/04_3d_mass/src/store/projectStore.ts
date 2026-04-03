@@ -70,12 +70,14 @@ export interface ParcelData {
 
 // ─── 폴리곤 유틸리티 ───
 export function polygonCentroid(pts: [number, number][]): [number, number] {
+    if (!pts || pts.length === 0) return [0, 0];
     let cx = 0, cy = 0;
     for (const [x, y] of pts) { cx += x; cy += y; }
     return [cx / pts.length, cy / pts.length];
 }
 
 export function polygonBBox(pts: [number, number][]) {
+    if (!pts || pts.length === 0) return { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0 };
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [x, y] of pts) {
         if (x < minX) minX = x; if (x > maxX) maxX = x;
@@ -1017,7 +1019,10 @@ export const useProjectStore = create<ProjectState>()(
     setShowSunlight: (showSunlight) => set({ showSunlight }),
     setSimulationDate: (simulationMonth, simulationDay) => set({ simulationMonth, simulationDay }),
     setSimulationHour: (simulationHour) => set({ simulationHour }),
-    setShowShadowAnalysis: (showShadowAnalysis) => set({ showShadowAnalysis }),
+    setShowShadowAnalysis: (showShadowAnalysis) => set((state) => ({ 
+        showShadowAnalysis,
+        ...(showShadowAnalysis ? { showSunlight: true } : {}) 
+    })),
 
     setSelectedTypology: (selectedTypology: TypologyType) => {
         const allResults = get().allTypologyResults;
@@ -1372,6 +1377,18 @@ export const useProjectStore = create<ProjectState>()(
         }),
         {
             name: 'haema-project-store', // 로컬 스토리지 키 이름
+            partialize: (state) => {
+                // 저장 시 불필요한/일시적인 상태(로딩, 에러 등) 제외하여 랜더링 무한 로딩 버그 방지
+                const { 
+                    isLoading, 
+                    apiError, 
+                    kakaoResults, 
+                    showShadowAnalysis, 
+                    showSunlight, 
+                    ...rest 
+                } = state as Record<string, any>;
+                return rest;
+            },
         }
     )
 );

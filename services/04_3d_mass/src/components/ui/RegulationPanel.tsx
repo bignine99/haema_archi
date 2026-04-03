@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import { ZONE_REGULATIONS } from '@/services/regulationEngine';
 import {
@@ -525,6 +525,17 @@ export default function RegulationPanel() {
         });
         return groups;
     }, [ordinanceResult]);
+
+    // 프로젝트 데이터(이름, 주소, 면적, 용도)가 변경되면 이전 분석 결과 초기화
+    useEffect(() => {
+        setAnalysisResult(null);
+        setError(null);
+        setOrdinanceResult(null);
+        setOrdinanceError(null);
+    }, [
+        store.projectName, store.address, store.landArea, store.grossFloorArea,
+        store.buildingUse, store.zoneType, setAnalysisResult, setOrdinanceResult
+    ]);
 
     const hasProjectInfo = !!(store.projectName && store.projectName !== '미정 프로젝트');
     const totalBatches = REGULATION_BATCHES.length;

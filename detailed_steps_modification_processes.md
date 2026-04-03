@@ -3334,3 +3334,93 @@ ln -s /etc/nginx/sites-available/ninetynine /etc/nginx/sites-enabled/ninetynine
 |------|--------------|
 | `LandingPage.tsx` | 개발자 IPv4 바이패스(자동 로그인) 로직 구축 및 무한 렌더링 루프 방지 `useRef` 주입 |
 | `StatisticsChartPanel.tsx` | 10개 Analytics Chart 생성, Tableau 10 Color 적용, Windows Blurry Font 퇴출, Treemap 공용/전용면적 색상 분할 및 Floor 선택 필터링 |
+
+---
+
+## 🚀 완료된 작업: 법규 분석 및 대지 분석 엔진 안정화 및 오류 해결 (2026-03-31)
+
+### 2026-03-31 작업 내용
+
+과업지시서 기반 다운스케일링 및 실 자동 구성 기능에 이어, 발생한 데이터 불일치 이슈("법규분석은 최신 버전이 아니다")와 분석 파싱 오류("대지분석에 실패했습니다")를 모두 해결하고, 패널의 상태 최신화 보장 로직을 확립했습니다.
+
+### 1. 대지 분석 JSON 파싱 에러 (Markdown Syntax Error) 해결
+- **문제 발생:** Gemini AI가 대지 분석 결과인 JSON 데이터를 반환할 때, 마크다운 코드 블록(예: ` ```json ` ... ` ``` `)으로 감싸서 응답하는 경우 `JSON.parse`가 이를 해석하지 못해 "대지분석에 실패했습니다. 다시 시도해주세요."라는 오류가 발생했습니다.
+- **개선 방법:** `siteAnalysisService.ts` 내 응답 파싱 과정에서 문자열 슬라이싱 및 트림(trim) 처리를 통해 마크다운 코드 블록 요소를 완벽하게 잘라내고(Strip) 순수 JSON 문자열만 파싱하도록 로직을 보강하여 분석 엔진의 안정성을 크게 높였습니다.
+
+### 2. 프로젝트 파라미터 변경 시 분석 패널의 상태 자동 초기화(Sync) 보장
+- **문제 발생:** 사용자가 목표 연면적을 수동으로 수정하거나 과업지시서를 새로 업로드하여 프로젝트 파라미터가 변동되었음에도 불구하고, `RegulationPanel.tsx`(법규분석)와 `SiteAnalysisPanel.tsx`(대지분석)에서는 과거 분석 결과를 화면에 계속 노출시키는 문제가 재발했습니다.
+- **개선 방법:** 양쪽 패널 컴포넌트에 React의 `useEffect` Cleanup 훅을 전면 도입했습니다. Project Store의 핵심 변수(`projectName`, `address`, `landArea`, `grossFloorArea`, `buildingUse`, `zoneType`)가 변경됨을 감지하면 즉시 기존 `analysisResult` 및 `result`를 `null`로 강제 리셋합니다. 이를 통해 과거 수치에 기초한 오분석 화면 잔류를 막고, 무조건 최신 데이터를 기반으로 "분석 시작" 버튼을 누르도록 UI 동기화를 보장했습니다.
+
+### 파일 수정 내역 총괄
+| 파일 | 주요 변경 내용 |
+|------|--------------|
+| `siteAnalysisService.ts`| LLM 응답값에서 마크다운 백틱(` ```json `)을 제거하여 안정적인 `JSON.parse` 구동 계층 확보 |
+| `SiteAnalysisPanel.tsx` | `useEffect`로 `store` 핵심 지표를 구독하여, 수치 변경 시 대지 분석 상태를 즉시 초기화하는 의존성 주입 |
+| `RegulationPanel.tsx`   | `useEffect`를 도입해 프로젝트 데이터 변경 시 과거 법규 종합 분석 결과를 강제로 폐기하고 빈 상태로 복귀 |
+
+---
+
+## 🚀 완료된 작업 및 미해결 과제: 3D Massing 모듈 안정화 및 단일 상태 유지 (2026-04-01)
+
+### 2026-04-01 오늘 작업 내용
+
+3D Massing 모듈(`04_3d_mass`)의 WebGL 렌더링 충돌 현상 방어와 UI 환경 정비(폰트 도입 및 중복 메뉴 제거), 그리고 패널 렌더링 시 전역 상태 유지를 위한 사전 작업을 진행했습니다.
+
+### 1. 전역 타이포그래피 구조화 및 UI 메뉴 정리
+- **프리미엄 폰트 적용:** 글로벌 폰트 패밀리를 수정하여, 한글에는 `Pretendard`, 영문과 숫자에는 `Outfit` 폰트가 전면적으로 분리 적용되도록 웹 폰트 규칙을 재선언했습니다.
+- **메뉴 중복 제거:** 좌측 메뉴 네비게이션 트리에서 중복으로 등록되어 있던 "버블 다이어그램" (Phase D) 항목을 삭제하여 깔끔한 위계를 확보했습니다.
+
+### 2. 3D Mass 모듈의 주소 검색 및 환경 안정성 보완
+- **주소 검색창 복구:** 3D 매스 모듈 뷰에서 사라졌던 헤더 내 주소 검색 컴포넌트(`MassAddressSearch`)를 다시 복원하여 정상적인 검색 및 위치 연동이 가능하게 만들었습니다.
+- **AppErrorBoundary 예외 처리망 구축:** `04_3d_mass` MSA 컨테이너(포트 3004)에서 데이터 지연이나 WebGL Context 상실 등으로 인해 전체 화면이 크래시가 나는 빈 화면(White Screen of Death) 현상을 막고자 ErrorBoundary를 적용, 에러 발생 시 UI 피드백과 새로고침 버튼을 노출하도록 처리했습니다.
+- **Vite 환경변수 마이그레이션:** `.env`의 API 키들을 프론트엔드 빌드에서 안전하게 소화하도록 `VITE_` 접두사를 삽입하고, `import.meta.env` 객체를 통한 호출로 전면 개편했습니다.
+
+### 3. 미해결 과제 (내일 이어서 최우선 진행)
+- **증상 ("다른 창 이동 시 분석결과 증발"):** 사용자가 "법규분석"이나 "대지분석"에서 오랜 시간을 기다려 AI 분석을 띄워놓았으나, 다른 탭(버블 다이어그램 등)에 다녀오면 분석 결과가 초기화(증발)되는 심각한 UX 결함이 식별되었습니다.
+- **가설 및 현황 파악:** 
+  1. `SiteAnalysisPanel`이 로컬 상태(`useState`)를 쓰던 점을 발견하여 전역 `projectStore.siteAnalysisResult`로 교체하는 마이그레이션을 우선 진행했습니다. 
+  2. 양쪽 패널에 이전 분석 결과를 강제로 다시 불러오는 "새로고침(복구)" 버튼도 삽입해 보았습니다.
+  3. **본질적 원인 추정:** Zustand의 `persist` 미들웨어가 상태를 브라우저 `LocalStorage`에 직렬화하여 저장할 때, 극단적으로 방대한 용량의 AI JSON 응답(수백 KB ~ 1MB 이상)을 밀어넣다 보면 **5MB QuotaExceededError**가 발생합니다. 이 에러가 발생 시 `persist` 모듈이 에러를 뱉고 상태 직렬화를 중단하며, 이후 컴포넌트 리렌더링이나 Iframe 생명주기 이동 시 엉뚱한 이전 상태로 롤백되거나 Null로 초기화되어 버리는 것으로 유력하게 추정됩니다.
+- **내일 조치 방향:**
+  - `frontend/src/store/projectStore.ts`의 `persist` 설정 속성에 **`partialize`** 필터를 강력하게 도입할 것입니다.
+  - 대용량 데이터(`siteAnalysisResult`, `regulationAnalysisResult`, `documentInfo`, `floorZoning` 등)를 명시적으로 LocalStorage 저장 대상에서 제외(Exclude Filter)시킵니다.
+  - 해당 데이터들은 페이지 세션이 켜져 있는 동안 오직 **메모리(Store Memory)** 상에만 보유되게 함으로써, LocalStorage 할당량 초과 시스템 크래시를 근본적으로 방지하고 탭 간 이동 시 메모리의 State를 그대로 유지하도록 아키텍처를 교정할 계획입니다.
+
+---
+
+## 🚀 완료된 작업: 하에마(Haema) 아키텍처 코드베이스 리팩토링 및 모듈화 단계 (2026-04-02)
+
+### 2026-04-02 작업 내용
+
+복잡해진 단일 컴포넌트들을 각각의 기능적 단위로 쪼개어 모듈화하고, 의존성 감사를 진행하여 불필요한 레거시 코드를 제거하는 **구조적 개선(Refactoring) 및 클린업** 작업을 완수했습니다.
+
+### 1. UI 컴포넌트 폴더 분리 및 파일 경량화
+- **레이아웃(App.tsx) 모듈 분리:** 
+  기존 단일 \`App.tsx\` 내에 혼재되어 있던 복잡한 헤더(Header) 및 사이드바(Sidebar), 네비게이션 제어 로직을 \`frontend/src/components/layout/\` 경로 안으로 선언적으로 독립시켰습니다.
+  - \`Header.tsx\`, \`Sidebar.tsx\`, \`navigation.tsx\` 로 각 역할 분담.
+- **법규 패널(RegulationPanel.tsx) 서브 모듈화:** 
+  1,300줄이 넘어 유지보수가 한계치에 달했던 \`RegulationPanel.tsx\`를 \`components/ui/RegulationPanel/\` 하위 디렉토리로 압축 해제(Decompose)했습니다.
+  - \`CategoryAccordion.tsx\`: 아코디언 메뉴 구역
+  - \`LawCard.tsx\`: 법령 내용 카드 레이아웃
+  - \`LawDetailModal.tsx\`: 상세 해설/원문 모달 팝업
+  - \`SummaryCard.tsx\`: 상단 요약 위젯
+  - \`constants.ts\`: 메타데이터 및 정규식 규칙 추출
+
+### 2. 스토어(Zustand) 상태 관리 파일 모듈 분리 및 검증
+- \`projectStore.ts\`에 산재해 있던 \`DocumentInfo\`, \`ProjectState\` 등의 길고 복잡한 타입 정의들을 \`frontend/src/store/types.ts\` 로 깔끔하게 추출 분리하여 DRY 원칙을 향상시켰습니다.
+- 상태 트리를 분할(Slice)하는 방식도 고려하였으나, 현 단계에서 3D 뷰어 엔진과 양방향으로 연동되는 상태 데이터의 무결성(Single Source of Truth)이 깨지며 발생할 부작용을 방지하기 위해 Store 자체는 1개로 유지하기로 결정했습니다.
+- 분리된 스토어와 \`ProjectCharacteristicsPanel.tsx\` 간의 프로퍼티 연동 오류(TS2339)가 모두 사라졌음을 확인했습니다.
+
+### 3. 프로젝트 루트 쓰레기 파일 정리 및 의존성 감사
+- 터미널 탭 오류나 과거 마이그레이션 과정에서 잔류하던 \`migrate_3d_mass.py\`, \`test_vworld.js\`, \`{\` 등 수십 개의 임시 및 정크 파일들을 스크립트를 통해 일괄 삭제 처리하여 디렉토리를 가볍게 만들었습니다.
+- \`package.json\` 내부 의존성 감사를 통해 불필요한 패키지 잔존여부(Depcheck)를 검토하였으며, \`pdfjs-dist\` 에러와 같은 부분도 CDN으로 완벽하게 연동되어 오류가 없음을 파악했습니다.
+
+### 4. 제안서 디자인 컨셉 제네레이터(AI) 연동
+- 사용자의 프롬프트를 토대로, "1등 제안서 수준의 매혹적인 문구"와 "건축의 3대 철학적 원칙(Metaphor 등)"을 AI가 프로젝트 데이터와 결합하여 무한 스핀 생성해주는 기능을 \`ConceptGenerator.tsx\` 에 신규 탑재했습니다.
+
+### 파일 수정/제거 내역 총괄
+| 분류 | 주요 변경 내용 |
+|------|--------------|
+| **추가 / 분리** | \`Header.tsx\`, \`Sidebar.tsx\`, \`navigation.tsx\`, \`types.ts\`, \`CategoryAccordion.tsx\`, \`LawCard.tsx\`, \`SummaryCard.tsx\`, \`LawDetailModal.tsx\` |
+| **개선** | \`App.tsx\` (100줄 이내로 대폭 축소), \`RegulationPanel.tsx\` (메인 컨테이너 역할 부여), \`projectStore.ts\` (타입 제거 후 임포트) |
+| **청소 (정크 파일)** | 루트 디렉토리 내부 20~30여 개의 테스트 코드 (\`test.js\`, \`build_msa_skeleton.py\` 등) 삭제 처리 |

@@ -251,7 +251,19 @@ export async function analyzeSite(
       return null;
     }
 
-    const parsed = JSON.parse(content);
+    let cleanContent = content.trim();
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json/, '');
+    }
+    if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```/, '');
+    }
+    if (cleanContent.endsWith('```')) {
+      cleanContent = cleanContent.replace(/```$/, '');
+    }
+    cleanContent = cleanContent.trim();
+
+    const parsed = JSON.parse(cleanContent);
 
     console.log('[대지분석] 분석 완료:', {
       sections: parsed.sections?.length,

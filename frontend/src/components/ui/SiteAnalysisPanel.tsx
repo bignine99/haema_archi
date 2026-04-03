@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import {
     analyzeSite,
@@ -130,7 +130,9 @@ function SwotCard({ category, items }: { category: string; items: string[] }) {
 // ══════════════════════════════════════
 export default function SiteAnalysisPanel() {
     const store = useProjectStore();
-    const [result, setResult] = useState<SiteAnalysisResult | null>(null);
+    const result = store.siteAnalysisResult;
+    const setResult = store.setSiteAnalysisResult;
+
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -156,7 +158,7 @@ export default function SiteAnalysisPanel() {
             };
             const res = await analyzeSite(input);
             if (res) {
-                setResult(res);
+                store.setSiteAnalysisResult(res);
             } else {
                 setError('AI 대지분석에 실패했습니다. 다시 시도해주세요.');
             }
@@ -171,14 +173,28 @@ export default function SiteAnalysisPanel() {
     return (
         <div className="h-full w-full flex flex-col bg-white">
             {/* 헤더 */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-6 py-4 flex items-center gap-3 rounded-t-3xl z-10 shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <MapPin size={16} className="text-emerald-600" />
+            <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <MapPin size={16} className="text-emerald-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800">AI 종합 대지분석</h3>
+                        <p className="text-[10px] text-slate-500">5대 영역 · SWOT · 디자인 전략 · Gemini AI</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-sm font-bold text-slate-800">AI 종합 대지분석</h3>
-                    <p className="text-[10px] text-slate-500">5대 영역 · SWOT · 디자인 전략 · Gemini AI</p>
-                </div>
+                {store.siteAnalysisResult && (
+                    <button
+                        onClick={() => {
+                            store.setSiteAnalysisResult(null);
+                            setError(null);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-bold text-xs transition-colors"
+                    >
+                        <RotateCcw size={14} />
+                        새로고침
+                    </button>
+                )}
             </div>
 
             {/* 본문 */}

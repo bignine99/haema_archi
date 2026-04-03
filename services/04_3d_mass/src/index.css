@@ -1,10 +1,15 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        font-family: 'Outfit', 'Pretendard Variable', 'Pretendard', sans-serif;
+    }
+}
 
 :root {
     --bg-primary: #f8fafc;
@@ -36,7 +41,7 @@ html,
 body,
 #root {
     height: 100%;
-    font-family: 'Inter', 'Pretendard Variable', 'Outfit', system-ui, sans-serif;
+    font-family: 'Outfit', 'Pretendard Variable', 'Pretendard', 'Inter', system-ui, sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
     overflow: hidden;

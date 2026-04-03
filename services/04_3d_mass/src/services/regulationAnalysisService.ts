@@ -137,7 +137,13 @@ export async function analyzeRegulations(
     const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) return null;
 
-    const parsed = JSON.parse(content);
+    let cleanContent = content.trim();
+    if (cleanContent.startsWith('```json')) cleanContent = cleanContent.replace(/^```json/, '');
+    if (cleanContent.startsWith('```')) cleanContent = cleanContent.replace(/^```/, '');
+    if (cleanContent.endsWith('```')) cleanContent = cleanContent.replace(/```$/, '');
+    cleanContent = cleanContent.trim();
+
+    const parsed = JSON.parse(cleanContent);
     const icons: Record<string, string> = {
       B1: '🏙️', B2: '🚗', B3: '🔥', B4: '♿', B5: '🌿', B6: '⚡', B7: '📋',
     };
@@ -342,7 +348,13 @@ export async function analyzeSingleBatch(
       const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!content) return [];
 
-      const parsed = JSON.parse(content);
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) cleanContent = cleanContent.replace(/^```json/, '');
+      if (cleanContent.startsWith('```')) cleanContent = cleanContent.replace(/^```/, '');
+      if (cleanContent.endsWith('```')) cleanContent = cleanContent.replace(/```$/, '');
+      cleanContent = cleanContent.trim();
+
+      const parsed = JSON.parse(cleanContent);
       const icons: Record<string, string> = {
         B1: '🏙️', B2: '🚗', B3: '🔥', B4: '♿', B5: '🌿', B6: '⚡', B7: '📋',
       };
