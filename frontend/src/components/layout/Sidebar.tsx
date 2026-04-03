@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import { MENU_GROUPS } from './navigation';
 
 interface SidebarProps {
@@ -9,6 +9,22 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeMenu, setActiveMenu, setIsAuthorized }: SidebarProps) {
+    const [expandedGroup, setExpandedGroup] = useState<number | null>(() => {
+        const activeIdx = MENU_GROUPS.findIndex(g => g.items.some(item => item.id === activeMenu));
+        return activeIdx !== -1 ? activeIdx : 0;
+    });
+
+    useEffect(() => {
+        const activeIdx = MENU_GROUPS.findIndex(g => g.items.some(item => item.id === activeMenu));
+        if (activeIdx !== -1 && expandedGroup !== activeIdx) {
+            setExpandedGroup(activeIdx);
+        }
+    }, [activeMenu]);
+
+    const toggleGroup = (idx: number) => {
+        setExpandedGroup(prev => prev === idx ? null : idx);
+    };
+
     return (
         <aside
             className="text-slate-300 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.15)] z-50 border-r border-slate-800"
@@ -49,12 +65,25 @@ export default function Sidebar({ activeMenu, setActiveMenu, setIsAuthorized }: 
                     }
                 `}</style>
                 <ul className="space-y-3">
-                    {MENU_GROUPS.map((group, gIdx) => (
+                    {MENU_GROUPS.map((group, gIdx) => {
+                        const isExpanded = expandedGroup === gIdx;
+                        return (
                         <li key={gIdx} className="space-y-1">
-                            <div className="px-5 text-[9px] font-bold tracking-wider text-slate-500 mb-1">
-                                {group.title}
-                            </div>
-                            <ul className="space-y-0.5">
+                            <button
+                                onClick={() => toggleGroup(gIdx)}
+                                className="w-full flex items-center justify-between px-5 py-2 font-bold tracking-wider transition-colors hover:text-white"
+                                style={{ fontSize: '10px' }}
+                            >
+                                <span className={isExpanded ? 'text-orange-400' : 'text-slate-500 hover:text-slate-300'}>
+                                    {group.title}
+                                </span>
+                                <span className="opacity-70">
+                                    {isExpanded ? <ChevronDown size={14} className="text-orange-400" /> : <ChevronRight size={14} className="text-slate-500" />}
+                                </span>
+                            </button>
+                            
+                            {isExpanded && (
+                            <ul className="space-y-0.5 mt-1">
                                 {group.items.map(item => {
                                     const isActive = item.id === activeMenu;
                                     return (
@@ -75,8 +104,9 @@ export default function Sidebar({ activeMenu, setActiveMenu, setIsAuthorized }: 
                                     )
                                 })}
                             </ul>
+                            )}
                         </li>
-                    ))}
+                    )})}
                 </ul>
             </nav>
 

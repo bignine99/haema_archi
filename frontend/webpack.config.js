@@ -105,13 +105,13 @@ module.exports = {
             },
             {
                 context: ['/land-use-api'],
-                target: 'http://localhost:8010',
+                target: 'http://127.0.0.1:8010',
                 pathRewrite: { '^/land-use-api': '' },
                 changeOrigin: true,
             },
             {
                 context: ['/api/land-use', '/api/pnu', '/api/zone-limits', '/api/fc', '/api/site'],
-                target: 'http://localhost:8010',
+                target: 'http://127.0.0.1:8010',
                 changeOrigin: true,
             },
         ],

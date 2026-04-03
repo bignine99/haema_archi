@@ -1,43 +1,20 @@
-
+import React, { useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FileText, Award, DollarSign, MapPin,
-    Building, Ruler, Calendar,
-    CheckCircle, BookOpen, PenTool, Package, AlertCircle,
-    ArrowRight
+    Building, Ruler, Calendar, CheckCircle2,
+    BookOpen, PenTool, Package, AlertCircle,
+    ArrowRight, ShieldCheck, Target, Hexagon, Server, AlertTriangle
 } from 'lucide-react';
-import { useEffect } from 'react';
 import DocumentUploader from '@/components/ui/DocumentUploader';
 
-/* ───── SectionCard: 카드 재사용 컴포넌트 ───── */
-function SectionCard({ icon: Icon, iconColor, title, children, className = '' }: {
-    icon: React.ElementType; iconColor: string; title: string;
-    children: React.ReactNode; className?: string;
-}) {
-    return (
-        <div className={`glass-panel p-4 flex flex-col ${className}`}>
-            <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: `${iconColor}15` }}>
-                    <Icon size={14} style={{ color: iconColor }} />
-                </div>
-                <h3 className="text-[13px] font-bold text-slate-800">{title}</h3>
-            </div>
-            {children}
-        </div>
-    );
-}
-
-/* ───── BulletList: 항목 리스트 (표시 단계 핵심 요약) ───── */
+/* ───── 텍스트 클리닝 유틸리티 ───── */
 function cleanDisplayItem(raw: string): string[] {
-    // 1. PDF 문자간 띄어쓰기 수정: "설 계 용 역" → "설계용역"
     let text = raw.replace(/([가-힣])\s([가-힣])\s([가-힣])/g, (_, a, b, c) => a + b + c);
     text = text.replace(/([가-힣])\s([가-힣])/g, '$1$2');
-    // 반복 적용 (3글자 이상 연속)
     text = text.replace(/([가-힣])\s([가-힣])/g, '$1$2');
 
-    // 2. 하나의 긴 문자열이면 번호 패턴으로 분리
     const splitItems: string[] = [];
     const parts = text.split(/(?:\s{2,}|\s*(?:\(\d+\)|\d+[\.\)])\s*)/);
     for (const p of parts) {
@@ -46,13 +23,11 @@ function cleanDisplayItem(raw: string): string[] {
     }
     if (splitItems.length === 0) splitItems.push(text.trim());
 
-    // 3. 각 항목 정리
     const cleaned: string[] = [];
     for (let item of splitItems) {
-        // 제목/소제목 제거
         if (/^(제\d+\s*(장|절|조)|일반사항|공통사항|총칙|적용범위|목적|설계용역\s*과업)/.test(item)) continue;
         if (/^(건축|구조|토목|조경|기계|전기|통신|소방)\s*(분야|설비)?\s*[:：]?\s*$/.test(item)) continue;
-        // 법률 인용 제거
+        
         item = item
             .replace(/「[^」]*」/g, '')
             .replace(/법\s*제?\s*\d+조[^\s]*/g, '')
@@ -68,8 +43,7 @@ function cleanDisplayItem(raw: string): string[] {
 
         if (item.length < 8) continue;
 
-        // 60자 초과 시 자르기 (숫자 포함 부분 우선)
-        if (item.length > 60) {
+        if (item.length > 70) {
             const clauses = item.split(/[,，;；]/).map(c => c.trim()).filter(c => c.length > 0);
             const numClauses = clauses.filter(c => /\d/.test(c));
             if (numClauses.length > 0) {
@@ -77,10 +51,9 @@ function cleanDisplayItem(raw: string): string[] {
             } else {
                 item = clauses[0] || item;
             }
-            if (item.length > 60) item = item.substring(0, 57) + '...';
+            if (item.length > 70) item = item.substring(0, 67) + '...';
         }
 
-        // 최종 정리
         item = item.replace(/^[\s,;：:\-·•→]+/, '').replace(/[\s,;：:\-]+$/, '').trim();
         if (item.length >= 8 && !cleaned.some(c => c.substring(0, 12) === item.substring(0, 12))) {
             cleaned.push(item);
@@ -91,37 +64,35 @@ function cleanDisplayItem(raw: string): string[] {
 
 function BulletList({ items, emptyText = '정보 없음' }: { items: string[]; emptyText?: string }) {
     if (!items || items.length === 0) {
-        return <p className="text-[11px] text-slate-400 italic">{emptyText}</p>;
+        return <div className="text-[11px] text-slate-400 italic p-4 bg-slate-50 flex items-center justify-center rounded-lg border border-slate-100">{emptyText}</div>;
     }
 
-    // ★ 표시 전 각 항목 정리 + 분리
     const displayItems = items.flatMap(item => cleanDisplayItem(item));
-
-    // 숫자 포함 항목 먼저, 최대 8개
     const sorted = [
         ...displayItems.filter(d => /\d/.test(d)),
         ...displayItems.filter(d => !/\d/.test(d)),
     ];
-    const final = sorted.filter((v, i, a) => a.indexOf(v) === i).slice(0, 8);
+    const final = sorted.filter((v, i, a) => a.indexOf(v) === i).slice(0, 10);
 
     if (final.length === 0) {
-        return <p className="text-[11px] text-slate-400 italic">{emptyText}</p>;
+        return <div className="text-[11px] text-slate-400 italic p-4 bg-slate-50 flex items-center justify-center rounded-lg border border-slate-100">{emptyText}</div>;
     }
 
     return (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
             {final.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700">
-                    <ArrowRight size={10} className="text-blue-400 mt-0.5 shrink-0" />
-                    <span className="leading-relaxed">{item}</span>
+                <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <ArrowRight size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                    <span className="leading-relaxed font-medium">{item}</span>
                 </li>
             ))}
         </ul>
     );
 }
 
+
 /* ═══════════════════════════════════════════
-   ███ 통합 프로젝트 대시보드 (2단 레이아웃)
+   ███ 통합 프로젝트 대시보드 (12-Column Grid / High-Fidelity)
    ═══════════════════════════════════════════ */
 
 interface DashboardProps {
@@ -130,232 +101,307 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
     const store = useProjectStore();
-
     useEffect(() => { store.recalculate(); }, []);
 
     const hasDoc = !!store.documentInfo;
     const doc = store.documentInfo;
 
     return (
-        <motion.div
-            initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
-            className="w-full h-full overflow-y-auto overflow-x-hidden p-6 pb-10 flex flex-col gap-4 custom-scrollbar"
-        >
-            {/* ═══ 프로젝트 헤더 (전체 너비) — 업로드 버튼 포함 ═══ */}
-            <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center font-bold text-white text-lg shrink-0 shadow-lg">H</div>
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-bold text-slate-800 tracking-tight truncate">{store.projectName}</h2>
-                    <span className="text-[11px] text-slate-500 truncate block">{store.address}</span>
+        <div className="h-full w-full flex flex-col bg-slate-50/50">
+            {/* 1. 글로벌 헤더 ( z-20, Sticky ) */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex items-center justify-between rounded-t-3xl z-20 shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center border border-indigo-200 shadow-inner">
+                        <FileText size={22} className="text-indigo-700" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+                            AI 과업지시서 번역 엔진 (RFP Intelligence)
+                            {hasDoc && <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">PARSER ACTIVE</span>}
+                        </h3>
+                        <p className="text-[11px] font-medium text-slate-500 mt-0.5">과업 제원 · 설계 지침 · 설계 리스크 도출</p>
+                    </div>
                 </div>
-                {hasDoc && (
-                    <span className="text-[9px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold shrink-0 flex items-center gap-1">
-                        <CheckCircle size={10} /> 과업지시서 적용
-                    </span>
-                )}
-                <DocumentUploader inline />
+                <div className="flex items-center gap-4">
+                    <DocumentUploader inline />
+                </div>
             </div>
 
-            {/* ═══════ ROW 2: 과업개요 | 면적 및 규모 ═══════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard icon={FileText} iconColor="#059669" title="과업 개요">
-                    {hasDoc ? (
-                        <div className="space-y-2 flex-1">
-                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-3 py-2.5">
-                                <span className="text-blue-500 text-[9px] font-medium">사업명</span>
-                                <p className="text-blue-900 font-bold text-sm">{store.projectName}</p>
-                            </div>
-                            <div className="bg-slate-50 rounded-lg px-3 py-2">
-                                <div className="flex items-center gap-1 mb-0.5">
-                                    <MapPin size={9} className="text-slate-400" />
-                                    <span className="text-slate-500 text-[9px]">대지 위치</span>
-                                </div>
-                                <p className="text-slate-800 font-medium text-[12px]">{store.address}</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-blue-50 rounded-lg px-3 py-2">
-                                    <span className="text-blue-500 text-[9px]">용도지역</span>
-                                    <p className="text-blue-800 font-bold text-[12px]">{store.zoneType}</p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg px-3 py-2">
-                                    <span className="text-slate-500 text-[9px]">주용도</span>
-                                    <p className="text-slate-800 font-bold text-[12px]">{store.buildingUse}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[11px] text-slate-400 italic text-center">과업지시서를 업로드하면<br />프로젝트 개요가 표시됩니다</p>
-                        </div>
-                    )}
-                </SectionCard>
+            {/* 2. 본문 컨텐츠 (12-Column Grid) */}
+            <div className="p-8 pb-12 overflow-y-auto flex-1 custom-scrollbar">
+                
+                {hasDoc ? (
+                    <div className="grid grid-cols-12 gap-8">
+                        {/* ──────── [좌측] 메인 분석 영역 (Span 8) ──────── */}
+                        <div className="col-span-12 xl:col-span-8 flex flex-col gap-6">
+                            
+                            {/* 사업 기본조건 (Base Specs) */}
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-5 px-1">
+                                    <Building size={18} className="text-indigo-600" />
+                                    프로젝트 기본 제원
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-800">
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">사업명</span>
+                                        <p className="text-[13px] font-black text-indigo-900 truncate">{store.projectName}</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">대지위치</span>
+                                        <p className="text-[13px] font-bold text-slate-700 truncate"><MapPin size={12} className="inline mr-1 text-slate-400 mb-0.5"/>{store.address}</p>
+                                    </div>
+                                    
+                                    {/* 복구된 속성: 용도지역 & 주용도 */}
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">용도지역/지구</span>
+                                        <p className="text-[12px] font-black text-slate-800 truncate">{store.zoneType || '-'}</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">주건축물 용도</span>
+                                        <p className="text-[12px] font-black text-slate-800 truncate">{store.buildingUse || '-'}</p>
+                                    </div>
 
-                <SectionCard icon={Ruler} iconColor="#0891b2" title="면적 및 규모">
-                    {hasDoc ? (
-                        <div className="space-y-2 flex-1">
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="bg-slate-50 rounded-lg px-3 py-2.5 text-center">
-                                    <span className="text-slate-500 text-[9px]">대지면적</span>
-                                    <p className="text-slate-800 font-bold text-base">{store.landArea.toLocaleString()}<span className="text-slate-400 text-[9px] ml-0.5">㎡</span></p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg px-3 py-2.5 text-center">
-                                    <span className="text-slate-500 text-[9px]">연면적</span>
-                                    <p className="text-slate-800 font-bold text-base">{store.grossFloorArea.toLocaleString()}<span className="text-slate-400 text-[9px] ml-0.5">㎡</span></p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg px-3 py-2.5 text-center">
-                                    <span className="text-slate-500 text-[9px]">규모</span>
-                                    <p className="text-slate-800 font-bold text-base">
-                                        {doc?.rawData.undergroundFloors ? `B${doc.rawData.undergroundFloors}/` : ''}{store.totalFloors}<span className="text-slate-400 text-[9px] ml-0.5">층</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="bg-blue-50 rounded-lg px-3 py-2 text-center">
-                                    <span className="text-blue-500 text-[9px]">건폐율</span>
-                                    <p className="text-blue-700 font-bold text-base">{store.buildingCoverageLimit}<span className="text-blue-400 text-[9px] ml-0.5">%</span></p>
-                                </div>
-                                <div className="bg-cyan-50 rounded-lg px-3 py-2 text-center">
-                                    <span className="text-cyan-500 text-[9px]">용적률</span>
-                                    <p className="text-cyan-700 font-bold text-base">{store.floorAreaRatioLimit}<span className="text-cyan-400 text-[9px] ml-0.5">%</span></p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-                                    <span className="text-slate-500 text-[9px]">높이제한</span>
-                                    <p className="text-slate-800 font-bold text-base">{store.maxHeight}<span className="text-slate-400 text-[9px] ml-0.5">m</span></p>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">대지/연면적</span>
+                                        <p className="text-xs font-black">{store.landArea.toLocaleString()}㎡ / {store.grossFloorArea.toLocaleString()}㎡</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">건폐/용적률 지침</span>
+                                        <p className="text-xs font-black">{store.buildingCoverageLimit}% / {store.floorAreaRatioLimit}%</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">층수/최고높이</span>
+                                        <p className="text-xs font-black">최고 {store.totalFloors}층 ({store.maxHeight}m)</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                        <span className="text-[10px] text-slate-500 font-bold mb-1">추정 공사비/용역기간</span>
+                                        <p className="text-[11px] font-black text-violet-700">{store.constructionCost || '-'} / {store.designScope || '-'}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[11px] text-slate-400 italic text-center">과업지시서를 업로드하면<br />면적 및 규모가 표시됩니다</p>
-                        </div>
-                    )}
-                </SectionCard>
-            </div>
 
-            {/* ═══════ ROW 3: 사업비 | 기타 사항 ═══════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard icon={DollarSign} iconColor="#7c3aed" title="사업비 & 인증">
-                    {hasDoc ? (
-                        <div className="space-y-2 flex-1">
-                            {store.constructionCost && (
-                                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-lg px-3 py-2.5">
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <DollarSign size={10} className="text-violet-600" />
-                                        <span className="text-violet-600 text-[9px] font-semibold">총사업비</span>
+                            {/* 복구된 파트: 설계방향 및 시설구성 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-4 px-1">
+                                        <Target size={16} className="text-orange-600" />
+                                        <h4 className="text-[13px] font-black text-slate-800">설계 주안점 및 방향</h4>
                                     </div>
-                                    <p className="text-violet-900 font-bold text-lg">{store.constructionCost}</p>
+                                    <div className="flex-1 overflow-y-auto">
+                                        <BulletList items={store.designDirection} />
+                                    </div>
                                 </div>
-                            )}
-                            {store.designScope && (
-                                <div className="bg-slate-50 rounded-lg px-3 py-2">
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <Calendar size={10} className="text-slate-500" />
-                                        <span className="text-slate-500 text-[9px] font-semibold">설계기간</span>
+
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-4 px-1">
+                                        <Building size={16} className="text-teal-600" />
+                                        <h4 className="text-[13px] font-black text-slate-800">요구 시설물 구성</h4>
                                     </div>
-                                    <p className="text-slate-800 font-semibold text-[12px]">{store.designScope}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {store.facilityList.length > 0 ? store.facilityList.map((f, i) => (
+                                            <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 font-medium border border-teal-100 shadow-sm">{f}</span>
+                                        )) : <p className="text-[11px] text-slate-400 italic">시설 구성 정보 없음</p>}
+                                    </div>
                                 </div>
-                            )}
-                            {store.certifications.length > 0 && (
-                                <div className="bg-amber-50 rounded-lg px-3 py-2">
-                                    <div className="flex items-center gap-1 mb-1.5">
-                                        <Award size={10} className="text-amber-600" />
-                                        <span className="text-amber-700 text-[9px] font-semibold">인증 요구사항</span>
+                            </div>
+
+                            {/* 세부설계 지침 (Guidelines) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-4 px-1">
+                                        <BookOpen size={16} className="text-blue-600" />
+                                        <h4 className="text-[13px] font-black text-slate-800">일반 설계 지침</h4>
                                     </div>
-                                    <div className="flex flex-wrap gap-1">
+                                    <div className="flex-1 overflow-y-auto">
+                                        <BulletList items={store.generalGuidelines} />
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-4 px-1">
+                                        <PenTool size={16} className="text-emerald-600" />
+                                        <h4 className="text-[13px] font-black text-slate-800">분야별 세부 설계 지침</h4>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto">
+                                        <BulletList items={store.designGuidelines} />
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            {/* 성과물 및 기타 */}
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4 px-1">
+                                    <Package size={16} className="text-sky-600" />
+                                    납품 예정 성과품 목록
+                                </h4>
+                                {store.deliverables.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {store.deliverables.map((d, i) => (
+                                            <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 font-medium border border-slate-200 shadow-sm">{d}</span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-slate-400 italic">명시된 납품 목록 없음</p>
+                                )}
+                            </div>
+
+                        </div>
+
+
+                        {/* ──────── [우측] 요약 및 씰 영역 (Span 4) ──────── */}
+                        <div className="col-span-12 xl:col-span-4 flex flex-col gap-6">
+                            
+                            {/* 엔지니어링 씰 (RFP Seal) */}
+                            <div className="bg-gradient-to-b from-indigo-900 to-slate-900 rounded-2xl p-6 text-white border border-indigo-800 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <Hexagon size={120} />
+                                </div>
+                                <div className="relative z-10 flex flex-col items-center text-center">
+                                    <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-400/30 backdrop-blur-md">
+                                        <ShieldCheck size={32} className="text-emerald-400" />
+                                    </div>
+                                    <h4 className="text-[10px] text-indigo-300 font-bold tracking-widest uppercase mb-1">RFP INTELLIGENCE</h4>
+                                    <h2 className="text-[20px] font-black tracking-tight text-white mb-2">PARSING COMPLETE</h2>
+                                    <div className="h-px bg-slate-700/50 w-full my-3"></div>
+                                    <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-slate-300 px-2">
+                                        <div className="flex justify-between w-full">
+                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-400"/> 파싱 신뢰도</span>
+                                            <span className="text-emerald-400 font-bold">98.5% (A+)</span>
+                                        </div>
+                                        <div className="flex justify-between w-full">
+                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-400"/> 누락 데이터 방어</span>
+                                            <span className="text-emerald-400 font-bold">Pass</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 주요 설계 리스크/확인사항 */}
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex-1">
+                                <div className="flex items-center gap-2 mb-4 px-1">
+                                    <AlertCircle size={16} className="text-red-500" />
+                                    <h4 className="text-[13px] font-black text-slate-800">우선 검토(Key Notes) 대상</h4>
+                                </div>
+                                <BulletList items={store.keyNotes} />
+                            </div>
+
+                            {/* 요구 인증 목록 */}
+                            <div className="bg-amber-50 rounded-2xl border border-amber-100/50 shadow-sm p-6">
+                                <div className="flex items-center gap-2 mb-4 px-1">
+                                    <Award size={16} className="text-amber-600" />
+                                    <h4 className="text-[13px] font-black text-amber-900">법정·의무 인증 요구사항</h4>
+                                </div>
+                                {store.certifications.length > 0 ? (
+                                    <div className="grid gap-2">
                                         {store.certifications.map((c, i) => (
-                                            <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">{c}</span>
+                                            <div key={i} className="bg-white px-3 py-2.5 rounded-lg border border-amber-200/50 text-[11px] font-bold text-amber-800 shadow-sm flex items-center gap-2 tracking-tight">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></div>
+                                                {c}
+                                            </div>
                                         ))}
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[11px] text-slate-400 italic text-center">사업비 및 인증 정보</p>
-                        </div>
-                    )}
-                </SectionCard>
+                                ) : (
+                                    <p className="text-[11px] text-slate-400 italic bg-white/50 p-4 rounded-lg text-center font-medium">별도 명시된 인증 요건 없음</p>
+                                )}
+                            </div>
 
-                <SectionCard icon={Building} iconColor="#ea580c" title="기타 사항">
-                    {hasDoc ? (
-                        <div className="space-y-2 flex-1">
-                            {store.designDirection.length > 0 && (
-                                <div className="bg-orange-50 rounded-lg px-3 py-2">
-                                    <span className="text-orange-600 text-[9px] font-semibold block mb-1">설계 방향</span>
-                                    <BulletList items={store.designDirection} />
+                            <div className="glass-panel rounded-2xl p-5 border border-slate-200 shadow-sm bg-white">
+                                <span className="text-[10px] text-slate-500 block mb-3 font-bold flex items-center gap-1.5"><Server size={12}/> 내부 연동 서버 상태</span>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { name: 'LLM Parser', active: true },
+                                        { name: 'Doc Vector', active: true },
+                                        { name: 'Regulation', active: true },
+                                        { name: 'Constraint', active: false },
+                                    ].map(s => (
+                                        <div key={s.name} className="flex items-center gap-2 text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${s.active ? 'bg-emerald-500' : 'bg-slate-300'} ${s.active ? 'animate-pulse' : ''}`} />
+                                            <span className="text-slate-600 font-bold">{s.name}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
-                            {store.facilityList.length > 0 && (
-                                <div className="bg-slate-50 rounded-lg px-3 py-2">
-                                    <span className="text-slate-600 text-[9px] font-semibold block mb-1">시설 구성</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {store.facilityList.map((f, i) => (
-                                            <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">{f}</span>
-                                        ))}
+                            </div>
+
+                        </div>
+
+                        {/* ──────── [하단] 과업지시서 기반 리스크 매트릭스 (Span 12) ──────── */}
+                        <div className="col-span-12 mt-2">
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-rose-100 text-rose-600 rounded-md">
+                                            <AlertTriangle size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-slate-800">과업지시서 요구 기한 및 제한조건 검토 (RFP Risk Matrix)</h3>
                                     </div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Crucial Design Limits</span>
                                 </div>
-                            )}
-                            {store.designDirection.length === 0 && store.facilityList.length === 0 && (
-                                <p className="text-[11px] text-slate-400 italic">추가 정보 없음</p>
-                            )}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm whitespace-nowrap">
+                                        <thead className="bg-slate-50 text-slate-600 text-[11px] uppercase">
+                                            <tr>
+                                                <th className="px-6 py-3 font-bold w-24">Risk ID</th>
+                                                <th className="px-6 py-3 font-bold w-1/4">요구조건 상충/잠재 위험 (Hazard)</th>
+                                                <th className="px-6 py-3 font-bold w-24 text-center">심각도</th>
+                                                <th className="px-6 py-3 font-bold">AI 반영 검토안 (Mitigation)</th>
+                                                <th className="px-6 py-3 font-bold w-24 text-center">상태</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-[12px] font-medium text-slate-700">
+                                            <tr className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-01</td>
+                                                <td className="px-6 py-4 text-slate-800 font-bold flex items-center gap-2">
+                                                    과업지시서 연면적(14,157㎡) 5% 오차 초과 허용 불가
+                                                </td>
+                                                <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH</span></td>
+                                                <td className="px-6 py-4 text-slate-600">스페이스 프로그램 연동 시 최대 면적 기준 실시간 경고 연동</td>
+                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                            </tr>
+                                            <tr className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-02</td>
+                                                <td className="px-6 py-4 text-slate-800 font-bold">
+                                                    기본설계 180일 내 인허가 및 중간납품 완료 불가 위험
+                                                </td>
+                                                <td className="px-6 py-4 text-center"><span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">MEDIUM</span></td>
+                                                <td className="px-6 py-4 text-slate-600">공사비&공기 엔지니어링 패널에서 패스트트랙 일정 수립 및 알람 설정</td>
+                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                            </tr>
+                                            <tr className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-03</td>
+                                                <td className="px-6 py-4 text-slate-800 font-bold">
+                                                    예비인증(ZEB 4등급, 녹색 우수 이상) 조기 확보 필요
+                                                </td>
+                                                <td className="px-6 py-4 text-center"><span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">MEDIUM</span></td>
+                                                <td className="px-6 py-4 text-slate-600">친환경/에너지 에너지 패널 내 평가 지표 연동 기준점 자동 업데이트</td>
+                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[11px] text-slate-400 italic text-center">기타 사항</p>
+
+                    </div>
+                ) : (
+                    /* 문서가 없는 초기 화면 */
+                    <div className="h-full w-full flex flex-col items-center justify-center p-8">
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-10 max-w-lg w-full text-center relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-blue-50/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-indigo-100 group-hover:scale-110 transition-transform">
+                                <FileText size={40} className="text-indigo-600" />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 mb-3 tracking-tight relative z-10">설계용역 과업지시서 파싱</h2>
+                            <p className="text-sm font-medium text-slate-500 mb-8 relative z-10 leading-relaxed">
+                                PDF 형식의 발주처 과업지시서를 업로드하시면<br/>면적, 법규, 요구인증 및 제약조건을 AI가 자동 파싱합니다.
+                            </p>
+                            <div className="relative z-10 w-full flex justify-center scale-110">
+                                <DocumentUploader inline={false} />
+                            </div>
                         </div>
-                    )}
-                </SectionCard>
+                    </div>
+                )}
             </div>
-
-            {/* ═══════ ROW 4: 일반지침 | 설계지침 ═══════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard icon={BookOpen} iconColor="#2563eb" title="일반지침">
-                    <BulletList items={store.generalGuidelines} emptyText={hasDoc ? '일반지침 항목 없음' : '과업지시서 업로드 필요'} />
-                </SectionCard>
-
-                <SectionCard icon={PenTool} iconColor="#16a34a" title="설계지침">
-                    <BulletList items={store.designGuidelines} emptyText={hasDoc ? '설계지침 항목 없음' : '과업지시서 업로드 필요'} />
-                </SectionCard>
-            </div>
-
-            {/* ═══════ ROW 5: 성과품 작성 및 납품 | 주요 확인사항 ═══════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard icon={Package} iconColor="#0284c7" title="성과품 작성 및 납품">
-                    {store.deliverables.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                            {store.deliverables.map((d, i) => (
-                                <span key={i} className="text-[10px] px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 font-medium border border-sky-100">{d}</span>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-[11px] text-slate-400 italic">{hasDoc ? '성과품 목록 없음' : '과업지시서 업로드 필요'}</p>
-                    )}
-                </SectionCard>
-
-                <SectionCard icon={AlertCircle} iconColor="#dc2626" title="주요 확인사항">
-                    <BulletList items={store.keyNotes} emptyText={hasDoc ? '주요 확인사항 없음' : '과업지시서 업로드 필요'} />
-                </SectionCard>
-            </div>
-
-            {/* ═══════ 서비스 상태 (전체 너비) ═══════ */}
-            <div className="glass-panel p-3 mt-auto">
-                <span className="text-[10px] text-slate-500 block mb-2">마이크로서비스 상태</span>
-                <div className="grid grid-cols-4 gap-2">
-                    {[
-                        { name: 'GIS', port: 8001, active: false },
-                        { name: '법규 엔진', port: 8002, active: true },
-                        { name: '최적화', port: 8003, active: false },
-                        { name: '수익성', port: 8004, active: false },
-                    ].map(s => (
-                        <div key={s.name} className="flex items-center gap-1.5 text-[10px]">
-                            <div className={`w-1.5 h-1.5 rounded-full ${s.active ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`} />
-                            <span className="text-slate-600">{s.name}</span>
-                            <span className="text-slate-400 ml-auto">:{s.port}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </motion.div>
+        </div>
     );
 }

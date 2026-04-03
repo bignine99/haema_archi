@@ -4,7 +4,6 @@ import Dashboard from '@/components/ui/Dashboard';
 import RegulationPanel from '@/components/ui/RegulationPanel';
 import SiteAnalysisPanel from '@/components/ui/SiteAnalysisPanel';
 import MapPanel from '@/components/ui/MapPanel';
-import BarrierFreePanel from '@/components/ui/BarrierFreePanel';
 import SpaceProgrammingPanel from '@/components/ui/SpaceProgrammingPanel';
 import { BubbleDiagramPanel } from '@/components/ui/BubbleDiagramPanel';
 import { SpatialStrategyPanel } from '@/components/ui/SpatialStrategyPanel';
@@ -12,6 +11,15 @@ import CirculationLayoutPanel from '@/components/ui/CirculationLayoutPanel';
 import SpecialDesignPanel from '@/components/ui/SpecialDesignPanel';
 import DesignConceptGeneratorPanel from '@/components/ui/DesignConceptGeneratorPanel';
 import ProjectCharacteristicsPanel from '@/components/ui/ProjectCharacteristicsPanel';
+import StructuralEngineeringPanel from '@/components/ui/StructuralEngineeringPanel';
+import CivilEngineeringPanel from '@/components/ui/CivilEngineeringPanel';
+import MechanicalEngineeringPanel from '@/components/ui/MechanicalEngineeringPanel';
+import ElectricalEngineeringPanel from '@/components/ui/ElectricalEngineeringPanel';
+import SpecialEngineeringPanel from '@/components/ui/SpecialEngineeringPanel';
+import CostSchedulePanel from '@/components/ui/CostSchedulePanel';
+import GreenBuildingPanel from '@/components/ui/GreenBuildingPanel';
+import EnergyStrategyPanel from '@/components/ui/EnergyStrategyPanel';
+import BFStrategyPanel from '@/components/ui/BFStrategyPanel';
 import {
     Search, LayoutDashboard, Scale, MapPin, Compass,
     Network, Grid, Building, Ruler, Box, PieChart,
@@ -94,8 +102,8 @@ function Floating3DMetrics() {
 }
 
 export default function App() {
-    // 개발 환경에서는 바로 메인페이지 진입, 운영 환경에서는 랜딩페이지부터 시작
-    const [isAuthorized, setIsAuthorized] = useState(process.env.NODE_ENV === 'development');
+    // 개발 서버 편의성을 위해 항상 로그인 패스 및 메인페이지 바로 진입
+    const [isAuthorized, setIsAuthorized] = useState(true);
     const [activeMenu, setActiveMenu] = useState('task_analysis');
     const store = useProjectStore();
     
@@ -234,8 +242,6 @@ export default function App() {
                 return renderSingleView(RegulationPanel);
             case 'site':
                 return renderSingleView(SiteAnalysisPanel);
-            case 'bf_strategy':
-                return renderSingleView(BarrierFreePanel);
             case 'space_zoning':
                 return renderSingleView(SpaceProgrammingPanel);
             case 'bubble_b':
@@ -246,6 +252,24 @@ export default function App() {
                 return renderSingleView(CirculationLayoutPanel);
             case 'special_design':
                 return renderSingleView(SpecialDesignPanel);
+            case 'structural_engineering':
+                return renderSingleView(StructuralEngineeringPanel);
+            case 'geotechnical_civil':
+                return renderSingleView(CivilEngineeringPanel);
+            case 'mep_mechanical':
+                return renderSingleView(MechanicalEngineeringPanel);
+            case 'mep_electrical':
+                return renderSingleView(ElectricalEngineeringPanel);
+            case 'special_engineering':
+                return renderSingleView(SpecialEngineeringPanel);
+            case 'cost_schedule':
+                return renderSingleView(CostSchedulePanel);
+            case 'eco_strategy':
+                return renderSingleView(GreenBuildingPanel);
+            case 'energy_strategy':
+                return renderSingleView(EnergyStrategyPanel);
+            case 'bf_strategy':
+                return renderSingleView(BFStrategyPanel);
             default:
                 return renderPlaceholder();
         }

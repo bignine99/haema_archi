@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "npm run dev:all",
         "dev:frontend": "cd frontend && npm run dev",
-        "dev:landuse": "cd services/land_use_regulation && python land_use_service.py serve",
+        "dev:landuse": "npx kill-port 8010 && cd services/land_use_regulation && python land_use_service.py serve",
         "dev:all": "concurrently --names \"FRONTEND,LANDUSE\" --prefix-colors \"cyan,yellow\" \"npm run dev:frontend\" \"npm run dev:landuse\"",
         "install:all": "cd frontend && npm install --legacy-peer-deps"
     },

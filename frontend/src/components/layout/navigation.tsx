@@ -23,16 +23,21 @@ export const MENU_GROUPS = [
             { id: 'bubble_b', label: '버블다이어그램', icon: <Network size={18} /> },
             { id: 'spatial_strategy', label: '맞춤형 공간 특화 전략', icon: <Target size={18} /> },
             { id: 'circulation_layout', label: '동선 및 프로그램 배치', icon: <Milestone size={18} /> },
+            { id: 'special_design', label: '특화설계 제안', icon: <Wrench size={18} /> },
         ]
     },
     {
         title: 'Phase C. 전문엔지니어링 분석',
         items: [
-            { id: 'special_design', label: '특화설계 제안', icon: <Wrench size={18} /> },
-            { id: 'structural_engineering', label: '구조 및 엔지니어링', icon: <Settings size={18} /> },
-            { id: 'eco_strategy', label: '친환경 특화 전략', icon: <Leaf size={18} /> },
-            { id: 'energy_strategy', label: '에너지 특화전략', icon: <Zap size={18} /> },
-            { id: 'bf_strategy', label: 'BF 특화전략', icon: <ShieldCheck size={18} /> },
+            { id: 'structural_engineering', label: '구조 엔지니어링', icon: <Settings size={18} /> },
+            { id: 'geotechnical_civil', label: '지반 및 토목 엔지니어링', icon: <MapPin size={18} /> },
+            { id: 'mep_mechanical', label: '기계설비 엔지니어링', icon: <Wrench size={18} /> },
+            { id: 'mep_electrical', label: '전기설비 엔지니어링', icon: <Zap size={18} /> },
+            { id: 'special_engineering', label: '특수시설 엔지니어링', icon: <Lightbulb size={18} /> },
+            { id: 'cost_schedule', label: '공사비&공기 엔지니어링', icon: <FileText size={18} /> },
+            { id: 'eco_strategy', label: '친환경 엔지니어링', icon: <Leaf size={18} /> },
+            { id: 'energy_strategy', label: '에너지분석 엔지니어링', icon: <Zap size={18} /> },
+            { id: 'bf_strategy', label: '무장애건축 엔지니어링', icon: <ShieldCheck size={18} /> },
         ]
     },
     {

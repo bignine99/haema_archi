@@ -1,3 +1,0 @@
-[webpack-cli] [31mInvalid configuration object. Webpack has been initialized using a configuration object that does not match the API schema.
- - configuration.entry[1] should be a non-empty string.
-   -> A module that is loaded upon startup. Only the last one is exported.[39m

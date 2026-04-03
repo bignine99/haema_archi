@@ -57,8 +57,8 @@ export async function generateSpaceProgramWithAI(
 2. 모든 층의 (netArea + commonArea) 총합은 반드시 목표 연면적의 95% ~ 100% 사이(${ (constraints.grossFloorArea * 0.95).toFixed(0) }㎡ ~ ${constraints.grossFloorArea.toFixed(0)}㎡) 가 되도록 전체 잉여 면적을 남김없이 분배하세요!!! (매우 중요: 현재 ${constraints.grossFloorArea.toFixed(0)}㎡ 규모의 큰 건물을 설계 중인데 너무 작게 만들지 마세요.)
 3. 법정 건폐율 기준: ${constraints.buildingCoverageLimit.toFixed(2)}%, 용적률: ${constraints.floorAreaRatioLimit.toFixed(2)}%
 4. 단일 층의 합계 면적이 절대로 '최대 건축면적(Building Footprint)'인 ${constraints.buildingFootprint.toFixed(2)} ㎡를 초과하지 않는 선에서 층수를 분할하세요. 기준 층수: 약 ${constraints.totalFloors}개 층.
-5. 공간 분배 원칙: 복도, 계단, 코어, 설비실, 지하 주차장 등 건축물에서 큰 비중을 차지하는 '공용면적(commonArea)'에 충분히 거대한 면적(예: 수백 ~ 수천 ㎡)을 할당하여 전체 연면적 목표를 반드시 달성하세요.
-6. 만약 원문 데이터에 요구되는 스페이스가 구체적으로 나열되어 있다면, "절대로 임의로 통폐합(축약)하지 말고" 원문에 나온 모든 개별 실(Room) 단위(예: 교무실, 행정실, 교장실, 회의실, 방송실, 식당 등)를 생략 없이 최대한 자세하게 쪼개서 (층당 10~25개 내외) 생성하세요.
+5. 공간 분배 원칙: 각 층별로 반드시 필수 공용 공간(계단실, 엘리베이터 홀, 복도 및 통로, 로비, 화장실, 설비/기계실, 창고 등)을 '독립된 개별 실(Room)' 항목으로 명시하여 배열에 추가하세요. 절대 이 영역들의 면적을 다른 실에 합쳐서 생략하지 마세요. (예: 계단실은 전용면적 0, 공용면적 150으로 별도 분리)
+6. 만약 원문 데이터에 요구되는 스페이스가 구체적으로 나열되어 있다면, "절대로 임의로 통폐합(축약)하지 말고" 원문에 나온 모든 개별 실 단위(예: 교무실, 행정실 등)와 함께, 위에서 언급한 공용 공간들을 추가하여 층당 15~30개 내외의 풍성한 리스트를 생성해 건축면적의 비율을 리얼하게 달성하세요.
 7. 면적을 큰 덩어리 1, 2개로 짐작해서 분배하지 말고, ${constraints.grossFloorArea.toFixed(0)}㎡ 수준의 대형 프로젝트임을 감안하여 단위 면적의 크기를 스케일에 맞게 분배하세요.
 
 [층 및 면적 분배 가이드]
@@ -80,9 +80,10 @@ export async function generateSpaceProgramWithAI(
        {
          "name": "지원 클러스터",
          "rooms": [
-            { "name": "기계실", "netArea": 0, "commonArea": 200, "isRequired": true },
-            { "name": "전기실", "netArea": 0, "commonArea": 150, "isRequired": true },
-            { "name": "발전기실", "netArea": 0, "commonArea": 50, "isRequired": true }
+            { "name": "기계실 및 전기실", "netArea": 0, "commonArea": 200, "isRequired": true },
+            { "name": "물탱크실", "netArea": 0, "commonArea": 150, "isRequired": true },
+            { "name": "주계단 및 엘리베이터홀", "netArea": 0, "commonArea": 80, "isRequired": true },
+            { "name": "지하 복도", "netArea": 0, "commonArea": 250, "isRequired": true }
          ]
        }
     ]
@@ -98,9 +99,11 @@ export async function generateSpaceProgramWithAI(
          "rooms": [
             { "name": "행정실", "netArea": 80, "commonArea": 20, "isRequired": true },
             { "name": "교장실", "netArea": 60, "commonArea": 10, "isRequired": true },
-            { "name": "회의실", "netArea": 40, "commonArea": 5, "isRequired": true },
-            { "name": "방송실", "netArea": 30, "commonArea": 0, "isRequired": true },
-            { "name": "수유실", "netArea": 15, "commonArea": 0, "isRequired": false }
+            { "name": "1층 로비", "netArea": 100, "commonArea": 50, "isRequired": true },
+            { "name": "주계단 및 E/V", "netArea": 0, "commonArea": 60, "isRequired": true },
+            { "name": "남녀 화장실", "netArea": 0, "commonArea": 50, "isRequired": true },
+            { "name": "1층 메인 복도", "netArea": 0, "commonArea": 150, "isRequired": true },
+            { "name": "공용 창고", "netArea": 15, "commonArea": 0, "isRequired": false }
          ]
        }
     ]
