@@ -94,8 +94,8 @@ function Floating3DMetrics() {
 }
 
 export default function App() {
-    // 개발 편의상 기본 로그인 상태 true
-    const [isAuthorized, setIsAuthorized] = useState(true);
+    // 개발 환경에서는 바로 메인페이지 진입, 운영 환경에서는 랜딩페이지부터 시작
+    const [isAuthorized, setIsAuthorized] = useState(process.env.NODE_ENV === 'development');
     const [activeMenu, setActiveMenu] = useState('task_analysis');
     const store = useProjectStore();
     

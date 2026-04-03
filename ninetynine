@@ -1,0 +1,148 @@
+server {
+    server_name ninetynine99.co.kr www.ninetynine99.co.kr;
+
+    location /api/research {
+        proxy_pass http://localhost:8000/research;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        client_max_body_size 100M;
+    }
+
+
+    # -- HAEMA 3D Site API Proxies (added 2026-03-21) --
+
+    location /land-use-api/ {
+        proxy_pass http://127.0.0.1:8010/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /kakao-api/ {
+        proxy_pass https://dapi.kakao.com/;
+        proxy_set_header Host dapi.kakao.com;
+        proxy_ssl_server_name on;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*";
+    }
+
+    location /vworld-api/ {
+        proxy_pass https://api.vworld.kr/;
+        proxy_set_header Host api.vworld.kr;
+        proxy_set_header Referer http://localhost;
+        proxy_set_header Origin http://localhost;
+        proxy_ssl_server_name on;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*";
+    }
+
+    location /building-api/ {
+        proxy_pass https://apis.data.go.kr/;
+        proxy_set_header Host apis.data.go.kr;
+        proxy_ssl_server_name on;
+    }
+    
+    location = /youtube-grab {
+        return 301 /youtube-grab/;
+    }
+
+    location /youtube-grab/ {
+        proxy_pass http://localhost:8005/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        client_max_body_size 500M;
+    }
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 100M;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/ninetynine99.co.kr/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/ninetynine99.co.kr/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+
+
+}
+server {
+    if ($host = www.ninetynine99.co.kr) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = ninetynine99.co.kr) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name ninetynine99.co.kr www.ninetynine99.co.kr;
+    return 404; # managed by Certbot
+
+
+
+
+}
+server {
+    server_name safety.ninetynine99.co.kr;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 100M;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/ninetynine99.co.kr/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/ninetynine99.co.kr/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+
+server {
+    if ($host = safety.ninetynine99.co.kr) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name safety.ninetynine99.co.kr;
+    return 404; # managed by Certbot
+
+
+}
