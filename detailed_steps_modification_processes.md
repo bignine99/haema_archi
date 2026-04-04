@@ -3424,3 +3424,32 @@ ln -s /etc/nginx/sites-available/ninetynine /etc/nginx/sites-enabled/ninetynine
 | **추가 / 분리** | \`Header.tsx\`, \`Sidebar.tsx\`, \`navigation.tsx\`, \`types.ts\`, \`CategoryAccordion.tsx\`, \`LawCard.tsx\`, \`SummaryCard.tsx\`, \`LawDetailModal.tsx\` |
 | **개선** | \`App.tsx\` (100줄 이내로 대폭 축소), \`RegulationPanel.tsx\` (메인 컨테이너 역할 부여), \`projectStore.ts\` (타입 제거 후 임포트) |
 | **청소 (정크 파일)** | 루트 디렉토리 내부 20~30여 개의 테스트 코드 (\`test.js\`, \`build_msa_skeleton.py\` 등) 삭제 처리 |
+
+
+---
+
+## [2026-04-03] Phase C 엔지니어링 패널 하이피델리티 표준화 및 Land Use API 프록시 오류 해결
+
+### 1. Phase C 엔지니어링 9종 및 Site Analysis UI/UX 표준화
+- **A-1, A-2 및 C-1 ~ C-9 패널 디자인 일원화**: 기존의 단조로운 배치에서 벗어나, `Metric Seal`(하이라이트 지표)과 `Risk Mitigation Matrix`(리스크 분석표)를 포함한 12-Column Grid의 고해상도(High-Fidelity) 'Phase C' UI를 전면 도입했습니다.
+- **콘텐츠 누락 이슈 대응 (시행착오)**: `A-1 Proposal Analysis (Dashboard.tsx)`를 12-Column Grid로 리팩토링하는 과정에서 기존에 렌더링되던 용도지역, 주용도, 설계 주안점, 시설구성 데이터가 시각적으로 누락되는 이슈가 발생했습니다.
+  - **해결 방안**: 단순히 레이아웃만 변경하는 것이 아니라, `Project Specs` 영역과 `세부 정보 섹션`을 분할하여 누락된 상태 필드(`store.zoneType`, `store.buildingUse`, `store.designDirection`, `store.facilityList`)를 기존 화면보다 더 밀도 있게 복원 배치하여 해결했습니다.
+- **좌측 네비게이션 명명법 통일**: `C-1`부터 `C-9`까지의 메뉴 명칭을 직관적이고 일관된 "OO 엔지니어링" (기계설비 엔지니어링, 전기설비 엔지니어링, 무장애건축 엔지니어링 등)으로 통합 및 수정했습니다.
+
+### 2. 토지이용규제(Land Use Regulation) API 504 Proxy 오류 원천 해결 (시행착오 중심)
+- **이슈 발생**: VWorld API를 활용하는 Land Use Backend 서비스 조회 시 간헐적 혹은 지속적으로 504 Gateway Timeout 오류가 발생하는 현상 재발 확인. (`Error occurred while trying to proxy: 192.168.0.239:3001/api/land-use...`)
+- **원인 분석 및 시행착오**:
+  1. 최초에는 `land_use_service.py` 백엔드 서버가 구동 중이지 않은 것으로 판단하여 프로세스 조회를 하였으나, `netstat -ano | findstr 8010` 명령어로 확인 후 데몬 프로세스 문제인지 혼선이 있었습니다.
+  2. 구조적으로 Node 17+ 환경부터는 `localhost` 도메인을 IPv6(`::1`)로 우선 해석하는 경향이 있어, IPv4(`127.0.0.1`)로 바인딩되는 Python Uvicorn 서버와의 네트워크 매핑 미스매치가 빈번하게 `ECONNREFUSED` / `504`를 유발함을 파악했습니다.
+  3. 동시에 `npm run dev` 스크립트를 여러 번 재시작하거나 화면을 강제 새로고침 시 윈도우 환경 구조상 기존 8010 포트 점유가 떨어지지 않아(Zombie Process, PID Sticking) 새로운 Python 서비스가 오류 없이 스리슬쩍 죽어버리는 현상도 함께 발견했습니다.
+- **최종 해결 조치**:
+  - `frontend/webpack.config.js`: Webpack 프록시의 타겟 설정을 `http://localhost:8010`에서 `http://127.0.0.1:8010`으로 명시적 변경하여 IPv6 충돌 차단.
+  - `package.json`: `"dev:landuse"` 스크립트 실행 전 `npx kill-port 8010` 명령을 우선 실행하도록 파이프라인 강제화. 더 이상 윈도우에서 좀비 프로세스로 인한 포트 꼬임 현상이 발생하지 않습니다.
+
+### 3. Agent 템플릿(Skill) 업데이트 및 레거시 파일 환경 정비
+- 기존에 구현했던 시스템 분석 모듈에 대한 `.agents/workflows/` 마크다운 가이드를 대거 작성 및 업데이트(`A-1`, `A-2` 및 Phase C 계열).
+- 수십 개의 `frontend/console.log(...)` 형태 임시 덤프 파일과 오래된 Python/JS 디버깅용 파일 등 워크스페이스 상의 쓰레기 파일들을 `git status` 추적을 통하여 색출하고 깔끔하게 삭제했습니다.
+- 모든 작업 후 안정적인 Git Push 통합 완료.
+
+### 4. 차기 작업 (Next Step)
+- **명일 목표**: `A-3-law-analysis.md` (건축 법규 분석 모듈) 파일에 대한 High-Fidelity 규격화 및 기능적 리팩토링 집중.

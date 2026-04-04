@@ -21,8 +21,10 @@ const GreenBuildingPanel = () => {
             {/* Grid Content */}
             <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
                 
-                {/* ════════ 1. 실내 공기질 및 정서환경 치유 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
+                {/* ════════ LEFT MAIN PANEL (Col 1-8) ════════ */}
+                <div className="col-span-12 xl:col-span-8 flex flex-col gap-5">
+                    {/* ════════ 1. 실내 공기질 및 정서환경 치유 ════════ */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
                     {/* Left: IAQ Quality Management */}
                     <div className="w-full md:w-7/12 p-6 border-r border-slate-100 flex flex-col">
                         <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">INDOOR AIR QUALITY (IAQ) STRATEGY</div>
@@ -86,8 +88,8 @@ const GreenBuildingPanel = () => {
                     </div>
                 </div>
 
-                {/* ════════ 2. 수자원 밸런스 및 생태(G-SEED) 인증 (Col 1-12) ════════ */}
-                <div className="col-span-12 grid grid-cols-2 gap-5 mt-1">
+                {/* ════════ 2. 수자원 밸런스 및 생태(G-SEED) 인증 ════════ */}
+                <div className="grid grid-cols-2 gap-5">
                     {/* Water Matrix */}
                     <div className="bg-white rounded-xl border border-cyan-100 shadow-sm p-6 relative overflow-hidden">
                          <div className="absolute top-[-5%] right-[-5%] opacity-5 text-cyan-500"><Droplets fill="currentColor" size={120} /></div>
@@ -141,7 +143,7 @@ const GreenBuildingPanel = () => {
                 </div>
 
                 {/* ════════ 3. 생태환경 공간/친환경 리스크 관리 ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
                     <div className="flex items-center gap-1.5 mb-4">
                         <Target size={18} className="text-slate-700" />
                         <h3 className="text-sm font-extrabold text-slate-800">친환경 공간 특화 리스크 식별</h3>
@@ -174,6 +176,92 @@ const GreenBuildingPanel = () => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                </div>
+
+                {/* ════════ RIGHT SIDEBAR (Col 9-12) ════════ */}
+                <div className="col-span-12 xl:col-span-4 flex flex-col gap-5">
+                    {/* SUSTAINABILITY ENGINE DASHBOARD */}
+                    <div className="bg-slate-900 rounded-xl p-5 text-white shadow-xl relative overflow-hidden flex flex-col border border-slate-800">
+                        <div className="absolute -right-4 -top-4 opacity-10"><Leaf size={120} /></div>
+                        
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-xs font-bold text-emerald-400 tracking-widest">SUSTAINABILITY ENGINE</span>
+                        </div>
+                        <h3 className="text-xl font-bold mb-4">친환경 생태 환경 매트릭스</h3>
+                        
+                        <div className="flex-1 space-y-3 relative z-10">
+                            {/* SKILL E-1 */}
+                            <div className="group rounded-lg border border-emerald-500/30 bg-slate-800/80 p-3 hover:bg-slate-800 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Wind size={14} className="text-emerald-400" />
+                                        <span className="text-xs font-bold text-slate-200">IAQ Monitor</span>
+                                    </div>
+                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/20">Running</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">실내공기질 시뮬레이션 및 유해물질 저감 검증</div>
+                            </div>
+                            
+                            {/* SKILL E-2 */}
+                            <div className="group rounded-lg border border-amber-500/30 bg-slate-800/80 p-3 hover:bg-slate-800 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Sun size={14} className="text-amber-400" />
+                                        <span className="text-xs font-bold text-slate-200">Daylight Auto</span>
+                                    </div>
+                                    <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold border border-amber-500/20">Running</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">자연채광 확보율 분석 및 눈부심(Glare) 시뮬레이션</div>
+                            </div>
+                            
+                            {/* SKILL E-3 */}
+                            <div className="group rounded-lg border border-slate-700 bg-slate-800/50 p-3 opacity-60">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Droplets size={14} className="text-slate-400" />
+                                        <span className="text-xs font-bold text-slate-300">Water Cycle</span>
+                                    </div>
+                                    <span className="text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-bold">Standby</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500">수자원 순환망 및 생태면적률 정량 계산 (데이터 대기)</div>
+                            </div>
+
+                            {/* SKILL E-4 */}
+                            <div className="group rounded-lg border border-slate-700 bg-slate-800/50 p-3 opacity-60 mt-auto">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Award size={14} className="text-slate-400" />
+                                        <span className="text-xs font-bold text-slate-300">G-SEED Cert.</span>
+                                    </div>
+                                    <span className="text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-bold">Standby</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500">녹색건축인증 항목별 평가점수 자동 매핑 (규제 연동 대기)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* ZEB Readiness Widget */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Leaf size={14} className="text-emerald-500" /> ZEB 4등급 달성률</h3>
+                            <span className="text-[10px] font-black text-emerald-600">82%</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-3">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '82%' }}></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-600">
+                            <div className="bg-slate-50 p-2 border border-slate-100 rounded">
+                                <span className="font-bold block text-slate-700">단열/기밀 (패시브)</span>
+                                <span>성능지표 1++ 기준 충족</span>
+                            </div>
+                            <div className="bg-slate-50 p-2 border border-slate-100 rounded">
+                                <span className="font-bold block text-slate-700">신재생에너지 (액티브)</span>
+                                <span>태양광/지열 비중 35% 요망</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -20,9 +20,11 @@ const CostSchedulePanel = () => {
 
             {/* Grid Content */}
             <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
-                
-                {/* ════════ 1. 공사비(5D) 및 VE 최적화 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
+
+                {/* ════════ LEFT MAIN PANEL (Col 1-8) ════════ */}
+                <div className="col-span-12 xl:col-span-8 flex flex-col gap-5">
+                    {/* ════════ 1. 공사비(5D) 및 VE 최적화 ════════ */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
                     {/* Left: Cost Breakdown & Benchmarking */}
                     <div className="w-full md:w-7/12 p-6 border-r border-slate-100 flex flex-col justify-center">
                         <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">5D COST ESTIMATION & TARGETING</div>
@@ -77,8 +79,8 @@ const CostSchedulePanel = () => {
                     </div>
                 </div>
 
-                {/* ════════ 2. 4D 공정 및 임계경로 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-sky-100 shadow-sm p-6 overflow-hidden flex flex-col">
+                {/* ════════ 2. 4D 공정 및 임계경로 ════════ */}
+                <div className="bg-white rounded-xl border border-sky-100 shadow-sm p-6 overflow-hidden flex flex-col">
                     <div className="flex items-center gap-2 mb-1.5">
                         <Calendar size={18} className="text-sky-600" />
                         <h3 className="text-sm font-extrabold text-slate-800">절대 공기 스케줄 (Project Critical Path)</h3>
@@ -130,7 +132,7 @@ const CostSchedulePanel = () => {
                 </div>
 
                 {/* ════════ 3. 리스크 및 이슈 관리 ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
                     <div className="flex items-center gap-1.5 mb-4">
                         <ShieldAlert size={18} className="text-slate-700" />
                         <h3 className="text-sm font-extrabold text-slate-800">공정 지연 및 사업비 리스크 파악 (Risk Audit)</h3>
@@ -163,6 +165,80 @@ const CostSchedulePanel = () => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                </div>
+
+                {/* ════════ RIGHT SIDEBAR (Col 9-12) ════════ */}
+                <div className="col-span-12 xl:col-span-4 flex flex-col gap-5">
+                    {/* COST & TIME ENGINE DASHBOARD */}
+                    <div className="bg-slate-900 rounded-xl p-5 text-white shadow-xl relative overflow-hidden flex flex-col border border-slate-800">
+                        <div className="absolute -right-4 -top-4 opacity-10"><Calculator size={120} /></div>
+                        
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                            <span className="text-xs font-bold text-cyan-400 tracking-widest">COST & TIME ENGINE</span>
+                        </div>
+                        <h3 className="text-xl font-bold mb-4">사업비/일정 통제 매트릭스</h3>
+                        
+                        <div className="flex-1 space-y-3 relative z-10">
+                            {/* SKILL M-1 */}
+                            <div className="group rounded-lg border border-cyan-500/30 bg-slate-800/80 p-3 hover:bg-slate-800 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <DollarSign size={14} className="text-cyan-400" />
+                                        <span className="text-xs font-bold text-slate-200">5D Cost Estimator</span>
+                                    </div>
+                                    <span className="text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-bold border border-cyan-500/20">Running</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">설계 변경 시 실시간 물량 연동 및 타겟 예산(Target Costing) 추적</div>
+                            </div>
+                            
+                            {/* SKILL M-2 */}
+                            <div className="group rounded-lg border border-indigo-500/30 bg-slate-800/80 p-3 hover:bg-slate-800 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar size={14} className="text-indigo-400" />
+                                        <span className="text-xs font-bold text-slate-200">4D Scheduler</span>
+                                    </div>
+                                    <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-bold border border-indigo-500/20">Running</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">건축 시공 크리티컬 패스(CP) 파악 및 절대 공기 지연 리스크 경고</div>
+                            </div>
+                            
+                            {/* SKILL M-3 */}
+                            <div className="group rounded-lg border border-slate-700 bg-slate-800/50 p-3 opacity-60">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <TrendingDown size={14} className="text-slate-400" />
+                                        <span className="text-xs font-bold text-slate-300">VE Optimizer</span>
+                                    </div>
+                                    <span className="text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-bold">Standby</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500">대안 설계(Value Engineering) 효과 시뮬레이터 (데이터 대기)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Schedule Risk Widget */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Clock size={14} className="text-red-500" /> 준공 지연 리스크 경고</h3>
+                            <span className="text-[10px] font-black text-red-600">High</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-600 mb-3">
+                            <div className="bg-red-50 p-2 border border-red-100 rounded text-center">
+                                <span className="font-bold block text-red-800 text-[10px] mb-1">인허가 장기화</span>
+                                <span className="text-red-600">BF 인증 심의 +4주 예상</span>
+                            </div>
+                            <div className="bg-amber-50 p-2 border border-amber-100 rounded text-center">
+                                <span className="font-bold block text-amber-800 text-[10px] mb-1">동절기 공사</span>
+                                <span className="text-amber-600">습식타설 통제 +3주 반영</span>
+                            </div>
+                        </div>
+                        <button className="w-full text-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 hover:text-slate-700 transition-colors py-2 rounded border border-slate-200">
+                            상세 리스크 완화 플랜 보기
+                        </button>
                     </div>
                 </div>
             </div>

@@ -363,6 +363,86 @@ export async function extractSiteParameters(
             parsed.version = '1.0';
         }
 
+        // ══════════════════════════════════════════════
+        // [SKILL: OrdSync & CalcVerify] 엔지니어링 데이터 무결성 검증
+        // ══════════════════════════════════════════════
+        if (!parsed.hard_constraints) {
+            parsed.hard_constraints = {} as any;
+        }
+        if (!parsed.hard_constraints.conflict_resolution_log) {
+            parsed.hard_constraints.conflict_resolution_log = [];
+        }
+
+        const siteArea = projectInfo.landArea || 0;
+        let appliedCoverage = parsed.hard_constraints.max_coverage_ratio_pct || projectInfo.buildingCoverageLimit || 0;
+        let appliedFar = parsed.hard_constraints.max_far_pct || projectInfo.floorAreaRatioLimit || 0;
+
+        // 1. OrdSync: 상위법 vs 조례 비교 (보수적 적용)
+        if (landUseRegulation) {
+            const ordCov = landUseRegulation.max_building_coverage;
+            const ordFar = landUseRegulation.max_floor_area_ratio;
+            
+            if (ordCov !== null && ordCov !== undefined && ordCov < appliedCoverage) {
+                 parsed.hard_constraints.conflict_resolution_log.push({
+                     parameter: '건폐율 상한 (%)',
+                     source_a: '상위법/기본입력',
+                     value_a: appliedCoverage,
+                     source_b: '지자체 조례',
+                     value_b: ordCov,
+                     resolved_value: ordCov,
+                     rule: '보수적 적용 (조례 우선-OrdSync)'
+                 });
+                 appliedCoverage = ordCov;
+            }
+            if (ordFar !== null && ordFar !== undefined && ordFar < appliedFar) {
+                 parsed.hard_constraints.conflict_resolution_log.push({
+                     parameter: '용적률 상한 (%)',
+                     source_a: '상위법/기본입력',
+                     value_a: appliedFar,
+                     source_b: '지자체 조례',
+                     value_b: ordFar,
+                     resolved_value: ordFar,
+                     rule: '보수적 적용 (조례 우선-OrdSync)'
+                 });
+                 appliedFar = ordFar;
+            }
+        }
+        
+        // 최종 조례 적용값 확정
+        parsed.hard_constraints.max_coverage_ratio_pct = appliedCoverage;
+        parsed.hard_constraints.max_far_pct = appliedFar;
+
+        // 2. CalcVerify: 면적 산정 교차검증 수학 수식 적용 (AI 환각 방지)
+        const calcBldgArea = Number((siteArea * (appliedCoverage / 100)).toFixed(1));
+        const calcGfa = Number((siteArea * (appliedFar / 100)).toFixed(1));
+
+        if (Math.abs((parsed.hard_constraints.calculated_max_building_area_sqm || 0) - calcBldgArea) > 1) {
+             parsed.hard_constraints.conflict_resolution_log.push({
+                 parameter: '최대 건축면적 (㎡)',
+                 source_a: 'AI 산출 초안',
+                 value_a: parsed.hard_constraints.calculated_max_building_area_sqm || 0,
+                 source_b: '수식 검증',
+                 value_b: calcBldgArea,
+                 resolved_value: calcBldgArea,
+                 rule: '수학적 오차 강제 교정 (CalcVerify)'
+             });
+             parsed.hard_constraints.calculated_max_building_area_sqm = calcBldgArea;
+        }
+
+        if (Math.abs((parsed.hard_constraints.calculated_max_gfa_sqm || 0) - calcGfa) > 1) {
+             parsed.hard_constraints.conflict_resolution_log.push({
+                 parameter: '최대 연면적 (㎡)',
+                 source_a: 'AI 산출 초안',
+                 value_a: parsed.hard_constraints.calculated_max_gfa_sqm || 0,
+                 source_b: '수식 검증',
+                 value_b: calcGfa,
+                 resolved_value: calcGfa,
+                 rule: '수학적 오차 강제 교정 (CalcVerify)'
+             });
+             parsed.hard_constraints.calculated_max_gfa_sqm = calcGfa;
+        }
+        // ══════════════════════════════════════════════
+
         console.log('[SiteParams] 추출 완료:', {
             floors: parsed.hard_constraints?.applied_max_floors,
             coverage: parsed.hard_constraints?.max_coverage_ratio_pct,
