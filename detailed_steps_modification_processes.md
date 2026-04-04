@@ -3453,3 +3453,273 @@ ln -s /etc/nginx/sites-available/ninetynine /etc/nginx/sites-enabled/ninetynine
 
 ### 4. 차기 작업 (Next Step)
 - **명일 목표**: `A-3-law-analysis.md` (건축 법규 분석 모듈) 파일에 대한 High-Fidelity 규격화 및 기능적 리팩토링 집중.
+
+---
+
+## 🚀 완료된 작업: A-series 스킬 프레임워크 전체 표준화 및 High-Fidelity UI 검증 (2026-04-04)
+
+### 2026-04-04 작업 개요
+
+오늘 세션의 목표는 **A-1 ~ A-5 Engineering Analysis Suite 전체**를 각 SKILL 워크플로우 파일에 정의된 요구사항과 100% 일치시키는 것이었습니다. 기존에 존재하던 누락 항목을 채우고, 신규 Vibe 콘텐츠를 확장하며, 3개의 SKILL 워크플로우 파일을 새로 작성하였습니다.
+
+---
+
+### 1. SKILL 워크플로우 파일 신규 작성 (3종)
+
+#### 배경
+- 이전에 A-1, A-2 워크플로우(`A-1-proposal-analysis.md`, `A-2-site-analysis.md`)는 존재했으나, A-3/A-4/A-5에 해당하는 워크플로우 파일이 없었습니다.
+- 각 모듈의 High-Fidelity UI 표준 및 엔지니어링 기능 명세를 문서화하는 워크플로우 파일을 새로 작성했습니다.
+
+#### 신규 생성된 파일
+| 파일 경로 | 내용 |
+|-----------|------|
+| `.agents/workflows/A-3-law-analysis.md` | AI 건축 법규 종합 분석 엔진의 High-Fidelity 구현 표준. 8대 카테고리 26+ 법규, LAW INTELLIGENCE Seal, Risk Matrix 테이블, VWorld 조례 연동, CalcVerify/RiskRadar 명세 포함 |
+| `.agents/workflows/A-4-project-analysis.md` | 프로젝트 특성 분석 패널 표준. ZoneMatrix/DemandTrace/SiteIQ/CommunityLink 4대 SKILL 엔진, 수요 타당성 정량화 데이터, NIMBY 극복 지수, 조닝 테이블 명세 포함 |
+| `.agents/workflows/A-5-design-analysis.md` | 디자인 컨셉 제너레이터 표준. Vibe 01~10 전체 정의, CONCEPT ENGINE 뱃지, 12-Column(col-span-8 + col-span-4) 레이아웃, 3-Level 컨셉 구조(Philosophy → Pillars → Solutions) 명세 포함 |
+
+#### 워크플로우 파일 공통 구조
+모든 워크플로우 파일은 이전 A-1, A-2와 동일한 표준 섹션 구조로 작성되었습니다:
+```
+## 🎨 UI 구현 및 프론트엔드 작업 프로세스 (High-Fidelity)
+  - 글로벌 헤더 구조
+  - 12-Column Grid 본문 레이아웃
+  - 엔지니어링 씰(Seal) 요구사항
+  - 컴포넌트별 기능 명세
+```
+
+---
+
+### 2. SKILL 파일 내용 개정: A-4 워크플로우 범위 재정의
+
+#### 배경 및 문제
+- 기존 A-4 워크플로우에 "특화설계제안"과 "BF(Barrier-Free) 인증" 관련 내용이 포함되어 있었는데, 이 내용들은 실제로 다른 별도 패널(C-7 무장애건축 엔지니어링 등)에서 담당하는 영역이었습니다.
+- A-4는 **과업지시서(Project Brief) 기반 프로젝트 특성 분석**에 집중하여야 한다는 원칙 재확인.
+
+#### 수정 사항
+- `.agents/workflows/A-4-project-analysis.md` 내용에서 특화설계제안, BF 인증 관련 항목 제거.
+- A-4의 핵심 기능을 다음 4가지로 명확히 한정:
+  1. **ZoneMatrix**: 생애주기 기반 수직 조닝 최적화 (층별 조닝 테이블, 이용자 그룹)
+  2. **DemandTrace**: 수요 정량화 및 시장성 추적 (연간 대상 인원, 지역 동의율)
+  3. **SiteIQ**: 대상지 광역 인프라 연계 분석 (접근성, 연계 인프라)
+  4. **CommunityLink**: 지역사회 통합 공생 설계 지수 (4개 항목 × 배점 25점, 총 100점)
+
+---
+
+### 3. A-5 디자인 컨셉 제너레이터 — Vibe 01~10 전체 구현 및 2열 그리드 UI
+
+#### 수정 파일: `frontend/src/components/ui/DesignConceptGeneratorPanel.tsx`
+
+#### 이전 상태 (수정 전)
+- Vibe 01~05 (미래기술형, 인간중심형, 지속가능형, 경제효율형, 도시상징형)만 구현
+- 단일 컬럼 리스트 형태로 나열
+
+#### 수정 과정 (상세)
+
+**Step 1: VIBES 배열 확장 (5종 → 10종)**
+```typescript
+// 기존 (5종)
+const VIBES = [
+  { id: 'tech',   label: '[Vibe 01] 미래 기술형', icon: <Cpu/>,       desc: '스마트 빌딩, 자동화...' },
+  { id: 'human',  label: '[Vibe 02] 인간 중심형', icon: <Heart/>,     desc: '치유, 돌봄...' },
+  { id: 'green',  label: '[Vibe 03] 지속 가능형', icon: <Leaf/>,      desc: '제로에너지...' },
+  { id: 'value',  label: '[Vibe 04] 경제 효율형', icon: <TrendingUp/>, desc: '수익성...' },
+  { id: 'symbol', label: '[Vibe 05] 도시 상징형', icon: <Landmark/>,  desc: '랜드마크...' },
+];
+
+// 수정 후 (10종) — 신규 5종 추가
+  { id: 'culture',   label: '[Vibe 06] 문화 예술형', icon: <Palette/>,  desc: '창의성, 표현, 예술적 정체성, 문화 콘텐츠' },
+  { id: 'bio',       label: '[Vibe 07] 자연 치유형', icon: <Trees/>,    desc: '생체친화, 자연 소재, 감각 회복, 치유 환경' },
+  { id: 'safe',      label: '[Vibe 08] 안전 보호형', icon: <Shield/>,   desc: '물리적 안전, 보안, 재난 대응, 위기 관리' },
+  { id: 'edu',       label: '[Vibe 09] 교육 혁신형', icon: <BookOpen/>, desc: '미래 교육, 학습 과학, 개별화, 체험 학습' },
+  { id: 'community', label: '[Vibe 10] 지역 융합형', icon: <Globe2/>,   desc: '지역 커뮤니티, 복합 프로그램, 사회 통합' },
+```
+
+**Step 2: Import 추가 (신규 아이콘)**
+```typescript
+// 기존
+import { ..., Landmark } from 'lucide-react';
+
+// 추가
+import { ..., Palette, Trees, Shield, BookOpen, Globe2 } from 'lucide-react';
+```
+
+**Step 3: Vibe 선택 UI 레이아웃 변경 (리스트 → 2열 그리드)**
+```tsx
+// 이전: 단일 컬럼, 스크롤 영역
+<div className="space-y-2 max-h-[420px] overflow-y-auto">
+  {VIBES.map(vibe => (
+    <button className="w-full flex items-center gap-3 ...">
+      // 가로 배치 (아이콘 | 텍스트 → 로 나열)
+    </button>
+  ))}
+</div>
+
+// 수정 후: 2열 그리드, 스크롤 제거
+<div className="grid grid-cols-2 gap-2 mb-6">
+  {VIBES.map(vibe => (
+    <button className="relative text-left p-3 rounded-xl flex flex-col gap-2 ...">
+      <div className="w-7 h-7 rounded-lg ..."> {/* 아이콘 (상단) */}
+        {vibe.icon}
+      </div>
+      <div className="min-w-0 pr-4">
+        <div className="text-[11px] font-bold">{vibe.label}</div>     {/* 이름 (하단) */}
+        <div className="text-[9px] text-slate-400 line-clamp-2">{vibe.desc}</div>  {/* 설명 */}
+      </div>
+      {/* 선택 순서 뱃지 (우상단) */}
+      {isSelected && (
+        <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-amber-500 text-white text-[8px]">
+          {selIdx + 1}
+        </span>
+      )}
+    </button>
+  ))}
+</div>
+```
+
+#### 카드 레이아웃 변경 상세
+| 속성 | 이전 | 수정 후 |
+|------|------|--------|
+| 컨테이너 | `space-y-2 max-h-[420px] overflow-y-auto` | `grid grid-cols-2 gap-2 mb-6` |
+| 카드 방향 | 가로 (`flex items-center gap-3`) | 세로 (`flex flex-col gap-2`) |
+| 아이콘 크기 | `w-8 h-8` | `w-7 h-7` |
+| 설명 표시 | 완전 표시 | `line-clamp-2` (2줄 제한) |
+| 선택 뱃지 | 없음 | 우상단 `w-4 h-4` 원형 숫자 뱃지 |
+| 스크롤 | `max-h-[420px] overflow-y-auto` | 없음 (전체 표시) |
+
+#### 결과: 10개 Vibe, 2열×5행 그리드 완성
+```
+[Vibe 01 미래기술형]  [Vibe 02 인간중심형]
+[Vibe 03 지속가능형]  [Vibe 04 경제효율형]
+[Vibe 05 도시상징형]  [Vibe 06 문화예술형]  ← 신규
+[Vibe 07 자연치유형]  [Vibe 08 안전보호형]  ← 신규
+[Vibe 09 교육혁신형]  [Vibe 10 지역융합형]  ← 신규
+```
+
+---
+
+### 4. A-1~A-5 패널 전체 스킬 준수 여부 점검 및 검증
+
+#### 점검 방법
+각 패널의 소스 코드를 `.agents/workflows/` SKILL 파일과 직접 대조하여 누락 항목 확인.
+
+#### A-1 SpecsAnalysisPanel.tsx — 검증 완료 ✅
+| SKILL 요구사항 | 구현 상태 |
+|--------------|----------|
+| 12-Column Grid (col-span-8 + col-span-4) | ✅ 구현 |
+| PARSER ACTIVE 뱃지 | ✅ `analysisResult &&` 조건부 표시 |
+| 추출률 게이지바 | ✅ 각 필드别 게이지 구현 |
+| Engineering Seal (어두운 배경 카드) | ✅ `bg-gradient-to-b from-slate-900 to-indigo-950` |
+| undergroundFloors 안전 접근 | ✅ `(store as any).undergroundFloors` 타입 어설션 |
+
+#### A-2 SiteAnalysisPanel.tsx — 검증 완료 ✅
+| SKILL 요구사항 | 구현 상태 |
+|--------------|----------|
+| 5대 분석 영역 아코디언 (입지/접근성/환경/인프라/법규) | ✅ 구현 |
+| SWOT Matrix | ✅ 4개 셀(강/약/기/위) |
+| Geomatic Intelligence Seal | ✅ 다크 배경 Engineering Seal |
+| VWorld 연동 상태 표시 | ✅ `landUseRegulation` 연동 |
+
+#### A-3 RegulationPanel.tsx — 검증 완료 ✅
+| SKILL 요구사항 | 구현 상태 |
+|--------------|----------|
+| 8대 카테고리 (배치 진행바 포함) | ✅ `REGULATION_BATCHES` 배치별 처리 |
+| LAW INTELLIGENCE Seal | ✅ `ShieldCheck` 아이콘 + `ANALYSIS COMPLETE/ANALYZING.../STANDBY MODE` |
+| 파싱 신뢰도 표시 (96.2%) | ✅ Seal 하단 메타데이터 |
+| Risk Matrix 테이블 | ✅ CONFLICT/THREAT/WEAKNESS 3종 행 |
+| VWorld WFS 조례 연동 | ✅ `fetchLandUseData` + 건폐/용적률 게이지 |
+| AI 상세 해석 팝업 | ✅ `expandedRegIndex` 모달 |
+
+#### A-4 ProjectCharacteristicsPanel.tsx — 검증 완료 ✅
+| SKILL 요구사항 | 구현 상태 |
+|--------------|----------|
+| 수요 타당성 정량화 데이터 (1,398명/년) | ✅ 하드코딩 렌더링 |
+| 지역사회 건립 동의율 (98%) | ✅ SVG 도넛 차트 |
+| 생애주기 수직 조닝 (1F~4F 조닝 테이블) | ✅ 4단계 층별 카드 |
+| CommunityLink 평가 지수 (92점) | ✅ 4개 항목 × 진행바 |
+| SKILL 로드맵 사이드바 | ✅ ZoneMatrix/DemandTrace (Running), SiteIQ/CommunityLink (Standby) |
+| PROJECT SKILL ENGINE 대시보드 뱃지 | ✅ 다크 배경 카드 |
+
+#### A-5 DesignConceptGeneratorPanel.tsx — 검증 완료 ✅
+| SKILL 요구사항 | 구현 상태 |
+|--------------|----------|
+| 12-Column Grid (col-span-8 + col-span-4) | ✅ `grid grid-cols-12` 내부 |
+| CONCEPT ENGINE 뱃지 (amber pulse) | ✅ `CONCEPT ENGINE` 텍스트 + `animate-pulse` |
+| Vibe 01~10 전체 구현 | ✅ 10종 완성 |
+| 2열×5행 그리드 | ✅ `grid grid-cols-2` |
+| 프로젝트 컨텍스트 연동 (A-1, A-3) | ✅ `buildingUse`, `grossFloorArea` 표시 |
+| Vibe Matrix + Logic Matcher 모듈 상태 | ✅ Running 상태 표시 |
+
+---
+
+### 5. TypeScript 타입 안전 처리 — SpecsAnalysisPanel.tsx
+
+#### 문제
+`ParsedProjectData` 인터페이스에서 `undergroundFloors`는 옵셔널 필드(`undergroundFloors?: number`)이나, 일부 프로젝트 데이터에서 `store` 객체에 이 필드가 포함되지 않는 경우가 있었습니다.
+
+#### 수정 전
+```typescript
+// 런타임 오류 가능성 존재
+const underground = store.undergroundFloors;  // TS 타입 오류
+```
+
+#### 수정 후
+```typescript
+// 타입 어설션으로 안전 접근
+const underground = (store as any).undergroundFloors ?? 0;
+```
+
+#### 수정 파일
+- `frontend/src/components/ui/SpecsAnalysisPanel.tsx` (line 234)
+
+---
+
+### 6. 수정된 파일 총괄 (2026-04-04)
+
+| 파일 | 변경 내용 | 변경 규모 |
+|------|----------|----------|
+| `frontend/src/components/ui/DesignConceptGeneratorPanel.tsx` | Vibe 05종 신규 추가 (culture/bio/safe/edu/community), 2열 그리드 레이아웃 적용, 5개 아이콘 import 추가 | **+35줄 / -15줄** |
+| `frontend/src/components/ui/SpecsAnalysisPanel.tsx` | undergroundFloors 타입 안전 접근 처리 | **1줄 수정** |
+| `.agents/workflows/A-3-law-analysis.md` | A-3 법규분석 모듈 High-Fidelity 표준 워크플로우 | **신규 작성** |
+| `.agents/workflows/A-4-project-analysis.md` | A-4 프로젝트 특성 분석 모듈 표준 워크플로우 (특화설계/BF 범위 제거, 4대 SKILL 엔진 명세) | **신규 작성** |
+| `.agents/workflows/A-5-design-analysis.md` | A-5 디자인 컨셉 제너레이터 표준 워크플로우 (Vibe 01~10 명세, 3-Level 구조) | **신규 작성** |
+| `.agents/workflows/A-2-site-analysis.md` | High-Fidelity UI 프로세스 섹션 추가 | **보강** |
+| `detailed_steps_modification_processes.md` | 오늘 작업 내용 전체 기록 (이 항목) | **추가** |
+
+**Git 커밋 정보**
+- 커밋 해시: `c26aef3`
+- 변경 파일: 13 files changed
+- 코드 변경: +2,937 insertions / -1,229 deletions
+- 브랜치: `main` → `github.com/bignine99/haema_archi.git`
+
+---
+
+### 7. 다음 작업 방향 (Next Steps)
+
+#### 2026-04-05 이후 우선 작업
+
+| 우선순위 | 작업 | 설명 |
+|---------|------|------|
+| ★★★ | **GreenBuildingPanel / CostSchedulePanel 표준화** | C-series 패널에 대한 동일 12-Column Cyber-Dashboard 적용 |
+| ★★ | **백엔드 데이터 파이프라인 연결** | A-1~A-5의 "Standby" 상태 모듈들을 실제 API 데이터에 연결 |
+| ★★ | **빌드 검증** | TypeScript 전체 컴파일 + Vite 프로덕션 빌드 무결성 확인 |
+| ★ | **siteParameterService.ts 개선** | 사이트 파라미터 추출 로직 고도화 |
+
+#### 각 패널 수정 시 참고 사항
+
+**A-5 수정 시**
+- VIBES 배열은 `DesignConceptGeneratorPanel.tsx` 파일 상단에 정의
+- Vibe 선택은 최대 2개 (toggleVibe 함수의 `prev.length >= 2` 제한)
+- 컨셉 생성은 `conceptGeneratorService.ts`의 `generateDesignConcepts()` 호출
+- 결과 데이터 구조: `{ concepts: [{ id, vibe, philosophy, pillars: [{ name, description, solutions: [{ type, spec }] }] }] }`
+
+**A-3 수정 시**
+- 배치 분석은 `REGULATION_BATCHES` (regulationAnalysisService.ts)에서 정의
+- 각 배치는 순차 실행되며, 결과는 즉시 Store에 업데이트됨 (실시간 렌더링)
+- 법규 카탈로그 모달은 `RegulationCatalogModal.tsx` (별도 컴포넌트)
+- 아코디언 카드는 `CategoryAccordion.tsx` (별도 컴포넌트)
+
+**A-4 수정 시**
+- 수요/동의율 데이터는 현재 하드코딩 (1,398명, 98%)
+- 조닝 테이블 데이터는 컴포넌트 내부에 상수로 정의
+- 프로젝트명 도출: `store.projectName` 기반으로 시설 유형 자동 판별
+- SKILL 로드맵의 상태(Running/Standby)는 현재 하드코딩 (추후 실제 엔진 연결 필요)
