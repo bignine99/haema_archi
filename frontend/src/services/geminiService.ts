@@ -10,6 +10,21 @@ import { useProjectStore } from '@/store/projectStore';
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 export interface GeminiAnalysisResult {
+    // ─── 기본 제원 (AI가 추출) ───
+    projectName?: string;
+    address?: string;
+    zoneType?: string;
+    buildingUse?: string;
+    landArea?: number;
+    grossFloorArea?: number;
+    totalFloors?: number;
+    undergroundFloors?: number;
+    buildingCoverageLimit?: number;
+    floorAreaRatioLimit?: number;
+    maxHeight?: number;
+    constructionCost?: string;
+
+    // ─── 세부 지침 ───
     designDirection: string[];     // 설계 방향 (핵심 3~5개)
     generalGuidelines: string[];   // 일반지침 요약 (핵심 4~6개)
     designGuidelines: string[];    // 설계지침 요약 (핵심 4~6개)
@@ -18,7 +33,7 @@ export interface GeminiAnalysisResult {
     certifications: string[];     // 인증 사항 (키워드)
 }
 
-const ANALYSIS_PROMPT = `당신은 건축 설계 전문가입니다. 아래 "과업지시서" 원문을 매우 꼼꼼하게 읽고 분석한 후, 설계자가 반드시 인지해야 할 핵심 사항만 추출하여 JSON 형식으로 제공하세요.
+const ANALYSIS_PROMPT = `당신은 건축 설계 전문가입니다. 아래 "과업지시서" 원문을 매우 꼼꼼하게 읽고 분석한 후, 설계자가 반드시 인지해야 할 핵심 사항과 프로젝트 제원을 추출하여 JSON 형식으로 제공하세요.
 
 ★ 핵심 원칙 ★
 1. 원문을 그대로 복사하지 마세요. 반드시 핵심만 요약하세요.
@@ -30,6 +45,18 @@ const ANALYSIS_PROMPT = `당신은 건축 설계 전문가입니다. 아래 "과
 
 ★ 반환 형식 (반드시 순수 JSON만 반환) ★
 {
+  "projectName": "사업명 (예: 남면 실내체육시설 건립사업)",
+  "address": "대지 위치 (예: 거제시고현동 1031 번지 일원)",
+  "zoneType": "용도지역 (예: 제2종일반주거지역)",
+  "buildingUse": "주차장, 체육시설, 교육연구시설 등",
+  "landArea": 1500,
+  "grossFloorArea": 2500,
+  "totalFloors": 3,
+  "undergroundFloors": 1,
+  "buildingCoverageLimit": 60,
+  "floorAreaRatioLimit": 200,
+  "maxHeight": 15,
+  "constructionCost": "15,000,000,000원",
   "designDirection": ["설계 방향 핵심 3~5개 (예: 친환경 패시브 설계 적용, ZEB 4등급 인증 필수)"],
   "generalGuidelines": ["일반지침 핵심 4~6개 (예: 착수일로부터 180일 이내 설계 완료, VE 2회 실시 필수)"],
   "designGuidelines": ["설계지침 핵심 4~6개 (예: 복도폭 2.4m 이상 확보, 내진 I등급 적용, 층고 3.6m 이상)"],

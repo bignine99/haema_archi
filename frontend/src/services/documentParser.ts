@@ -76,12 +76,25 @@ export async function parseDocument(file: File): Promise<ParsedProjectData> {
         if (aiResult) {
             console.log('[Gemini] AI 분석 성공! 결과 적용 중...');
             // AI 분석 결과로 덮어쓰기 (AI가 더 정확한 요약 제공)
-            if (aiResult.designDirection.length > 0) result.designDirection = aiResult.designDirection;
-            if (aiResult.generalGuidelines.length > 0) result.generalGuidelines = aiResult.generalGuidelines;
-            if (aiResult.designGuidelines.length > 0) result.designGuidelines = aiResult.designGuidelines;
-            if (aiResult.keyNotes.length > 0) result.keyNotes = aiResult.keyNotes;
-            if (aiResult.deliverables.length > 0) result.deliverables = aiResult.deliverables;
-            if (aiResult.certifications.length > 0) result.certifications = aiResult.certifications;
+            if (aiResult.projectName) result.projectName = aiResult.projectName;
+            if (aiResult.address) result.address = aiResult.address;
+            if (aiResult.zoneType) result.zoneType = aiResult.zoneType;
+            if (aiResult.buildingUse) result.buildingUse = aiResult.buildingUse;
+            if (aiResult.landArea) result.landArea = aiResult.landArea;
+            if (aiResult.grossFloorArea) result.grossFloorArea = aiResult.grossFloorArea;
+            if (aiResult.totalFloors) result.totalFloors = aiResult.totalFloors;
+            if (aiResult.undergroundFloors) result.undergroundFloors = aiResult.undergroundFloors;
+            if (aiResult.buildingCoverageLimit) result.buildingCoverageLimit = aiResult.buildingCoverageLimit;
+            if (aiResult.floorAreaRatioLimit) result.floorAreaRatioLimit = aiResult.floorAreaRatioLimit;
+            if (aiResult.maxHeight) result.maxHeight = aiResult.maxHeight;
+            if (aiResult.constructionCost) result.constructionCost = aiResult.constructionCost;
+
+            if (aiResult.designDirection?.length > 0) result.designDirection = aiResult.designDirection;
+            if (aiResult.generalGuidelines?.length > 0) result.generalGuidelines = aiResult.generalGuidelines;
+            if (aiResult.designGuidelines?.length > 0) result.designGuidelines = aiResult.designGuidelines;
+            if (aiResult.keyNotes?.length > 0) result.keyNotes = aiResult.keyNotes;
+            if (aiResult.deliverables?.length > 0) result.deliverables = aiResult.deliverables;
+            if (aiResult.certifications?.length > 0) result.certifications = aiResult.certifications;
         } else {
             console.warn('[Gemini] AI 분석 실패, regex 결과 사용');
         }
