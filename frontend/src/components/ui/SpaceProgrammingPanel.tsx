@@ -188,7 +188,7 @@ export default function SpaceProgrammingPanel() {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex border-b border-slate-200 bg-white px-6 pt-2 gap-2 shrink-0">
+            <div className="flex border-b border-slate-200 bg-white px-6 pt-2 gap-2 shrink-0 justify-center">
                 <button onClick={() => setActiveTab('overview')} className={`pb-3 px-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>건축개요 및 시설면적표</button>
                 <button onClick={() => setActiveTab('spaces')} className={`pb-3 px-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'spaces' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>층별 세부용도 및 면적표</button>
                 <button onClick={() => setActiveTab('charts')} className={`pb-3 px-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'charts' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>시설면적 세부 분석(차트)</button>

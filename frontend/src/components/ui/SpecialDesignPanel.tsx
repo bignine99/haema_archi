@@ -12,15 +12,18 @@ const SpecialDesignPanel = () => {
     const isEdu = buildingUse === '교육연구시설';
     const isHospital = buildingUse === '의료시설';
     const isOffice = buildingUse === '업무시설(오피스)';
+    const isSports = buildingUse.includes('체육') || buildingUse.includes('운동');
 
     // Dynamic strings
     const defaultBranding = projectName ? `${projectName} Innovation Hub` : 'Urban Innovation Campus';
-    const branding = isHospital ? 'Healing Oasis Campus' : isOffice ? 'Smart Innovation Hub' : defaultBranding;
-    const slogan = isHospital ? '자연과 치유가 만나는 메디컬 거점' : isOffice ? '초연결 스마트 워크스페이스' : '미래를 향한 융합과 상생의 공동체';
+    const branding = isHospital ? 'Healing Oasis Campus' : isOffice ? 'Smart Innovation Hub' : isSports ? 'Active Wellness Center' : defaultBranding;
+    const slogan = isHospital ? '자연과 치유가 만나는 메디컬 거점' : isOffice ? '초연결 스마트 워크스페이스' : isSports ? '지역사회 밀착형 활력 충전 플랫폼' : '미래를 향한 융합과 상생의 공동체';
     const masterplanDesc = isHospital 
         ? '일반적인 치료 기능을 넘어 지역 사회와 상생하며, 도심 속 프리미엄 헬스케어 및 생태적 치유 환경을 제공하는 메디컬 혁신 거점으로 자리매김합니다.'
         : isOffice 
         ? '단조로운 업무 공간을 넘어 구성원의 웰니스와 지역사회 네트워킹을 증명하는 차세대 하이브리드 워크스페이스 벤치마크 모델로 자리매김합니다.'
+        : isSports
+        ? '지역 주민에게 고부가 스포츠 인프라를 제공하며 모든 연령층의 신체적, 정신적 웰니스를 증진하는 개방형 라이프스타일 랜드마크로 자리매김합니다.'
         : `단순한 기능을 넘어 지역과의 활발한 상호작용을 촉진하며, 도심 속 창의적 혁신 거점이자 사용자 중심의 미래형 융합 플랫폼으로 자리매김합니다.`;
 
     const scaleFactor = Math.max(1, grossFloorArea / 3000);
@@ -42,9 +45,13 @@ const SpecialDesignPanel = () => {
         policyTitle = '차세대 하이브리드 워크스페이스 표준 부합';
         policyDesc = '기업의 ESG 경영 및 임직원의 웰니스(Wellness) 실현을 최우선으로 고려하는 미래형 오피스 벤치마크 모델.';
         policyTags = ['조직 창의성 극대화 소통/교류 노드 30% 확충', '지역사회 맞닿음 및 로컬 네트워크 커뮤니티 조성', '탄소 중립(ZEB) 친환경 스마트 빌딩 기준 달성'];
+    } else if (isSports) {
+        policyTitle = '생활형 SOC 및 지역 복합 스포츠 인프라 부합';
+        policyDesc = '문체부 생활 밀착형 체육시설 확충 정책에 대응하며, 전 연령 생활 체육의 거점으로 활용 가능한 모델.';
+        policyTags = ['다목적 복합경기장 및 고효율 체육공간 확보', '주야간 상시 개방성을 고려한 방범/안전 특화 설계', '무장애(BF) 유니버설 및 체육약자 편의성 제고'];
     }
 
-    const clusterTitle = isHospital ? '4단계 환자 맞춤형 치유 클러스터' : isOffice ? '4단계 웰니스 코어 및 창의 존' : '4단계 융합 및 소통 혁신 클러스터';
+    const clusterTitle = isHospital ? '4단계 환자 맞춤형 치유 클러스터' : isOffice ? '4단계 웰니스 코어 및 창의 존' : isSports ? '4단계 액티브 라이프스타일 콤플렉스' : '4단계 융합 및 소통 혁신 클러스터';
 
     const clusterSteps = isHospital ? [
         { step: 1, name: '응급/외상', color: 'emerald', sub: '응급의료센터, 감염분류소' },
@@ -56,6 +63,11 @@ const SpecialDesignPanel = () => {
         { step: 2, name: '창의협업', color: 'blue', sub: '아이디에이션 홀, 스크럼보드 라운지' },
         { step: 3, name: '소셜교류', color: 'emerald', sub: '사내 카페테리아, 오프닝 타운홀' },
         { step: 4, name: '웰니스케어', color: 'orange', sub: '수면/휴게실, 피트니스, 릴렉스룸' }
+    ] : isSports ? [
+        { step: 1, name: '퍼블릭존', color: 'emerald', sub: '웰컴 로비, 카페, 스포츠숍' },
+        { step: 2, name: '멀티코트', color: 'blue', sub: '다목적 실내체육관, 조명/음향' },
+        { step: 3, name: '피트니스', color: 'emerald', sub: 'G·X룸, 헬스장, 개인PT실' },
+        { step: 4, name: '편의시설', color: 'orange', sub: '대형 락커, 무장애 샤워실, 회복실' }
     ] : [ 
         { step: 1, name: '소통라운지', color: 'emerald', sub: '환영 로비, 코워킹 라운지' },
         { step: 2, name: '창의실험', color: 'emerald', sub: '메이커스페이스, 집중 연구실' },
@@ -63,8 +75,8 @@ const SpecialDesignPanel = () => {
         { step: 4, name: '힐링케어', color: 'orange', sub: '옥상 정원, 체육 밎 휴게 시설' }
     ];
 
-    const clusterFloors = isHospital ? ['1F 응급/로비', '2F 수술실/ICU', '3F 무균병동', '4F 일반병동/가든'] : isOffice ? ['1F 코워킹/로비', '2F 오픈라운지', '3F 집중업무구역', '4F 임원/루프탑'] : ['1F 로비/오픈존', '2F 협업 라운지', '3F 집중 업무/연구', '4F 조용/독립존'];
-    const loopTitle = isHospital ? '치유와 회복의 입체적 동선 교차망' : isOffice ? '업무와 휴식의 입체적 동선 교차망' : '유기적 연계 및 소통의 입체 동선망';
+    const clusterFloors = isHospital ? ['1F 응급/로비', '2F 수술실/ICU', '3F 무균병동', '4F 일반병동/가든'] : isOffice ? ['1F 코워킹/로비', '2F 오픈라운지', '3F 집중업무구역', '4F 임원/루프탑'] : isSports ? ['1F 진입마당/로비', '2F 다목적 체육관', '3F 헬스&피트니스', '4F 옥상 공원/트랙'] : ['1F 로비/오픈존', '2F 협업 라운지', '3F 집중 업무/연구', '4F 조용/독립존'];
+    const loopTitle = isHospital ? '치유와 회복의 입체적 동선 교차망' : isOffice ? '업무와 휴식의 입체적 동선 교차망' : isSports ? '관람-경기-휴식의 3D 입체 트래픽 루프' : '유기적 연계 및 소통의 입체 동선망';
 
     const handleExport = () => {
         exportToJSON('SpecialDesign_Proposal', {

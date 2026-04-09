@@ -1389,6 +1389,10 @@ export const useProjectStore = create<ProjectState>()(
             rawData: parsedData,
         } as DocumentInfo;
 
+        // Reset Phase B data so Z3, Z4, Z5 do not show stale project data
+        updates.floorZoning = [];
+        updates.massingResult = null; // Assuming massingResult is stored here
+
         set((state) => ({ ...state, ...updates }));
         get().recalculate();
     },
