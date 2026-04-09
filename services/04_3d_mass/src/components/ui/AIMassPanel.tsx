@@ -60,7 +60,7 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <Sparkles size={14} className="text-indigo-500" />
-                            <span className="text-[11px] font-bold text-indigo-900">HAEMA AI 어시스턴트</span>
+                            <span className="text-[11px] font-bold text-indigo-900">ARCHE AI 어시스턴트</span>
                         </div>
                         {store.chatLoading && <Loader2 size={12} className="animate-spin text-indigo-500" />}
                     </div>

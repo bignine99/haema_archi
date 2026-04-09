@@ -42,15 +42,12 @@ if errorlevel 1 (
 echo.
 
 echo [6/6] 커밋 실행...
-git commit -m "feat: A-series 엔지니어링 패널 스킬 프레임워크 표준화 완료
+git commit -m "docs: Re-activate SECURE AUTH WALL (LandingPage) for production server deployment
 
-- A-5 디자인 컨셉 제너레이터: Vibe 01~10 전체 구현 (2열x5행 그리드)
-- A-5 신규 Vibe: 문화예술형, 자연치유형, 안전보호형, 교육혁신형, 지역융합형 추가
-- A-1~A-5 패널 전체 12-Column Cyber-Dashboard 표준 준수 검증 완료
-- Engineering Seal, PARSER ACTIVE, LAW INTELLIGENCE 뱃지 통일 적용
-- SpecsAnalysisPanel: undergroundFloors 타입 안전 처리
-
-Reviewed: A-1(Specs), A-2(Site), A-3(Regulation), A-4(Project), A-5(DesignConcept)"
+- Changed App.tsx `isAuthorized` default to false
+- Activated password / API Key gate for demo security
+- Refined C-6 ~ C-9 Standardization process
+- Verified Phase C Zero-Leakage Push mechanisms"
 echo.
 
 echo [완료] 커밋이 완료되었습니다.

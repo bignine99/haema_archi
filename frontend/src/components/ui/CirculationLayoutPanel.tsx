@@ -1,58 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Layers, Accessibility, Activity, Bus, Navigation, ShieldCheck, ZoomIn, Settings, Maximize2, Sun, Play, Trophy, BarChart3, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Layers, Accessibility, Activity, Bus, Navigation, ShieldCheck, ZoomIn, Settings, Maximize2, Sun, Play, Trophy, BarChart3, CheckCircle2, Loader2, ArrowRight, Waypoints } from 'lucide-react';
+
+import { useProjectStore } from '@/store/projectStore';
+import { exportToJSON, exportToSVG, exportToDXF, exportToIFC } from '@/utils/exportData';
 
 /* ──────────────────────────────────────────────
-   Floor-specific data model
+   Floor-specific data model (Dynamic by Building Use)
    ────────────────────────────────────────────── */
 type RoomDef = { name: string; area: string; ch: string; x: number; y: number; w: number; h: number; color: string; stroke: string; subs: string[] };
 
-const FLOOR_DATA: Record<number, {
-    label: string; street: string; streetColor: string; streetAccent: string; rooms: RoomDef[];
-}> = {
-    1: {
-        label: '1F : 지역사회 개방 / 웰컴', street: 'Welcome Street', streetColor: '#dbeafe', streetAccent: '#3b82f6',
-        rooms: [
-            { name: '다목적 강당', area: '324㎡', ch: 'CH 6.0m', x: 60, y: 80, w: 160, h: 120, color: '#eff6ff', stroke: '#93c5fd', subs: ['무대', '관람석', '음향'] },
-            { name: '도서관/미디어', area: '186㎡', ch: 'CH 3.6m', x: 60, y: 220, w: 160, h: 100, color: '#eff6ff', stroke: '#93c5fd', subs: ['열람실', '디지털존'] },
-            { name: '보안관실', area: '24㎡', ch: 'CH 3.0m', x: 60, y: 340, w: 70, h: 50, color: '#fef3c7', stroke: '#fbbf24', subs: ['CCTV 통합'] },
-            { name: '재활운동실', area: '210㎡', ch: 'CH 4.5m', x: 370, y: 80, w: 160, h: 120, color: '#f0fdf4', stroke: '#86efac', subs: ['물리치료', '보행훈련'] },
-            { name: '감각통합실', area: '96㎡', ch: 'CH 3.6m', x: 370, y: 220, w: 160, h: 100, color: '#f0fdf4', stroke: '#86efac', subs: ['진동바닥', '볼풀'] },
-        ],
-    },
-    2: {
-        label: '2F : 초등 저학년 / 유치원', street: 'Play Street', streetColor: '#fef9c3', streetAccent: '#eab308',
-        rooms: [
-            { name: '유치원 교실 A', area: '72㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 130, h: 90, color: '#fefce8', stroke: '#fde047', subs: ['놀이', '낮잠'] },
-            { name: '유치원 교실 B', area: '72㎡', ch: 'CH 3.0m', x: 60, y: 190, w: 130, h: 90, color: '#fefce8', stroke: '#fde047', subs: ['감각', '소근육'] },
-            { name: '유희실', area: '144㎡', ch: 'CH 4.5m', x: 60, y: 300, w: 130, h: 80, color: '#fff7ed', stroke: '#fdba74', subs: ['클라이밍', '트램폴린'] },
-            { name: '초등 1-2 교실', area: '132㎡', ch: 'CH 3.0m', x: 370, y: 80, w: 160, h: 100, color: '#eff6ff', stroke: '#93c5fd', subs: ['1학년', '2학년'] },
-            { name: '특별활동실', area: '96㎡', ch: 'CH 3.6m', x: 370, y: 200, w: 160, h: 100, color: '#f0fdf4', stroke: '#86efac', subs: ['미술', '음악'] },
-        ],
-    },
-    3: {
-        label: '3F : 중학 / 메디컬 클러스터', street: 'Care Street', streetColor: '#dcfce7', streetAccent: '#22c55e',
-        rooms: [
-            { name: '중학 교실 3학급', area: '198㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 160, h: 120, color: '#eff6ff', stroke: '#93c5fd', subs: ['3-1', '3-2', '3-3'] },
-            { name: '언어치료실', area: '48㎡', ch: 'CH 3.0m', x: 60, y: 220, w: 80, h: 70, color: '#fdf2f8', stroke: '#f9a8d4', subs: ['방음 Rw55'] },
-            { name: '심리안정실', area: '36㎡', ch: 'CH 3.0m', x: 150, y: 220, w: 70, h: 70, color: '#fdf2f8', stroke: '#f9a8d4', subs: ['센서리룸'] },
-            { name: '수치료실', area: '120㎡', ch: 'CH 4.2m', x: 370, y: 80, w: 160, h: 120, color: '#f0fdf4', stroke: '#86efac', subs: ['온수풀 32℃', 'HEPA'] },
-            { name: '작업치료실', area: '72㎡', ch: 'CH 3.6m', x: 370, y: 220, w: 160, h: 80, color: '#f0fdf4', stroke: '#86efac', subs: ['일상동작', 'ADL'] },
-        ],
-    },
-    4: {
-        label: '4F : 고등 / 전공과 직업교육', street: 'Job Street', streetColor: '#e0e7ff', streetAccent: '#6366f1',
-        rooms: [
-            { name: '고등 교실 3학급', area: '198㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 160, h: 120, color: '#eff6ff', stroke: '#93c5fd', subs: ['고1', '고2', '고3'] },
-            { name: '전공과 실습', area: '180㎡', ch: 'CH 3.6m', x: 60, y: 220, w: 160, h: 100, color: '#e0e7ff', stroke: '#a5b4fc', subs: ['바리스타', '제과'] },
-            { name: '직업교육실', area: '144㎡', ch: 'CH 3.6m', x: 370, y: 80, w: 160, h: 120, color: '#e0e7ff', stroke: '#a5b4fc', subs: ['세탁', '포장'] },
-            { name: '전환교육실', area: '96㎡', ch: 'CH 3.0m', x: 370, y: 220, w: 160, h: 90, color: '#fef3c7', stroke: '#fbbf24', subs: ['면접연습', '시뮬레이션'] },
-        ],
-    },
-};
-
-/* ──────────────────────────────────────────────
-   Alt-specific KPI + layout offsets
-   ────────────────────────────────────────────── */
 interface AltProfile {
     cpo: number; eduRatio: number; commonRatio: number; pathReduction: number; zeb: number;
     naturalLight: number; acousticGap: string;
@@ -65,59 +21,129 @@ interface AltProfile {
     evalScores: { operation: number; safety: number; energy: number; bf: number; cost: number };
 }
 
-const ALT_PROFILES: Record<string, AltProfile> = {
-    alt1: {
-        cpo: 88, eduRatio: 65, commonRatio: 35, pathReduction: 18, zeb: 41.2, naturalLight: 78, acousticGap: '30m+',
-        streetX: 230, streetW: 40, hubDx: 0,
-        roomOffsets: {},
-        loopStyle: 'balanced',
-        evalSummary: '학습↔치료 동선을 18% 단축하여 교사 관리 부하를 최소화하는 효율 중심 배치',
-        evalGrade: 'A',
-        evalScores: { operation: 95, safety: 85, energy: 72, bf: 90, cost: 88 },
-    },
-    alt2: {
-        cpo: 96, eduRatio: 60, commonRatio: 40, pathReduction: 12, zeb: 38.5, naturalLight: 70, acousticGap: '25m',
-        streetX: 210, streetW: 80, hubDx: 0,
-        roomOffsets: {
-            '다목적 강당': { dx: -20, dy: 10 }, '재활운동실': { dx: 20, dy: 10 },
-            '도서관/미디어': { dx: -20, dy: 0 }, '감각통합실': { dx: 20, dy: 0 },
-            '유치원 교실 A': { dx: -15, dy: 5 }, '초등 1-2 교실': { dx: 15, dy: 5 },
-            '중학 교실 3학급': { dx: -15, dy: 5 }, '수치료실': { dx: 15, dy: 5 },
-            '고등 교실 3학급': { dx: -15, dy: 5 }, '직업교육실': { dx: 15, dy: 5 },
+const getDynamicSimulationData = (buildingUse: string) => {
+    const isEdu = buildingUse.includes('학교') || buildingUse.includes('교육');
+    const isHospital = buildingUse.includes('병원') || buildingUse.includes('의료');
+    const isOffice = buildingUse.includes('업무') || buildingUse.includes('오피스');
+
+    const themeA = isHospital ? { bg: '#fdf2f8', border: '#f9a8d4' } : isOffice ? { bg: '#eff6ff', border: '#93c5fd' } : { bg: '#eff6ff', border: '#93c5fd' };
+    const themeB = isHospital ? { bg: '#f0fdf4', border: '#86efac' } : isOffice ? { bg: '#fefce8', border: '#fde047' } : { bg: '#f0fdf4', border: '#86efac' };
+    const themeC = isHospital ? { bg: '#fff7ed', border: '#fdba74' } : isOffice ? { bg: '#f8fafc', border: '#cbd5e1' } : { bg: '#fefce8', border: '#fde047' };
+
+    const floorData: Record<number, { label: string; street: string; streetColor: string; streetAccent: string; rooms: RoomDef[] }> = {
+        1: {
+            label: isEdu ? '1F : 개방 / 웰컴' : isHospital ? '1F : 외래 / 접수' : isOffice ? '1F : 로비 / 라운지' : '1F : 공용 / 로비',
+            street: 'Welcome Street', streetColor: '#dbeafe', streetAccent: '#3b82f6',
+            rooms: [
+                { name: isEdu ? '다목적 강당' : isHospital ? '외래 로비' : isOffice ? '리셉션 홀' : '다목적홀', area: '324㎡', ch: 'CH 6.0m', x: 60, y: 80, w: 160, h: 120, color: themeA.bg, stroke: themeA.border, subs: ['오픈스페이스'] },
+                { name: isEdu ? '도서관/미디어' : isHospital ? '접수처' : isOffice ? '초청 미팅존' : '라운지', area: '186㎡', ch: 'CH 3.6m', x: 60, y: 220, w: 160, h: 100, color: themeA.bg, stroke: themeA.border, subs: ['열람/대기'] },
+                { name: '보안데스크', area: '24㎡', ch: 'CH 3.0m', x: 60, y: 340, w: 70, h: 50, color: '#fef3c7', stroke: '#fbbf24', subs: ['CCTV 통합'] },
+                { name: isEdu ? '재활운동실' : isHospital ? '응급의료센터' : isOffice ? '직원 라운지' : '부대시설', area: '210㎡', ch: 'CH 4.5m', x: 370, y: 80, w: 160, h: 120, color: themeB.bg, stroke: themeB.border, subs: ['지원시설'] },
+                { name: isEdu ? '감각통합실' : isHospital ? '원내약국' : isOffice ? '워크카페' : '편의시설', area: '96㎡', ch: 'CH 3.6m', x: 370, y: 220, w: 160, h: 100, color: themeB.bg, stroke: themeB.border, subs: ['서비스'] },
+            ],
         },
-        loopStyle: 'radial',
-        evalSummary: '중앙 HUB 폭을 2배로 확장, 사각지대 0% 달성. 공용면적 증가로 공사비 소폭 상승',
-        evalGrade: 'A-',
-        evalScores: { operation: 78, safety: 98, energy: 65, bf: 95, cost: 75 },
-    },
-    alt3: {
-        cpo: 82, eduRatio: 68, commonRatio: 32, pathReduction: 10, zeb: 52.3, naturalLight: 92, acousticGap: '35m+',
-        streetX: 230, streetW: 40, hubDx: 0,
-        roomOffsets: {
-            '다목적 강당': { dx: 0, dy: -15 }, '재활운동실': { dx: 0, dy: -15 },
-            '도서관/미디어': { dx: 0, dy: -10 }, '감각통합실': { dx: 0, dy: -10 },
-            '보안관실': { dx: 0, dy: -10 },
-            '유치원 교실 A': { dx: 0, dy: -10 }, '초등 1-2 교실': { dx: 0, dy: -10 },
-            '중학 교실 3학급': { dx: 0, dy: -10 }, '수치료실': { dx: 0, dy: -10 },
-            '고등 교실 3학급': { dx: 0, dy: -10 }, '직업교육실': { dx: 0, dy: -10 },
+        2: {
+            label: isEdu ? '2F : 유치원 / 저학년' : isHospital ? '2F : 입원실 A' : isOffice ? '2F : 오픈 오피스' : '2F : 주요 공간',
+            street: 'Play Street', streetColor: '#fef9c3', streetAccent: '#eab308',
+            rooms: [
+                { name: isEdu ? '유치원 교실 A' : isHospital ? '일반병동 A' : isOffice ? '팀 스페이스 A' : '공간 A', area: '72㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 130, h: 90, color: themeC.bg, stroke: themeC.border, subs: ['기본업무'] },
+                { name: isEdu ? '유치원 교실 B' : isHospital ? '일반병동 B' : isOffice ? '팀 스페이스 B' : '공간 B', area: '72㎡', ch: 'CH 3.0m', x: 60, y: 190, w: 130, h: 90, color: themeC.bg, stroke: themeC.border, subs: ['기본업무'] },
+                { name: isEdu ? '유희실' : isHospital ? '간호스테이션' : isOffice ? '프로젝트실' : '지원실', area: '144㎡', ch: 'CH 4.5m', x: 60, y: 300, w: 130, h: 80, color: '#fff7ed', stroke: '#fdba74', subs: ['서포트'] },
+                { name: isEdu ? '초등 1-2 교실' : isHospital ? '집중치료센터' : isOffice ? '개방형 워크존' : '메인공간', area: '132㎡', ch: 'CH 3.0m', x: 370, y: 80, w: 160, h: 100, color: themeA.bg, stroke: themeA.border, subs: ['집중구역'] },
+                { name: isEdu ? '특별활동실' : isHospital ? '당직의국' : isOffice ? '화상회의룸' : '다목적룸', area: '96㎡', ch: 'CH 3.6m', x: 370, y: 200, w: 160, h: 100, color: themeB.bg, stroke: themeB.border, subs: ['협업'] },
+            ],
         },
-        loopStyle: 'linear',
-        evalSummary: '남향 채광 극대화 배치, ZEB 자립률 52.3% 달성. 동선 길이 소폭 증가 감수',
-        evalGrade: 'B+',
-        evalScores: { operation: 72, safety: 80, energy: 97, bf: 88, cost: 82 },
-    },
+        3: {
+            label: isEdu ? '3F : 중등 / 특화' : isHospital ? '3F : 수술 / 처치' : isOffice ? '3F : 임원 / 특화' : '3F : 특화 공간',
+            street: 'Focus Street', streetColor: '#dcfce7', streetAccent: '#22c55e',
+            rooms: [
+                { name: isEdu ? '중학 교실' : isHospital ? '수술실 A' : isOffice ? '임원실' : '고급 기능구역', area: '198㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 160, h: 120, color: themeA.bg, stroke: themeA.border, subs: ['특화'] },
+                { name: isEdu ? '언어치료실' : isHospital ? '수술대기실' : isOffice ? '폰부스' : '방음공간', area: '48㎡', ch: 'CH 3.0m', x: 60, y: 220, w: 80, h: 70, color: '#fdf2f8', stroke: '#f9a8d4', subs: ['방음유리'] },
+                { name: isEdu ? '심리안정실' : isHospital ? '멸균/세척실' : isOffice ? '프라이빗 라운지' : '안정실', area: '36㎡', ch: 'CH 3.0m', x: 150, y: 220, w: 70, h: 70, color: '#fdf2f8', stroke: '#f9a8d4', subs: ['보안'] },
+                { name: isEdu ? '수치료실' : isHospital ? 'ICU 집중치료' : isOffice ? '대형 회의실' : '대회의실', area: '120㎡', ch: 'CH 4.2m', x: 370, y: 80, w: 160, h: 120, color: themeC.bg, stroke: themeC.border, subs: ['특수설비'] },
+                { name: isEdu ? '작업치료실' : isHospital ? '장비/보관' : isOffice ? '오픈 테라스' : '오픈 데크', area: '72㎡', ch: 'CH 3.6m', x: 370, y: 220, w: 160, h: 80, color: themeC.bg, stroke: themeC.border, subs: ['휴게'] },
+            ],
+        },
+        4: {
+            label: isEdu ? '4F : 고등 / 직업' : isHospital ? '4F : 병실 / 옥상정원' : isOffice ? '4F : 스카이라운지' : '4F : 스카이존',
+            street: 'Sky Street', streetColor: '#e0e7ff', streetAccent: '#6366f1',
+            rooms: [
+                { name: isEdu ? '고등 교실' : isHospital ? 'VIP 특실' : isOffice ? 'CEO 오피스' : '프리미엄 룸', area: '198㎡', ch: 'CH 3.0m', x: 60, y: 80, w: 160, h: 120, color: themeA.bg, stroke: themeA.border, subs: ['채광'] },
+                { name: isEdu ? '전공과 실습' : isHospital ? '병동 라운지' : isOffice ? '임원식당' : '전망 라운지', area: '180㎡', ch: 'CH 3.6m', x: 60, y: 220, w: 160, h: 100, color: '#e0e7ff', stroke: '#a5b4fc', subs: ['파노라마 뷰'] },
+                { name: isEdu ? '직업교육실' : isHospital ? '옥상 힐링정원' : isOffice ? '루프탑 정원' : '옥상 데크', area: '144㎡', ch: 'CH 3.6m', x: 370, y: 80, w: 160, h: 120, color: '#e0e7ff', stroke: '#a5b4fc', subs: ['바비큐/휴게'] },
+                { name: isEdu ? '전환교육실' : isHospital ? '공조/유틸리티' : isOffice ? '기계/전산실' : '설비공간', area: '96㎡', ch: 'CH 3.0m', x: 370, y: 220, w: 160, h: 90, color: '#fef3c7', stroke: '#fbbf24', subs: ['유지관리'] },
+            ],
+        },
+    };
+
+    const altProfiles: Record<string, AltProfile> = {
+        alt1: {
+            cpo: 88, eduRatio: 65, commonRatio: 35, pathReduction: 18, zeb: 41.2, naturalLight: 78, acousticGap: '30m+',
+            streetX: 230, streetW: 40, hubDx: 0,
+            roomOffsets: {},
+            loopStyle: 'balanced',
+            evalSummary: '기능 간 동선을 18% 단축하여 관리 부하를 최소화하는 효율 중심 배치',
+            evalGrade: 'A',
+            evalScores: { operation: 95, safety: 85, energy: 72, bf: 90, cost: 88 },
+        },
+        alt2: {
+            cpo: 96, eduRatio: 60, commonRatio: 40, pathReduction: 12, zeb: 38.5, naturalLight: 70, acousticGap: '25m',
+            streetX: 210, streetW: 80, hubDx: 0,
+            roomOffsets: { [floorData[1].rooms[0].name]: { dx: -20, dy: 10 }, [floorData[1].rooms[3].name]: { dx: 20, dy: 10 } },
+            loopStyle: 'radial',
+            evalSummary: '중앙 HUB 확대 및 주변 가시성 확보. 모니터링 시스템 효율 96% 최적화',
+            evalGrade: 'A-',
+            evalScores: { operation: 78, safety: 98, energy: 65, bf: 95, cost: 75 },
+        },
+        alt3: {
+            cpo: 82, eduRatio: 68, commonRatio: 32, pathReduction: 10, zeb: 52.3, naturalLight: 92, acousticGap: '35m+',
+            streetX: 230, streetW: 40, hubDx: 0,
+            roomOffsets: { [floorData[1].rooms[0].name]: { dx: 0, dy: -10 }, [floorData[1].rooms[3].name]: { dx: 0, dy: -10 } },
+            loopStyle: 'linear',
+            evalSummary: '남향 채광 극대화 배치 (ZEB 특화). 코어 분산으로 동선 10% 증가',
+            evalGrade: 'B+',
+            evalScores: { operation: 72, safety: 80, energy: 97, bf: 88, cost: 82 },
+        },
+    };
+
+    return { floorData, altProfiles };
 };
 
 const ALT_META = [
-    { id: 'alt1', name: 'Alt 1 : 운영 효율형', shortName: '운영 효율', desc: '이동 동선 최적화 · -18% 경로 단축', badge: 'Recommend', color: '#3b82f6' },
-    { id: 'alt2', name: 'Alt 2 : 감시 극대화형', shortName: '감시 극대화', desc: '중앙 HUB 방사형 · CPO 96%', badge: '', color: '#8b5cf6' },
-    { id: 'alt3', name: 'Alt 3 : 생태 에너지형', shortName: '생태 에너지', desc: '자연 채광/환기 중점 · ZEB 52.3%', badge: '', color: '#10b981' },
+    { id: 'alt1', name: 'Alt 1 : 운영 효율형', shortName: '운영 효율', desc: '이동 동선 최적화 · 경로 단축 극대화', badge: 'Recommend', color: '#ea580c' },
+    { id: 'alt2', name: 'Alt 2 : 가시성 극대화형', shortName: '안전성/인지성', desc: '중앙 HUB 방사형 · C2 동선 충돌 회피', badge: '', color: '#f59e0b' },
+    { id: 'alt3', name: 'Alt 3 : 생태 에너지형', shortName: 'C6 환경 성능', desc: '자연 채광/환기 중점 · ZEB 최적화', badge: '', color: '#10b981' },
 ];
 
 /* ──────────────────────────────────────────────
    Component
    ────────────────────────────────────────────── */
 const CirculationLayoutPanel = () => {
+    const store = useProjectStore();
+    const buildingUse = store.buildingUse;
+    const grossFloorArea = store.grossFloorArea;
+
+    // Dynamic Engine Calibration for C2 (Safety/Conflict) and C6 (Energy/Environmental)
+    const { floorData: FLOOR_DATA, altProfiles: ALT_PROFILES } = React.useMemo(() => {
+        const data = getDynamicSimulationData(buildingUse);
+        // Base penalty or boost based on scale
+        const scaleFactor = grossFloorArea > 10000 ? 0.9 : 1.05; // Larger building = more conflict C2, harder energy C6
+        
+        // Refine Alt 1 (Operation)
+        data.altProfiles.alt1.evalScores.safety = Math.min(100, Math.round(85 * scaleFactor));
+        data.altProfiles.alt1.evalScores.energy = Math.min(100, Math.round(72 * scaleFactor));
+        
+        // Refine Alt 2 (Safety/Conflict - C2 Focused)
+        data.altProfiles.alt2.evalScores.safety = Math.min(100, Math.round(98 / scaleFactor)); // Highly sensitive to scale
+        data.altProfiles.alt2.evalScores.energy = Math.min(100, Math.round(65 * scaleFactor));
+        
+        // Refine Alt 3 (Environmental - C6 Focused)
+        data.altProfiles.alt3.evalScores.safety = Math.min(100, Math.round(80 * scaleFactor));
+        data.altProfiles.alt3.evalScores.energy = Math.min(100, Math.round(97 / scaleFactor)); // Highly sensitive to scale
+
+        return data;
+    }, [buildingUse, grossFloorArea]);
+
     const [activeFloor, setActiveFloor] = useState(1);
     const [activeAlt, setActiveAlt] = useState('alt1');
     const [layers, setLayers] = useState({ bus: true, pedestrian: true, emergency: false });
@@ -128,14 +154,51 @@ const CirculationLayoutPanel = () => {
     const [simCurrentAlt, setSimCurrentAlt] = useState('');   // which alt is being analysed
     const [simDone, setSimDone] = useState(false);
     const [showEval, setShowEval] = useState(false);
+    const [hasSimulated, setHasSimulated] = useState(false);
     const simTimerRef = useRef<number | null>(null);
 
     const toggleLayer = (layer: keyof typeof layers) => {
         setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
     };
 
+    const handleExport = (format: string) => {
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const filename = `arche_circulation_alt_${activeAlt}_${timestamp}`;
+        
+        // Assemble current alternatives data for export
+        const exportPayload = {
+            project: buildingUse || "Demo Project",
+            activeAlternative: activeAlt,
+            floorData: FLOOR_DATA, // Use local FLOOR_DATA
+            evaluationMeta: ALT_META.find(a => a.id === activeAlt),
+            evaluationProfile: ALT_PROFILES[activeAlt as keyof typeof ALT_PROFILES],
+        };
+
+        switch (format) {
+            case 'JSON':
+                exportToJSON(filename, exportPayload);
+                break;
+            case 'SVG':
+                exportToSVG(filename, `
+                    <rect width="100%" height="100%" fill="#f8fafc"/>
+                    <text x="400" y="300" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#334155">
+                        Circulation Layout: ${exportPayload.evaluationMeta?.name}
+                    </text>
+                    <path d="M 100 100 L 700 500" stroke="#3b82f6" stroke-width="4" stroke-dasharray="8 8"/>
+                `);
+                break;
+            case 'DXF':
+                exportToDXF(filename, exportPayload);
+                break;
+            case 'IFC':
+                exportToIFC(filename, exportPayload);
+                break;
+        }
+    };
+
     /* ─── Simulation runner ─── */
     const startSimulation = useCallback(() => {
+        setHasSimulated(true);
         setSimRunning(true);
         setSimProgress(0);
         setSimDone(false);
@@ -182,67 +245,98 @@ const CirculationLayoutPanel = () => {
     const simAltLabel = ALT_META.find(a => a.id === simCurrentAlt)?.shortName || '';
 
     return (
-        <div className="h-full flex flex-col p-6 overflow-hidden">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-5">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                        <Navigation className="text-blue-600" size={22} />
-                        동선 및 프로그램 배치
-                    </h2>
-                    <p className="text-slate-500 text-[13px] mt-1 font-medium">
-                        보차분리 · Double Loop 내부 동선 · 층별 Street 배치 시뮬레이션
-                    </p>
+        <div className="w-full flex flex-col bg-[#F8FAFC] relative font-sans h-full overflow-hidden custom-scrollbar">
+            {/* Top Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-white z-10 shadow-sm sticky top-0 shrink-0">
+                <div className="flex items-center space-x-3">
+                    <div className="bg-orange-50 p-2 rounded-lg text-orange-600">
+                        <Navigation size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-bold text-slate-800 tracking-tight">
+                            동선 및 프로그램 배치 (Circulation & Program Layout)
+                        </h1>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-2xl line-clamp-1">
+                            보차분리 · Double Loop 내부 동선 · 층별 Street 배치 시뮬레이션
+                        </p>
+                    </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex space-x-3 shrink-0">
                     <button
                         onClick={startSimulation}
                         disabled={simRunning}
-                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-all border flex items-center gap-2 ${
+                        className={`flex items-center space-x-2 px-4 py-2 text-sm font-bold rounded-lg transition-all border shadow-md whitespace-nowrap ${
                             simRunning
                                 ? 'bg-amber-50 border-amber-300 text-amber-600 cursor-wait'
-                                : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                                : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-transparent'
                         }`}
                     >
                         {simRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                        {simRunning ? '시뮬레이션 중...' : '배치 시뮬레이션'}
+                        <span>{simRunning ? '시뮬레이션 중...' : '배치 시뮬레이션'}</span>
                     </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                        CAD/BIM 연동
-                    </button>
+                    <div className="relative group">
+                        <button className="flex items-center space-x-2 px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 text-sm font-bold rounded-lg transition-colors shadow-sm whitespace-nowrap">
+                            <Layers size={16} className="text-slate-500" />
+                            <span>CAD/BIM 연동</span>
+                        </button>
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            <div className="p-2 space-y-1">
+                                <button onClick={() => handleExport('DXF')} className="w-full text-left px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 rounded">DXF/DWG (AutoCAD)</button>
+                                <button onClick={() => handleExport('IFC')} className="w-full text-left px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 rounded">IFC (BIM Data)</button>
+                                <button onClick={() => handleExport('JSON')} className="w-full text-left px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 rounded">JSON (Data Params)</button>
+                                <button onClick={() => handleExport('SVG')} className="w-full text-left px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-600 rounded">SVG (Vector Export)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0 overflow-hidden max-w-[1600px] mx-auto w-full gap-5">
 
             {/* Simulation progress bar */}
             {simRunning && (
                 <div className="mb-4 bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-[12px] font-bold text-slate-600 flex items-center gap-2">
-                            <Loader2 size={14} className="animate-spin text-blue-500" />
-                            배치 시뮬레이션 진행 중 — <span className="text-blue-600">{simAltLabel}</span> 분석 중
+                            <Loader2 size={14} className="animate-spin text-orange-500" />
+                            배치 시뮬레이션 진행 중 — <span className="text-orange-600">{simAltLabel}</span> 분석 중
                         </span>
-                        <span className="text-[12px] font-bold text-blue-600">{simProgress}%</span>
+                        <span className="text-[12px] font-bold text-orange-600">{simProgress}%</span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-emerald-500 transition-all duration-100" style={{ width: `${simProgress}%` }} />
+                        <div className="h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-500 to-orange-600 transition-all duration-100" style={{ width: `${simProgress}%` }} />
                     </div>
                     <div className="flex justify-between mt-1.5 text-[10px] text-slate-400 font-medium">
-                        <span className={simProgress >= 0 ? 'text-blue-500 font-bold' : ''}>운영 효율형</span>
-                        <span className={simProgress >= 33 ? 'text-violet-500 font-bold' : ''}>감시 극대화형</span>
-                        <span className={simProgress >= 66 ? 'text-emerald-500 font-bold' : ''}>생태 에너지형</span>
+                        <span className={simProgress >= 0 ? 'text-orange-500 font-bold' : ''}>운영 효율형</span>
+                        <span className={simProgress >= 33 ? 'text-amber-500 font-bold' : ''}>감시 극대화형</span>
+                        <span className={simProgress >= 66 ? 'text-orange-500 font-bold' : ''}>생태 에너지형</span>
                     </div>
                 </div>
             )}
 
             <div className="flex-1 flex flex-col gap-5 min-h-0 overflow-hidden">
-              <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
+              {!hasSimulated ? (
+                  <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50 border border-slate-200 border-dashed rounded-lg m-1 mt-0">
+                      <div className="w-16 h-16 bg-orange-50 rounded-lg flex items-center justify-center mb-4 text-orange-500 shadow-sm border border-orange-100">
+                          <Activity strokeWidth={1.5} size={32} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-700 mb-2">분석 결과가 없습니다</h3>
+                      <p className="text-slate-500 text-[13px] max-w-md text-center leading-relaxed">
+                          우측 상단의 <strong className="text-orange-600">배치 시뮬레이션</strong> 버튼을 클릭하여 <br/>
+                          다층 동선 분석, 레이어 충돌 감지, 및 자연감시 최적화를 진행하세요.
+                      </p>
+                  </div>
+              ) : (
+                <>
+                  <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
                 {/* ═══════════════ LEFT: Main Canvas ═══════════════ */}
-                <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col overflow-hidden relative">
+                <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col overflow-hidden relative">
                     {/* Floor selector */}
                     <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur rounded-lg p-1.5 shadow-sm border border-slate-200 flex gap-1">
                         {[1, 2, 3, 4].map(f => (
                             <button key={f} onClick={() => setActiveFloor(f)}
-                                className={`w-8 h-8 rounded shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${activeFloor === f ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
+                                className={`w-8 h-8 rounded shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${activeFloor === f ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
                             >{f}F</button>
                         ))}
                         <div className="w-px bg-slate-200 mx-1" />
@@ -432,6 +526,20 @@ const CirculationLayoutPanel = () => {
                                     <text x="230" y="492" fill="#3b82f6" fontSize="7">유효폭 3.3m · 무단차</text>
                                 </g>
                             )}
+                            
+                            {/* Upper floor cross-connections */}
+                            {activeFloor > 1 && (
+                                <g>
+                                    <path d="M 235 220 C 400 350, 400 450, 400 500" fill="none" stroke="#6366f1" strokeWidth="2" strokeDasharray="5 5" className="flow-anim" />
+                                    <circle cx="235" cy="220" r="15" fill="none" stroke="#4f46e5" strokeWidth="3" />
+                                    <circle cx="235" cy="220" r="5" fill="#4f46e5" />
+                                    <text x="260" y="222" fill="#4f46e5" fontSize="10" fontWeight="bold">수직 코어 샤프트 연동 (Elev)</text>
+
+                                    <path d="M 450 180 C 550 300, 550 400, 480 380" fill="none" stroke="#14b8a6" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" className="flow-anim" />
+                                    <rect x="440" y="170" width="20" height="20" fill="none" stroke="#0d9488" strokeWidth="2" />
+                                    <text x="470" y="185" fill="#0d9488" fontSize="8" fontWeight="bold">피난 계단 및 소방진입로 연결</text>
+                                </g>
+                            )}
 
                             {/* Scale + North */}
                             <g transform="translate(620, 15)">
@@ -453,7 +561,7 @@ const CirculationLayoutPanel = () => {
                     <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
                     {/* Layer Toggles */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
                         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                             <span>동선 시스템 레이어</span><Layers size={14} />
                         </h3>
@@ -462,11 +570,11 @@ const CirculationLayoutPanel = () => {
                                 <input type="checkbox" className="hidden" checked={layers.bus} onChange={() => toggleLayer('bus')} />
                                 <Bus size={15} /> 차량/드롭오프
                             </label>
-                            <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${layers.pedestrian ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                            <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${layers.pedestrian ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                                 <input type="checkbox" className="hidden" checked={layers.pedestrian} onChange={() => toggleLayer('pedestrian')} />
                                 <Accessibility size={15} /> BF 보행동선
                             </label>
-                            <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${layers.emergency ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                            <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${layers.emergency ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                                 <input type="checkbox" className="hidden" checked={layers.emergency} onChange={() => toggleLayer('emergency')} />
                                 <Activity size={15} /> 비상차량 회차
                             </label>
@@ -477,19 +585,19 @@ const CirculationLayoutPanel = () => {
                     </div>
 
                     {/* AI Alternatives */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
                         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                             <span>AI 배치 대안 (Alternatives)</span>
-                            <span className="text-blue-500 bg-blue-50 px-2 py-0.5 rounded text-[10px] font-bold">Auto Gen</span>
+                            <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[10px] font-bold">Auto Gen</span>
                         </h3>
                         <div className="space-y-2">
                             {ALT_META.map(alt => (
                                 <button key={alt.id} onClick={() => setActiveAlt(alt.id)}
-                                    className={`w-full text-left p-3 rounded-lg border transition-all ${activeAlt === alt.id ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-300' : 'bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50'}`}
+                                    className={`w-full text-left p-3 rounded-lg border transition-all ${activeAlt === alt.id ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-300' : 'bg-white border-slate-200 hover:border-orange-200 hover:bg-slate-50'}`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className={`font-bold text-sm ${activeAlt === alt.id ? 'text-blue-700' : 'text-slate-700'}`}>{alt.name}</span>
-                                        {alt.badge && <span className="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded">{alt.badge}</span>}
+                                        <span className={`font-bold text-sm ${activeAlt === alt.id ? 'text-orange-700' : 'text-slate-700'}`}>{alt.name}</span>
+                                        {alt.badge && <span className="text-[9px] bg-orange-50 text-orange-600 font-bold px-1.5 py-0.5 rounded">{alt.badge}</span>}
                                     </div>
                                     <div className="text-[11px] text-slate-500 mt-0.5">{alt.desc}</div>
                                 </button>
@@ -498,7 +606,7 @@ const CirculationLayoutPanel = () => {
                     </div>
 
                     {/* Live KPIs */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex-1 flex flex-col min-h-0">
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex-1 flex flex-col min-h-0">
                         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                             <span>실시간 배치 검증 KPI</span><Settings size={14} className="text-slate-400" />
                         </h3>
@@ -506,39 +614,49 @@ const CirculationLayoutPanel = () => {
                             {/* BF */}
                             <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
                                 <div className="flex justify-between items-center mb-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><Accessibility size={14} className="text-emerald-500" /> BF 적합성</div>
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Pass</span>
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><Accessibility size={14} className="text-orange-500" /> BF 적합성 정밀진단</div>
+                                    <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">100% Pass</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                                    <span className="text-slate-500">주요 통로 유효폭</span><span className="font-bold text-slate-800 text-right">3.3m (법정 2.4m↑)</span>
-                                    <span className="text-slate-500">경사로 구배</span><span className="font-bold text-slate-800 text-right">1/18 이하</span>
-                                    <span className="text-slate-500">휠체어 회전반경</span><span className="font-bold text-slate-800 text-right">1.4m × 1.4m ✓</span>
-                                    <span className="text-slate-500">66인승 EV 배치</span><span className="font-bold text-slate-800 text-right">코어 직결 ✓</span>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px]">
+                                    <span className="text-slate-500 flex justify-between">주요폭 <span className="font-bold text-slate-800">3.3m (≥2.4m)</span></span>
+                                    <span className="text-slate-500 flex justify-between">경사로 <span className="font-bold text-slate-800">1/18 이하</span></span>
+                                    <span className="text-slate-500 flex justify-between">회전반경 <span className="font-bold text-slate-800">1.4m × 1.4m</span></span>
+                                    <span className="text-slate-500 flex justify-between">66인승EV <span className="font-bold text-slate-800">코어 직결</span></span>
+                                    <span className="text-slate-500 flex justify-between">단차제거 <span className="font-bold text-slate-800">1.5cm 미만</span></span>
+                                    <span className="text-slate-500 flex justify-between">시각표지 <span className="font-bold text-slate-800">점자/음성연동</span></span>
+                                    <span className="text-slate-500 flex justify-between">손잡이 <span className="font-bold text-slate-800">2중 0.85m</span></span>
+                                    <span className="text-slate-500 flex justify-between">피난기구 <span className="font-bold text-slate-800">경사로 대피</span></span>
                                 </div>
                             </div>
                             {/* Zoning */}
                             <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
                                 <div className="flex justify-between items-center mb-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><ShieldCheck size={14} className="text-blue-500" /> 조닝 및 가시성</div>
-                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Optimal</span>
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><ShieldCheck size={14} className="text-orange-500" /> 조닝 및 가시성</div>
+                                    <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">Optimal</span>
                                 </div>
                                 <div className="mb-2">
-                                    <div className="flex justify-between text-[11px] mb-1"><span className="text-slate-500">자연감시 CPO 면적</span><span className="font-bold text-blue-600">{profile.cpo}%</span></div>
-                                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${profile.cpo}%` }} /></div>
+                                    <div className="flex justify-between text-[11px] mb-1"><span className="text-slate-500">자연감시 CPO 면적</span><span className="font-bold text-orange-600">{profile.cpo}%</span></div>
+                                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${profile.cpo}%` }} /></div>
                                 </div>
                                 <div className="flex gap-2 text-[11px]">
-                                    <div className="flex-1 bg-blue-50 rounded p-1.5 text-center"><div className="text-blue-600 font-bold text-sm">{profile.eduRatio}%</div><div className="text-slate-500 text-[9px]">순수교육</div></div>
+                                    <div className="flex-1 bg-orange-50 rounded p-1.5 text-center"><div className="text-orange-600 font-bold text-sm">{profile.eduRatio}%</div><div className="text-slate-500 text-[9px]">순수교육</div></div>
                                     <div className="flex-1 bg-slate-100 rounded p-1.5 text-center"><div className="text-slate-700 font-bold text-sm">{profile.commonRatio}%</div><div className="text-slate-500 text-[9px]">공용(Street 등)</div></div>
                                 </div>
                             </div>
                             {/* Circulation */}
                             <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
                                 <div className="flex justify-between items-center mb-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><Activity size={14} className="text-rose-400" /> 동선 효율</div>
-                                    <span className="text-[10px] text-slate-400">기존 대비</span>
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600"><Activity size={14} className="text-orange-400" /> SKILL C3: 동선 최적화</div>
+                                    <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">-{profile.pathReduction}% 단축</span>
                                 </div>
-                                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mb-1"><div className="bg-rose-400 h-full rounded-full transition-all duration-500" style={{ width: `${100 - profile.pathReduction}%` }} /></div>
-                                <div className="text-right text-[11px] font-bold text-rose-500">-{profile.pathReduction}% 경로 단축</div>
+                                <div className="flex justify-between text-[11px] mb-1"><span className="text-slate-500">기존 분산형</span><span className="font-bold text-slate-400">왕복 420m</span></div>
+                                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-1.5"><div className="bg-slate-300 h-full rounded-full w-full" /></div>
+                                <div className="flex justify-between text-[11px] mb-1"><span className="text-slate-500">{ALT_META.find(a => a.id === activeAlt)?.shortName} 최적화</span><span className="font-bold text-orange-500">왕복 {Math.round(420 * (100 - profile.pathReduction) / 100)}m 예측</span></div>
+                                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mb-2"><div className="bg-gradient-to-r from-orange-300 to-orange-400 h-full rounded-full transition-all duration-500" style={{ width: `${100 - profile.pathReduction}%` }} /></div>
+                                <div className="bg-white rounded p-1.5 border border-slate-100 text-[10px] text-slate-500 flex gap-1.5 mb-1 mt-2">
+                                    <Waypoints size={10} className="text-orange-400 mt-0.5 shrink-0" />
+                                    <span>AI RouteOpt 분석: 코어 집중화 및 더블루프 구조 적용으로 주요 기능간 선형 이동경로 대폭 삭감</span>
+                                </div>
                             </div>
                             {/* ZEB */}
                             <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
@@ -560,12 +678,12 @@ const CirculationLayoutPanel = () => {
 
               {/* ═══════════════ BOTTOM: Evaluation Panel ═══════════════ */}
               {showEval && (
-                <div className="shrink-0 bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+                <div className="shrink-0 bg-white border border-slate-200 rounded-lg shadow-sm p-4">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                             <Trophy size={13} className="text-amber-500" /> 배치 대안 종합평가
                         </h3>
-                        <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 font-bold">
+                        <div className="flex items-center gap-1.5 text-[10px] text-orange-600 font-bold">
                             <CheckCircle2 size={12} /> AI 추천: Alt 1 (운영 효율형) — 종합 점수 및 과업 적합도 기반
                         </div>
                     </div>
@@ -576,14 +694,14 @@ const CirculationLayoutPanel = () => {
                             const totalScore = Math.round((p.evalScores.operation + p.evalScores.safety + p.evalScores.energy + p.evalScores.bf + p.evalScores.cost) / 5);
                             return (
                                 <button key={alt.id} onClick={() => setActiveAlt(alt.id)}
-                                    className={`text-left p-3 rounded-lg border transition-all ${isActive ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-100 bg-slate-50/50 hover:border-blue-200'}`}
+                                    className={`text-left p-3 rounded-lg border transition-all ${isActive ? 'border-orange-300 bg-orange-50 ring-1 ring-orange-200' : 'border-slate-100 bg-slate-50/50 hover:border-orange-200'}`}
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-[12px] font-bold" style={{ color: alt.color }}>{alt.name}</span>
                                         <div className="flex items-center gap-1">
                                             <span className="text-[10px] font-bold text-slate-500">종합</span>
-                                            <span className={`text-lg font-extrabold ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>{totalScore}<span className="text-[11px] font-bold text-slate-400">점</span></span>
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 ${totalScore >= 85 ? 'bg-emerald-50 text-emerald-600' : totalScore >= 80 ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>{p.evalGrade}</span>
+                                            <span className={`text-lg font-extrabold ${isActive ? 'text-orange-700' : 'text-slate-700'}`}>{totalScore}<span className="text-[11px] font-bold text-slate-400">점</span></span>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 ${totalScore >= 85 ? 'bg-orange-50 text-orange-600' : totalScore >= 80 ? 'bg-orange-50 text-orange-600' : 'bg-amber-50 text-amber-600'}`}>{p.evalGrade}</span>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-5 gap-1.5 mb-2">
@@ -608,6 +726,9 @@ const CirculationLayoutPanel = () => {
                     </div>
                 </div>
               )}
+                </>
+              )}
+            </div>
             </div>
         </div>
     );

@@ -46,7 +46,7 @@ function LoadingSpinner() {
     return (
         <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                <div className="w-12 h-12 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
                 <p className="text-xs text-slate-500">3D 엔진 로딩 중...</p>
             </div>
         </div>
@@ -76,7 +76,7 @@ class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { 
                             ? 'WebGL 렌더러가 메모리 초과로 해제되었습니다. 새 탭에서 열어주시거나 새로고침 해주세요.' 
                             : '3D 렌더링 중 오류가 발생했습니다.'}
                     </p>
-                    <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600">
+                    <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg shadow text-xs hover:bg-orange-700">
                         페이지 새로고침
                     </button>
                 </div>
@@ -102,8 +102,8 @@ function Floating3DMetrics() {
 }
 
 export default function App() {
-    // 개발 서버 편의성을 위해 항상 로그인 패스 및 메인페이지 바로 진입
-    const [isAuthorized, setIsAuthorized] = useState(true);
+    // 실제 서버 배포 및 보안 유지를 위해 랜딩웹페이지 패스워드 인증(Auth Wall) 활성화
+    const [isAuthorized, setIsAuthorized] = useState(false);
     const [activeMenu, setActiveMenu] = useState('task_analysis');
     const store = useProjectStore();
     
@@ -116,7 +116,7 @@ export default function App() {
                 .then(blob => {
                     const file = new File(
                         [blob], 
-                        '김해제2특수학교 교사 신축사업_설계용역과업지시서.pdf', 
+                        '기본_프로젝트_설계용역과업지시서.pdf', 
                         { type: 'application/pdf' }
                     );
                     parseDocument(file).then(parsedData => {
@@ -209,7 +209,7 @@ export default function App() {
             {/* 데코레이션 배경 */}
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
 
-            <div className="flex-1 h-full w-full max-w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col transition-all hover:shadow-2xl relative z-10">
+            <div className="flex-1 h-full w-full max-w-full bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden flex flex-col transition-all hover:shadow-2xl relative z-10">
                 <Component {...(componentProps || {})} />
             </div>
         </div>
@@ -218,7 +218,7 @@ export default function App() {
     // 준비 중인 메뉴 뷰
     const renderPlaceholder = () => (
         <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
-            <div className="w-24 h-24 mb-6 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-4xl transform hover:scale-105 transition-transform">
+            <div className="w-24 h-24 mb-6 rounded-lg bg-white shadow-lg border border-slate-100 flex items-center justify-center text-4xl transform hover:scale-105 transition-transform">
                 {allMenuItems.find(m => m.id === activeMenu)?.icon}
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">

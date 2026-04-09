@@ -82,7 +82,7 @@ function BulletList({ items, emptyText = '정보 없음' }: { items: string[]; e
         <ul className="space-y-2">
             {final.map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <ArrowRight size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                    <ArrowRight size={12} className="text-orange-400 mt-0.5 shrink-0" />
                     <span className="leading-relaxed font-medium">{item}</span>
                 </li>
             ))}
@@ -111,13 +111,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             {/* 1. 글로벌 헤더 ( z-20, Sticky ) */}
             <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex items-center justify-between rounded-t-3xl z-20 shrink-0">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center border border-indigo-200 shadow-inner">
-                        <FileText size={22} className="text-indigo-700" />
+                    <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-200 shadow-inner">
+                        <FileText size={22} className="text-orange-500" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
                             AI 과업지시서 번역 엔진 (RFP Intelligence)
-                            {hasDoc && <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">PARSER ACTIVE</span>}
+                            {hasDoc && <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200">PARSER ACTIVE</span>}
                         </h3>
                         <p className="text-[11px] font-medium text-slate-500 mt-0.5">과업 제원 · 설계 지침 · 설계 리스크 도출</p>
                     </div>
@@ -136,53 +136,53 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         <div className="col-span-12 xl:col-span-8 flex flex-col gap-6">
                             
                             {/* 사업 기본조건 (Base Specs) */}
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-5 px-1">
-                                    <Building size={18} className="text-indigo-600" />
+                                    <Building size={18} className="text-orange-500" />
                                     프로젝트 기본 제원
                                 </h4>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-800">
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">사업명</span>
-                                        <p className="text-[13px] font-black text-indigo-900 truncate">{store.projectName}</p>
+                                        <p className="text-[13px] font-black text-slate-900 truncate">{store.projectName}</p>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">대지위치</span>
                                         <p className="text-[13px] font-bold text-slate-700 truncate"><MapPin size={12} className="inline mr-1 text-slate-400 mb-0.5"/>{store.address}</p>
                                     </div>
                                     
                                     {/* 복구된 속성: 용도지역 & 주용도 */}
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">용도지역/지구</span>
                                         <p className="text-[12px] font-black text-slate-800 truncate">{store.zoneType || '-'}</p>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 md:col-span-2 flex flex-col justify-center">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">주건축물 용도</span>
                                         <p className="text-[12px] font-black text-slate-800 truncate">{store.buildingUse || '-'}</p>
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">대지/연면적</span>
                                         <p className="text-xs font-black">{store.landArea.toLocaleString()}㎡ / {store.grossFloorArea.toLocaleString()}㎡</p>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">건폐/용적률 지침</span>
                                         <p className="text-xs font-black">{store.buildingCoverageLimit}% / {store.floorAreaRatioLimit}%</p>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">층수/최고높이</span>
                                         <p className="text-xs font-black">최고 {store.totalFloors}층 ({store.maxHeight}m)</p>
                                     </div>
-                                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                                    <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">추정 공사비/용역기간</span>
-                                        <p className="text-[11px] font-black text-violet-700">{store.constructionCost || '-'} / {store.designScope || '-'}</p>
+                                        <p className="text-[11px] font-black text-orange-600">{store.constructionCost || '-'} / {store.designScope || '-'}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* 복구된 파트: 설계방향 및 시설구성 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex flex-col">
                                     <div className="flex items-center gap-2 mb-4 px-1">
                                         <Target size={16} className="text-orange-600" />
                                         <h4 className="text-[13px] font-black text-slate-800">설계 주안점 및 방향</h4>
@@ -192,14 +192,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex flex-col">
                                     <div className="flex items-center gap-2 mb-4 px-1">
-                                        <Building size={16} className="text-teal-600" />
+                                        <Building size={16} className="text-orange-600" />
                                         <h4 className="text-[13px] font-black text-slate-800">요구 시설물 구성</h4>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {store.facilityList.length > 0 ? store.facilityList.map((f, i) => (
-                                            <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 font-medium border border-teal-100 shadow-sm">{f}</span>
+                                            <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg bg-orange-50 text-orange-800 font-medium border border-orange-100 shadow-sm">{f}</span>
                                         )) : <p className="text-[11px] text-slate-400 italic">시설 구성 정보 없음</p>}
                                     </div>
                                 </div>
@@ -207,9 +207,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
                             {/* 세부설계 지침 (Guidelines) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex flex-col">
                                     <div className="flex items-center gap-2 mb-4 px-1">
-                                        <BookOpen size={16} className="text-blue-600" />
+                                        <BookOpen size={16} className="text-slate-500" />
                                         <h4 className="text-[13px] font-black text-slate-800">일반 설계 지침</h4>
                                     </div>
                                     <div className="flex-1 overflow-y-auto">
@@ -217,9 +217,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex flex-col">
                                     <div className="flex items-center gap-2 mb-4 px-1">
-                                        <PenTool size={16} className="text-emerald-600" />
+                                        <PenTool size={16} className="text-slate-500" />
                                         <h4 className="text-[13px] font-black text-slate-800">분야별 세부 설계 지침</h4>
                                     </div>
                                     <div className="flex-1 overflow-y-auto">
@@ -230,9 +230,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
 
                             {/* 성과물 및 기타 */}
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4 px-1">
-                                    <Package size={16} className="text-sky-600" />
+                                    <Package size={16} className="text-slate-500" />
                                     납품 예정 성과품 목록
                                 </h4>
                                 {store.deliverables.length > 0 ? (
@@ -253,32 +253,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         <div className="col-span-12 xl:col-span-4 flex flex-col gap-6">
                             
                             {/* 엔지니어링 씰 (RFP Seal) */}
-                            <div className="bg-gradient-to-b from-indigo-900 to-slate-900 rounded-2xl p-6 text-white border border-indigo-800 shadow-2xl relative overflow-hidden">
+                            <div className="bg-gradient-to-b from-orange-600 to-orange-700 rounded-lg p-6 text-white border border-orange-500 shadow-2xl relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-4 opacity-10">
                                     <Hexagon size={120} />
                                 </div>
                                 <div className="relative z-10 flex flex-col items-center text-center">
-                                    <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-400/30 backdrop-blur-md">
-                                        <ShieldCheck size={32} className="text-emerald-400" />
+                                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20 backdrop-blur-md">
+                                        <ShieldCheck size={32} className="text-white" />
                                     </div>
-                                    <h4 className="text-[10px] text-indigo-300 font-bold tracking-widest uppercase mb-1">RFP INTELLIGENCE</h4>
+                                    <h4 className="text-[10px] text-orange-200 font-bold tracking-widest uppercase mb-1">ARCHE RFP INTELLIGENCE</h4>
                                     <h2 className="text-[20px] font-black tracking-tight text-white mb-2">PARSING COMPLETE</h2>
-                                    <div className="h-px bg-slate-700/50 w-full my-3"></div>
-                                    <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-slate-300 px-2">
+                                    <div className="h-px bg-white/20 w-full my-3"></div>
+                                    <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-orange-100 px-2">
                                         <div className="flex justify-between w-full">
-                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-400"/> 파싱 신뢰도</span>
-                                            <span className="text-emerald-400 font-bold">98.5% (A+)</span>
+                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 파싱 신뢰도</span>
+                                            <span className="text-white font-bold">98.5% (A+)</span>
                                         </div>
                                         <div className="flex justify-between w-full">
-                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-400"/> 누락 데이터 방어</span>
-                                            <span className="text-emerald-400 font-bold">Pass</span>
+                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 누락 데이터 방어</span>
+                                            <span className="text-white font-bold">Pass</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* 주요 설계 리스크/확인사항 */}
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex-1">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex-1">
                                 <div className="flex items-center gap-2 mb-4 px-1">
                                     <AlertCircle size={16} className="text-red-500" />
                                     <h4 className="text-[13px] font-black text-slate-800">우선 검토(Key Notes) 대상</h4>
@@ -287,7 +287,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             </div>
 
                             {/* 요구 인증 목록 */}
-                            <div className="bg-amber-50 rounded-2xl border border-amber-100/50 shadow-sm p-6">
+                            <div className="bg-amber-50 rounded-lg border border-amber-100/50 shadow-sm p-6">
                                 <div className="flex items-center gap-2 mb-4 px-1">
                                     <Award size={16} className="text-amber-600" />
                                     <h4 className="text-[13px] font-black text-amber-900">법정·의무 인증 요구사항</h4>
@@ -306,7 +306,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                 )}
                             </div>
 
-                            <div className="glass-panel rounded-2xl p-5 border border-slate-200 shadow-sm bg-white">
+                            <div className="glass-panel rounded-lg p-5 border border-slate-200 shadow-sm bg-white">
                                 <span className="text-[10px] text-slate-500 block mb-3 font-bold flex items-center gap-1.5"><Server size={12}/> 내부 연동 서버 상태</span>
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
@@ -316,7 +316,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                         { name: 'Constraint', active: false },
                                     ].map(s => (
                                         <div key={s.name} className="flex items-center gap-2 text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${s.active ? 'bg-emerald-500' : 'bg-slate-300'} ${s.active ? 'animate-pulse' : ''}`} />
+                                            <div className={`w-1.5 h-1.5 rounded-full ${s.active ? 'bg-orange-500' : 'bg-slate-300'} ${s.active ? 'animate-pulse' : ''}`} />
                                             <span className="text-slate-600 font-bold">{s.name}</span>
                                         </div>
                                     ))}
@@ -327,15 +327,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
                         {/* ──────── [하단] 과업지시서 기반 리스크 매트릭스 (Span 12) ──────── */}
                         <div className="col-span-12 mt-2">
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="p-5 border-b border-orange-500/20 bg-gradient-to-r from-slate-900 to-slate-800 flex justify-between items-center text-white">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-rose-100 text-rose-600 rounded-md">
+                                        <div className="p-1.5 bg-orange-500/20 text-orange-500 rounded-md">
                                             <AlertTriangle size={16} />
                                         </div>
-                                        <h3 className="text-sm font-black text-slate-800">과업지시서 요구 기한 및 제한조건 검토 (RFP Risk Matrix)</h3>
+                                        <h3 className="text-sm font-black text-white">과업지시서 요구 기한 및 제한조건 검토 (RFP Risk Matrix)</h3>
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Crucial Design Limits</span>
+                                    <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Crucial Design Limits</span>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm whitespace-nowrap">
@@ -352,11 +352,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                             <tr className="hover:bg-slate-50/70 transition-colors">
                                                 <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-01</td>
                                                 <td className="px-6 py-4 text-slate-800 font-bold flex items-center gap-2">
-                                                    과업지시서 연면적(14,157㎡) 5% 오차 초과 허용 불가
+                                                    과업지시서 연면적({store.grossFloorArea ? store.grossFloorArea.toLocaleString() : '미정'}㎡) 5% 오차 초과 허용 불가
                                                 </td>
                                                 <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH</span></td>
                                                 <td className="px-6 py-4 text-slate-600">스페이스 프로그램 연동 시 최대 면적 기준 실시간 경고 연동</td>
-                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                                <td className="px-6 py-4 text-center"><span className="text-orange-600 font-bold border border-orange-200 bg-orange-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
                                             </tr>
                                             <tr className="hover:bg-slate-50/70 transition-colors">
                                                 <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-02</td>
@@ -365,7 +365,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                                 </td>
                                                 <td className="px-6 py-4 text-center"><span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">MEDIUM</span></td>
                                                 <td className="px-6 py-4 text-slate-600">공사비&공기 엔지니어링 패널에서 패스트트랙 일정 수립 및 알람 설정</td>
-                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                                <td className="px-6 py-4 text-center"><span className="text-orange-600 font-bold border border-orange-200 bg-orange-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
                                             </tr>
                                             <tr className="hover:bg-slate-50/70 transition-colors">
                                                 <td className="px-6 py-4 font-mono text-slate-400 text-[11px]">RFP-03</td>
@@ -374,7 +374,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                                 </td>
                                                 <td className="px-6 py-4 text-center"><span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">MEDIUM</span></td>
                                                 <td className="px-6 py-4 text-slate-600">친환경/에너지 에너지 패널 내 평가 지표 연동 기준점 자동 업데이트</td>
-                                                <td className="px-6 py-4 text-center"><span className="text-indigo-600 font-bold border border-indigo-200 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
+                                                <td className="px-6 py-4 text-center"><span className="text-orange-600 font-bold border border-orange-200 bg-orange-50 px-2 py-0.5 rounded text-[10px]">Tracked</span></td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -386,12 +386,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 ) : (
                     /* 문서가 없는 초기 화면 */
                     <div className="h-full w-full flex flex-col items-center justify-center p-8">
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-10 max-w-lg w-full text-center relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-blue-50/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-indigo-100 group-hover:scale-110 transition-transform">
-                                <FileText size={40} className="text-indigo-600" />
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-xl p-10 max-w-lg w-full text-center relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="w-20 h-20 bg-orange-50 rounded-lg flex items-center justify-center mx-auto mb-6 shadow-inner border border-orange-100 group-hover:scale-110 transition-transform">
+                                <FileText size={40} className="text-orange-500" />
                             </div>
-                            <h2 className="text-2xl font-black text-slate-800 mb-3 tracking-tight relative z-10">설계용역 과업지시서 파싱</h2>
+                            <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight relative z-10">설계용역 과업지시서 파싱</h2>
                             <p className="text-sm font-medium text-slate-500 mb-8 relative z-10 leading-relaxed">
                                 PDF 형식의 발주처 과업지시서를 업로드하시면<br/>면적, 법규, 요구인증 및 제약조건을 AI가 자동 파싱합니다.
                             </p>

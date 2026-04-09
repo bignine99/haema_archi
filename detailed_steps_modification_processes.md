@@ -1,4 +1,4 @@
-# Flexity Clone - 개발 과정 상세 기록
+Flexity Clone - 개발 과정 상세 기록
 > 작성일: 2026-02-26 (Step 2 업데이트: 2026-03-01)
 > 프로젝트: 한국형 건축 법규 최적화 AI (Flexity Clone)
 
@@ -3723,3 +3723,130 @@ const underground = (store as any).undergroundFloors ?? 0;
 - 조닝 테이블 데이터는 컴포넌트 내부에 상수로 정의
 - 프로젝트명 도출: `store.projectName` 기반으로 시설 유형 자동 판별
 - SKILL 로드맵의 상태(Running/Standby)는 현재 하드코딩 (추후 실제 엔진 연결 필요)
+
+---
+
+## 📅 다음 작업 예고: Phase B. 공간 프로그래밍 (2026-04-05 예정)
+
+### 작업 목표
+
+A-series(기획·분석) 5개 패널 표준화가 완료된 이후, Phase B. **공간 프로그래밍(Space Programming)** 5개 모듈을 순차 구현할 예정이다.
+- 각 B-series 페이지에 대응하는 SKILL 워크플로우 파일 5종이 `.agents/workflows/` 폴더에 이미 업로드된 상태.
+- 내일 각 SKILL 파일을 우리 프로그램의 구조와 데이터 모델에 맞게 수정한 뒤, 페이지를 순차 완성한다.
+
+### B-series SKILL 파일 현황
+
+| 파일 | 모듈명 | 설명 |
+|------|--------|------|
+| `B-1-zoning-spacing.md` | 층별 조닝 & 스페이스 | 층별 공간 배분 및 조닝 자동화, 면적 배분 최적화 |
+| `B-2-bubble-analysis.md` | 버블 다이어그램 | 공간 인접성 분석, Spatial Adjacency Bubble Diagram |
+| `B-3-special-spacing.md` | 맞춤형 공간 특화 전략 | Space Specialization, 프로젝트 특성별 공간 차별화 |
+| `B-4-walkthrough-program.md` | 동선 및 프로그램 배치 | 이용자 동선 분석, 기능별 프로그램 배치 최적화 |
+| `B-5-special-design.md` | 특화설계 제안 | 특화설계 제안서, V3.0 AI Simulated |
+
+### 작업 순서 (예정)
+1. **SKILL 파일 검토 및 조정** — 각 B-series `.md` 파일을 현재 프로그램의 데이터 구조(`projectStore`, `ParsedProjectData`)에 맞게 수정
+2. **B-1 층별 조닝** — 현재 구현된 `SpaceProgrammingPanel.tsx` 및 `StatisticsChartPanel.tsx`와 연계하여 고도화
+3. **B-2 버블 다이어그램** — 공간 인접성 그래프 UI 구현
+4. **B-3 공간 특화 전략** — 프로젝트 성격에 따른 맞춤 공간 전략 AI 분석
+5. **B-4 동선 배치** — 수직/수평 동선 다이어그램 시각화
+6. **B-5 특화설계 제안** — AI 기반 특화설계 제안서 자동 생성
+
+---
+
+## 2026-04-05 (Phase B-1 SKILL Z1~Z6 구현 완료)
+
+### B-1 층별 조닝 & 스페이스 모듈 — SKILL Z1~Z6 적용
+
+#### 수정된 파일
+| 파일 | 변경 내용 |
+|------|----------|
+| `store/projectStore.ts` | `RoomTag` 타입(legal/project/recommended/optional), `ROOM_TAG_LABELS`, `ROOM_TAG_COLORS` 상수 추가; `Room.roomTag` 필드 추가; `updateRoomTag` 액션 추가 |
+| `components/ui/SpaceProgrammingPanel.tsx` | SKILL Z1~Z5 통합 고도화 (전면 재작성) |
+| `components/ui/StatisticsChartPanel.tsx` | SKILL Z6 차트 고도화 (신규 2개 차트 + 기존 3개 개선) |
+
+#### 구현된 SKILL 항목
+- **Z1 · AreaSync**: 목표 연면적 vs 입력 합계 실시간 신호등(🟢정합/🟡경고/🔴오류), 용적률 산입/미산입 자동 분류, 잔여 배분 면적 표시
+- **Z2 · RoomCode**: 실별 4단계 태그(법정필수/사업필수/권장/선택) 클릭 편집 드롭다운 UI
+- **Z3 · LegalRoom**: 특수학교 법정 기준 DB 12종, 실별 면적 대조 테이블(적합/검토필요/미달)
+- **Z4 · FloorBalance**: 층별 기능 균형 스코어(공용비율, 코어효율, A~D 등급), 층고 최적화 반영
+- **Z5 · SpecialZone**: 특수학교 수직배치 원칙 4종 체크리스트 + 준수율(%) 자동 계산
+- **Z6 · AreaDash**: Volume Compliance에 잔여면적 지표 추가, Core Ratio Trajectory에 목표 범위 기준 밴드(20~35%) 추가, Legal Compliance Heatmap(신규), Remaining Area Allocator RoomTag 파이 차트(신규)
+
+#### 다음 작업 (완료됨)
+- 버블 다이어그램 (공간 인접성 그래프, Spatial Adjacency Analysis)
+- 공간 특화 전략, 동선 배치, 특화설계 제안 모듈
+
+### B-2 ~ B-5 모듈 UI/UX 하이피델리티 표준화 및 CI 오렌지 팔레트 전면 적용 완료
+
+#### 변경 사항 총괄
+| 파일 | 주요 변경 내용 |
+|------|----------|
+| `components/ui/BubbleDiagramPanel.tsx` (B-2) | 12-Column Cyber-Dashboard 적용, D3 시뮬레이션 기반 물리엔진 시각화 보강 |
+| `components/ui/SpaceSpecializationPanel.tsx` (B-3) | Sticky Header 도입, Haema Orange CI 기반 배지 및 액션 버튼 디자인 표준화 |
+| `components/ui/CirculationLayoutPanel.tsx` (B-4) | 12-Column 레이아웃 마이그레이션, V3.0 AI Simulated SKILL 프레임워크 레이아웃 정렬 |
+| `components/ui/SpecialDesignPanel.tsx` (B-5) | 하드코딩된 Blue/Emerald SVG 에셋 색상(HVAC, ZEB 곡선, Heatmap 등)들을 전체 Haema Orange 톤으로 일괄 변경 |
+
+#### 구현된 핵심 요소
+- **전역 통일된 Cyber-Dashboard 레이아웃**: 모든 B 모듈이 12-Column 최대 대역폭(`max-w-[1600px]`)을 사용하도록 통합하여 통일감 확보.
+- **Sparkles 오렌지 뱃지 & Sticky Header**: 상단 헤더 뷰포트 고정을 통해 메뉴별 식별력과 명확한 화면 구조 제공.
+- **오렌지 CI 가이드라인 100% 반영**: 블루 및 에메랄드 톤으로 파편화되어 있던 인포그래픽(시뮬레이션 히트맵, Security Zone 영역, Air Flow Chart 등)을 Haema Orange CI 표준으로 리맵핑하여 프리미엄 브랜드 정체성 강화.
+
+---
+
+## 🚀 [2026-04-06] Phase C 특화 엔지니어링 9종 모듈 표준화 및 전역 색상 통일 완료
+
+### 2026-04-06 작업 내용
+기획(A), 공간(B) 단계에 이어, Phase C (특화 엔지니어링 9종) 모듈에 대한 12-Column Cyber-Dashboard 연동 및 SKILL 시각화를 성공적으로 완료했습니다. 특히 백엔드 코드와 분리된 하이피델리티 UI에서 브랜드 정체성을 확고히 하기 위해 레거시 색상을 모두 일괄 치환했습니다.
+
+### 1. C-Series (C-1 ~ C-9) 하이피델리티 UI/UX 표준화 완료
+기존에 파편화되어 있던 Phase C 9개 엔지니어링 패널들을 B-Series와 동일한 12-Column Grid를 기반으로 전면 리팩토링했습니다.
+
+| 분류 | 생성 및 고도화 된 모듈 (상태: ✅ 완료) | 내용 |
+|------|--------|------|
+| **C-1** | `StructuralEngineeringPanel.tsx` | 하이브리드 구조, 비선형 동적해석(내진 특등급), 배근율 최적화 대시보드 |
+| **C-2** | `CivilEngineeringPanel.tsx` | 흙막이 가시설, 기초 안정성, 부력 방수 검토 시각화 |
+| **C-3** | `MechanicalEngineeringPanel.tsx` | 공조/소방/열원 시스템 최적화, 엘리베이터 트래픽 |
+| **C-4** | `ElectricalEngineeringPanel.tsx` | 수변전, 조명, 보안 및 BEMS(건물에너지관리시스템) 연동 분석 |
+| **C-5** | `SpecialEngineeringPanel.tsx` | 음향 분석, 스마트 빌딩(IBMS), 디지털트윈 매트릭스 |
+| **C-6** | `CostSchedulePanel.tsx` | 4D/5D BIM 통합 분석, 코스트 매니지먼트 및 Risk |
+| **C-7** | `GreenBuildingPanel.tsx` | G-SEED, ZEB, 생태면적률, 탄소중립(LCA) 정량화 평가 |
+| **C-8** | `EnergyStrategyPanel.tsx` | 패시브/액티브 성능 최적화 모델, ZEB 한계선 시각화 탑재 |
+| **C-9** | `BarrierFreePanel.tsx`, `BFStrategyPanel.tsx` | BF 1등급 통과율, 무장애(Barrier-Free) 특화설계 인증망 시각화 |
+
+*각 모듈은 SKILL 마크다운 명세(`C-1-structural-engineering.md` 등)의 요구사항이었던 지표 게이지, Risk Matrix, Metric Seal(엔지니어링 씰)을 모두 준수하여 구성되었습니다.*
+
+### 2. 브랜드 정체성(CI) 확보를 위한 전역 색상 통일 스크립트 실행
+과거 모듈에서 개별적으로 남발되던 청록색(`teal`, `emerald`, `cyan`), 보라색(`violet`, `indigo`, `fuchsia`), 장미색(`rose`) 등의 레거시 색상 테마를 **Haema Orange CI (주황/호박색/슬레이트)** 톤으로 일괄 리팩토링했습니다.
+- **수단:** 정규식 기반 Node.js 치환 스크립트 (`tmp/bulk_replace_colors.js`) 실행.
+- **결과:** `frontend/src/components/ui/` 하위의 모든 `.tsx` 파일 내 Tailwind 클래스명이 `orange-`, `amber-`, `slate-` 로 안전하게 자동 치환됨. 브랜드 룩앤필의 압도적인 일체감(Premium Vibe) 확보. 
+(단, 최신 업데이트로 C-6은 Emerald/Sky, C-7은 Emerald/Cyan, C-8은 Amber/Indigo, C-9은 Indigo/Teal/Rose의 고유 CI 컨셉을 부여하여 12-Column 레이아웃 내에서 더욱 세밀한 브랜딩을 강화했습니다.)
+
+### 3. C-6 ~ C-9 모듈 12-Column 통합 레이아웃 마이그레이션 완료 (추가)
+- **C-6 CostSchedulePanel:** J1-J5 SKILL 로드맵 통합, SVG 기반 24개월 4D/5D 간트차트 렌더링, Emerald/Sky 색상 적용.
+- **C-7 GreenBuildingPanel:** K1-K5 SKILL 모듈 연동, IAQ/자연채광/G-SEED 등 친환경 지표 시각화, Emerald/Cyan 색상 적용.
+- **C-8 EnergyStrategyPanel:** L1-L5 SKILL 최적화 연동, 공공/교육연구시설 강제 ZEB 4등급(제로에너지) 타겟 지표 및 지열/태양광 믹스 시각화, Amber/Indigo 색상 적용.
+- **C-9 BFStrategyPanel:** M1-M5 SKILL 트래킹, 교육 보정 단차 0mm, 복도 폭 2.1m 컴플라이언스 및 장애인 화살표, Indigo/Teal 색상 및 Metrics Seal 시각화.
+
+### 4. C-3 ~ C-5 모듈 특화 레이아웃 리노베이션 및 고유 CI 테마 분리 완료 (추가)
+기존에 범용 Orange 템플릿으로 남아있던 C-3, C-4, C-5 모듈을 워크플로우 명세서(`C-*-engineering.md`)에 정의된 하이엔드 테마와 데이터 플로우 스펙에 맞춰 전면 리팩토링했습니다.
+- **C-3 MechanicalEngineeringPanel (기계/수직이동):** Sky/Blue 테마 적용. Zone 1에 SVG 기반 HVAC 공조 파이프네트워크 탑재. Zone 2에 수직 엘리베이터 동적 Area Chart (AWT 30초 데드라인) 통합. 포소화설비(Foam Water) 등 Risk 대응 테이블 강화.
+- **C-4 ElectricalEngineeringPanel (전기/통신):** Amber/Indigo 테마 적용. Zone 1 수변전 단선결선도(SLD, 특수 시설 Dual Feed 연동) 시각화. Zone 2 생체리듬 DALI 디밍 및 BEMS 인버터 Peak Cut 방어용 Area Chart 렌더링.
+- **C-5 SpecialEngineeringPanel (특수/디지털):** Teal/Violet 테마 적용. Acoustic RT60 감쇠 곡선 Line Chart 및 BIM Clash Radar(다분야 간섭 매트릭스 도식) 추가. IBMS/IoT 상태변화 스텝 렌더링 도입.
+
+### 4. 좌측 전체 네비게이션 구조화 완결
+- `navigation.tsx` 내에 `Phase A`, `Phase B`, `Phase C`, `Phase D` 총 4대 카테고리로 메뉴 트리를 그룹화하고, 9개 특화 엔지니어링 항목을 `Phase C` 아래에 명확하게 배치했습니다. 네비게이션 아이콘도 직관적인 Lucide 셋으로 완성했습니다.
+
+---
+
+## 📅 다음 작업 예고: Phase D. 3D 시각화 및 최종 제안서 도출 (2026-04-07 예정)
+
+### 내일 작업 목표
+프로젝트의 대단원인 Phase D (3D 매스, 배치도, 평면/입/단면도 도출 및 제안서 배포) 모듈에 대한 안정화를 진행합니다.
+
+### 작업 순서 (예정)
+1. **D-1 3D Mass Engine**: Three.js 기반 WebGL 엔진에서 버그로 누락된 매스 축척/정북방향 툴 재확인.
+2. **D-2 Siteplan / Floorplan**: 기존 제네레이터들을 엮어 배치 및 평면/단면 구획 시각화.
+3. **D-3 Concept Rendering**: Vibe 기반 컨셉 다이어그램과 연계된 최종 데이터 매트릭스 도출 뷰 추가.
+4. 배포용 Docker-compose 환경 정비(프론트엔드 포트 할당 및 프록시 확인).
+

@@ -44,10 +44,10 @@ export function LawCard({ law }: { law: RegulationLaw }) {
     };
 
     return (
-        <div className={`rounded-xl border transition-all flex flex-col h-full ${law.risk === 'required' ? 'bg-red-50/50 border-red-200' :
+        <div className={`rounded-lg border transition-all flex flex-col h-full ${law.risk === 'required' ? 'bg-red-50/50 border-red-200' :
             law.risk === 'review' ? 'bg-amber-50/50 border-amber-200' :
                 law.risk === 'na' ? 'bg-slate-50/50 border-slate-200 opacity-50' :
-                    'bg-blue-50/30 border-blue-200'
+                    'bg-orange-50/30 border-orange-200'
             }`}>
             <div className="p-4 flex flex-col flex-1">
                 <div className="flex items-center justify-between mb-2">
@@ -73,7 +73,7 @@ export function LawCard({ law }: { law: RegulationLaw }) {
                         onClick={handleDetailClick}
                         disabled={isLoadingDetail}
                         className="mt-3 w-full py-2 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-2 transition-all
-                            bg-white/80 text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 hover:shadow-sm"
+                            bg-white/80 text-slate-600 border border-slate-200 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 hover:shadow-sm"
                     >
                         {isLoadingDetail ? (
                             <>

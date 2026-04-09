@@ -32,7 +32,7 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute left-4 top-20 bottom-4 w-80 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl flex flex-col z-30 overflow-hidden"
+            className="absolute left-4 top-20 bottom-4 w-80 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-lg flex flex-col z-30 overflow-hidden"
         >
             {/* 헤더 */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50">
@@ -56,20 +56,20 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-4">
                 
                 {/* 0. AI 채팅 (신규) */}
-                <div className="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 border border-indigo-100 rounded-xl p-3 shadow-inner">
+                <div className="bg-gradient-to-br from-slate-50/50 to-blue-50/50 border border-orange-100 rounded-lg p-3 shadow-inner">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <Sparkles size={14} className="text-indigo-500" />
-                            <span className="text-[11px] font-bold text-indigo-900">HAEMA AI 어시스턴트</span>
+                            <Sparkles size={14} className="text-orange-500" />
+                            <span className="text-[11px] font-bold text-orange-900">ARCHE AI 어시스턴트</span>
                         </div>
-                        {store.chatLoading && <Loader2 size={12} className="animate-spin text-indigo-500" />}
+                        {store.chatLoading && <Loader2 size={12} className="animate-spin text-orange-500" />}
                     </div>
                     {store.aiComment ? (
-                        <div className="bg-white/80 border border-indigo-200 text-indigo-800 text-[10px] p-2 rounded-lg mb-2 shadow-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="bg-white/80 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg mb-2 shadow-sm leading-relaxed whitespace-pre-wrap">
                             {store.aiComment}
                         </div>
                     ) : (
-                        <div className="text-[10px] text-indigo-700/70 mb-2 leading-relaxed">
+                        <div className="text-[10px] text-orange-700/70 mb-2 leading-relaxed">
                             원하시는 지시사항을 자연어로 입력하세요.<br/>(예: "건폐율을 꽉 채워서 중정형으로 뽑아줘")
                         </div>
                     )}
@@ -87,27 +87,27 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                                 }}
                                 disabled={store.chatLoading}
                                 placeholder={store.chatLoading ? "AI가 지시사항을 수행 중입니다..." : "AI에게 매스 제어 명령 내리기..."}
-                                className="w-full text-[11px] bg-white border border-indigo-100 rounded-lg p-2 pr-8 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm disabled:opacity-50"
+                                className="w-full text-[11px] bg-white border border-orange-100 rounded-lg p-2 pr-8 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/20 shadow-sm disabled:opacity-50"
                                 rows={2}
                             />
                             <button 
                                 onClick={() => handleSendChat(chatMsg)}
                                 disabled={!chatMsg.trim() || store.chatLoading} 
-                                className="absolute bottom-1 right-1 p-1.5 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                                className="absolute bottom-1 right-1 p-1.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50"
                             >
                                 <Send size={12} />
                             </button>
                         </div>
                     </div>
                     <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 custom-scrollbar">
-                        <button onClick={() => handleSendChat("조경 특화 및 옥상 녹화를 반영해서 중정형으로 배치해줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-indigo-100 text-indigo-600 rounded-md text-[9px] hover:bg-indigo-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 조경 특화</button>
-                        <button onClick={() => handleSendChat("가장 수익성이 높은 타워형으로 뽑고, 인센티브 모두 켜줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-indigo-100 text-indigo-600 rounded-md text-[9px] hover:bg-indigo-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 최대 수익형</button>
-                        <button onClick={() => handleSendChat("지능형 건축물 인센티브 켜고, ㄷ자형 건물로 뽑아줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-indigo-100 text-indigo-600 rounded-md text-[9px] hover:bg-indigo-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 지능형 ㄷ자형</button>
+                        <button onClick={() => handleSendChat("조경 특화 및 옥상 녹화를 반영해서 중정형으로 배치해줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-orange-100 text-orange-600 rounded-md text-[9px] hover:bg-orange-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 조경 특화</button>
+                        <button onClick={() => handleSendChat("가장 수익성이 높은 타워형으로 뽑고, 인센티브 모두 켜줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-orange-100 text-orange-600 rounded-md text-[9px] hover:bg-orange-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 최대 수익형</button>
+                        <button onClick={() => handleSendChat("지능형 건축물 인센티브 켜고, ㄷ자형 건물로 뽑아줘")} disabled={store.chatLoading} className="whitespace-nowrap px-2 py-1 bg-white border border-orange-100 text-orange-600 rounded-md text-[9px] hover:bg-orange-50 shadow-sm font-medium transition-colors disabled:opacity-50">+ 지능형 ㄷ자형</button>
                     </div>
                 </div>
                 
                 {/* 1. 디자인 조건 요약 */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                     <div className="flex items-center gap-1.5 mb-2">
                         <Ruler size={12} className="text-slate-500" />
                         <span className="text-[11px] font-bold text-slate-700">입력 디자인 제약조건</span>
@@ -115,11 +115,11 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                         <div className="flex justify-between items-center bg-white px-2 py-1.5 rounded-md border border-slate-100">
                             <span className="text-slate-500">최대 건폐율</span>
-                            <span className="font-bold text-blue-600">{store.buildingCoverageLimit}%</span>
+                            <span className="font-bold text-orange-600">{store.buildingCoverageLimit}%</span>
                         </div>
                         <div className="flex justify-between items-center bg-white px-2 py-1.5 rounded-md border border-slate-100">
                             <span className="text-slate-500">최대 용적률</span>
-                            <span className="font-bold text-cyan-600">{store.floorAreaRatioLimit}%</span>
+                            <span className="font-bold text-amber-600">{store.floorAreaRatioLimit}%</span>
                         </div>
                         <div className="flex justify-between items-center bg-white px-2 py-1.5 rounded-md border border-slate-100">
                             <span className="text-slate-500">대지면적</span>
@@ -133,10 +133,10 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                 </div>
 
                 {/* 1.5. 인센티브 완화 스위치 */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-emerald-100">
+                <div className="bg-gradient-to-br from-green-50 to-orange-50 rounded-lg p-3 border border-orange-100">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5">
-                            <CheckCircle2 size={12} className="text-emerald-600" />
+                            <CheckCircle2 size={12} className="text-orange-600" />
                             <span className="text-[11px] font-bold text-slate-700">친환경·공개공지 법규 완화</span>
                         </div>
                     </div>
@@ -150,8 +150,8 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                             const isChecked = store.incentives[id as keyof typeof store.incentives];
                             return (
                                 <label key={id} className="flex items-center justify-between cursor-pointer group">
-                                    <span className={`text-[10px] transition-colors ${isChecked ? 'text-emerald-700 font-bold' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
-                                    <div className={`w-7 h-4 rounded-full transition-colors relative shadow-inner ${isChecked ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                                    <span className={`text-[10px] transition-colors ${isChecked ? 'text-orange-700 font-bold' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
+                                    <div className={`w-7 h-4 rounded-full transition-colors relative shadow-inner ${isChecked ? 'bg-orange-500' : 'bg-slate-300'}`}>
                                         <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full shadow transition-transform ${isChecked ? 'translate-x-3' : ''}`} />
                                     </div>
                                     <input 
@@ -188,7 +188,7 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                             const isExpanded = expandedType === type;
 
                             return (
-                                <div key={type} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange-400 shadow-md ring-2 ring-orange-400/20' : 'border-slate-200 hover:border-orange-300'}`}>
+                                <div key={type} className={`border rounded-lg overflow-hidden transition-all ${isSelected ? 'border-orange-400 shadow-md ring-2 ring-orange-400/20' : 'border-slate-200 hover:border-orange-300'}`}>
                                     {/* 아코디언 헤더 */}
                                     <button
                                         onClick={() => {

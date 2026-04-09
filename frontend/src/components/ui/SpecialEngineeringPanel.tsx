@@ -1,208 +1,361 @@
 import React from 'react';
-import { Lightbulb, VolumeX, Cpu, Box, Layers, ShieldAlert, Waves, HeartPulse } from 'lucide-react';
+import { Waves, Hexagon, Layers, ScanFace, Building2, ShieldAlert, Cpu, Network, Radar } from 'lucide-react';
+import { useProjectStore } from '@/store/projectStore';
+
+/* ═══════════════════════════════════════════════════════════════
+   C-5  특수·디지털 융합 엔지니어링 분석 모듈
+   SKILL: I1 Acoustic · I2 SmartIBMS · I3 BIM-Clash · I4 Parametric · I5 TwinSync
+   Layout: 12-Column Cyber-Dashboard · Teal/Violet/Slate CI
+   ═══════════════════════════════════════════════════════════════ */
 
 const SpecialEngineeringPanel = () => {
+    const store = useProjectStore();
+    const isSpecialUse = store.buildingUse === '의료시설' || store.buildingUse === '교육연구시설';
+    
     return (
-        <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
+        <div className="h-full flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative pb-28">
             
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6 shrink-0 z-10">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                        <Lightbulb className="text-slate-600" size={24} />
-                        특수 엔지니어링: 음향·스마트빌딩·BIM
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1 font-medium">
-                        재활 치료 공간 환경 제어, 첨단 공기질 관리, 3D 간섭(Clash) 검토 시뮬레이션 명세
-                    </p>
-                </div>
-            </div>
-
-            {/* Grid Content */}
-            <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
-                
-                {/* ════════ 1. 실내 음향 및 차음 계획 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
-                    {/* Left: Acoustics Strategy */}
-                    <div className="w-full md:w-7/12 p-6 border-r border-slate-100 flex flex-col justify-center">
-                        <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">ACOUSTIC & NOISE CONTROL</div>
-                        <h3 className="text-xl font-extrabold text-slate-800 mb-3">심리 안정형 소음 제어 및 특수 공간 공간 음향</h3>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-5 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            소음에 민감한 장애 학생들의 발작 및 정서 불안을 예방하기 위해 <span className="font-bold text-teal-700">고차음 외벽 및 이중 바닥 패드(Floating Floor)</span> 설계를 채택합니다.
-                            체육관과 인접한 교실 간의 차음을 강화하고, 음악 치료실의 최적 잔향시간을 정밀하게 제어하여 치료 효과를 극대화합니다.
-                        </p>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="border-l-4 border-teal-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 flex flex-col justify-between">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-1.5"><VolumeX size={14} className="text-teal-500"/><span className="text-[10px] text-slate-500 font-bold">음악 치료실 (RT60)</span></div>
-                                    <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">최적 잔향치 범위</span>
-                                </div>
-                                <div>
-                                    <div className="text-lg font-black text-slate-800">0.5 ~ 0.8<span className="text-[10px] font-normal ml-1 text-slate-500">초 (sec)</span></div>
-                                    <div className="text-[9px] text-teal-600 font-medium">유리면 다공질 흡음 패널 + 디퓨저</div>
-                                </div>
-                            </div>
-                            <div className="border-l-4 border-violet-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 flex flex-col justify-between">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-1.5"><Waves size={14} className="text-violet-500"/><span className="text-[10px] text-slate-500 font-bold">인접 교실 차음 (STC)</span></div>
-                                    <span className="text-[8px] bg-violet-50 text-violet-600 px-1 py-0.5 rounded border border-violet-100">충격음 50dB 이하</span>
-                                </div>
-                                <div>
-                                    <div className="text-lg font-black text-slate-800">&gt; 50<span className="text-[10px] font-normal ml-1 text-slate-500">STC Rate</span></div>
-                                    <div className="text-[9px] text-slate-500 font-medium tracking-tight">수중운동실 기계 소음 차단(슬리브)</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right: Acoustic Detail Section */}
-                    <div className="w-full md:w-5/12 p-5 flex flex-col relative overflow-hidden bg-gradient-to-b from-teal-50/50 to-white">
-                        <div className="absolute top-[-10%] right-[-5%] opacity-5 text-teal-800"><VolumeX fill="currentColor" size={150} /></div>
-                        <div className="flex items-center gap-1.5 mb-3 relative z-10">
-                            <Layers size={16} className="text-teal-600" />
-                            <span className="text-[12px] font-bold text-slate-800">생활 공간 층간소음 제어 전략 (Floating Edge)</span>
-                        </div>
-                        <div className="flex-1 flex flex-col justify-center gap-2 relative z-10 text-[10px] text-slate-600">
-                            <div className="bg-white p-2.5 rounded shadow-sm border border-teal-100 flex items-start gap-2">
-                                <div className="bg-teal-100 text-teal-700 p-1 rounded font-bold w-5 h-5 flex items-center justify-center shrink-0">1</div>
-                                <div><span className="font-bold text-slate-700">다목적 체육관 격리:</span> 상부 및 측면 틈새를 통해 진동이 벽으로 전이되는 것을 막는 방진재 댐핑 적용</div>
-                            </div>
-                            <div className="bg-white p-2.5 rounded shadow-sm border border-teal-100 flex items-start gap-2">
-                                <div className="bg-teal-100 text-teal-700 p-1 rounded font-bold w-5 h-5 flex items-center justify-center shrink-0">2</div>
-                                <div><span className="font-bold text-slate-700">기계장비 진동 차단:</span> 수중운동실 배수 펌프 하부에 고강도 방진 마운트 및 플렉시블 조인트 의무 반영</div>
-                            </div>
-                            <div className="bg-white p-2.5 rounded shadow-sm border border-teal-100 flex items-start gap-2">
-                                <div className="bg-teal-100 text-teal-700 p-1 rounded font-bold w-5 h-5 flex items-center justify-center shrink-0">3</div>
-                                <div><span className="font-bold text-slate-700">환기구(Duct) 소음 저감:</span> 챔버 박스 내측에 친환경 항균 유리섬유 마감을 통한 소음(급속 배기) 소거</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ════════ 2. 스마트 빌딩 & 3. BIM (Col 1-12 / 2단 분할) ════════ */}
-                <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    
-                    {/* IBMS & Smart System */}
-                    <div className="bg-white rounded-xl border border-sky-100 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-sky-50 bg-gradient-to-r from-sky-50 to-white flex items-center gap-1.5">
-                            <HeartPulse size={16} className="text-sky-600"/>
-                            <span className="text-[12px] font-bold text-sky-800">건강 모니터링 기반 스마트 빌딩 (IBMS)</span>
-                        </div>
-                        <div className="p-5 flex-1 flex flex-col gap-4">
-                            <div className="flex bg-slate-50 p-3 rounded-lg border border-slate-100 items-center justify-between">
-                                <div>
-                                    <div className="text-[9px] font-bold text-slate-500 mb-0.5">호흡기·면역 민감 학생 보호 센서 연동</div>
-                                    <div className="text-[13px] font-black text-slate-800">실내 공기질 실시간 자동 제어체계</div>
-                                </div>
-                                <div className="text-[10px] text-right text-slate-500 max-w-[130px]">
-                                    CO₂, 미세먼지(PM2.5) 수치 초과 시 외기 도입 자동화
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mt-1">
-                                <div className="border border-sky-100 bg-sky-50/30 rounded-lg p-3 relative overflow-hidden flex flex-col justify-center">
-                                    <div className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1"><Cpu size={12}/> IoT 센서 포인트</div>
-                                    <div className="text-[9px] text-slate-500 leading-tight">교실마다 온/습도, CO2 센서를 장착하여 재실 인원에 따른 외조기(OAHU) 풍량 비례 제어</div>
-                                </div>
-                                <div className="border border-emerald-100 bg-emerald-50/30 rounded-lg p-3 relative overflow-hidden flex flex-col justify-center">
-                                    <div className="text-[10px] font-bold text-slate-600 flex items-center gap-1 mb-1"><ShieldAlert size={12}/> 감염병 확산 방지</div>
-                                    <div className="text-[9px] text-slate-500 leading-tight">양·음압 공조 모드 전환 시스템. 전염병 유행 시 음압 격리실 수준의 개별 배기 전환</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Digital Engineering & BIM */}
-                    <div className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-indigo-50 bg-gradient-to-r from-indigo-50 to-white flex items-center gap-1.5">
-                            <Box size={16} className="text-indigo-600"/>
-                            <span className="text-[12px] font-bold text-indigo-800">디지털 엔지니어링 및 3D BIM 최적화</span>
-                        </div>
-                        <div className="p-5 flex flex-col gap-3 flex-1 justify-center">
-                            <div className="flex items-start gap-3 bg-indigo-50/40 p-2.5 rounded border border-indigo-100/50">
-                                <div className="bg-indigo-100 text-indigo-600 p-1.5 rounded-full shrink-0 mt-0.5"><Layers size={13}/></div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-700">무장애 동선(BF) 간섭 (Clash) 검사 전용화</div>
-                                    <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                                        휠체어 경사로(Ramp), 엘리베이터 승강장 상부의 덕트 및 케이블 트레이 등 입체적 간섭 요소를 Navisworks로 LOD 350 수준으로 사전 검출합니다.
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 bg-slate-50 p-2.5 rounded border border-slate-100">
-                                <div className="bg-slate-200 text-slate-600 p-1.5 rounded-full shrink-0 mt-0.5"><Box size={13}/></div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-700">디지털 트윈 운영 기초 데이터 세팅</div>
-                                    <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                                        준공 시점 유지관리(FM) 단계로 데이터를 넘기기 위한 공간별 자산 속성(바닥 마감재 유형, 특수 펌프 보증 기간 등)을 파라메트릭하게 부여합니다.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ════════ 4. 리스크 및 이슈 관리 ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
-                    <div className="flex items-center gap-1.5 mb-4">
-                        <ShieldAlert size={18} className="text-slate-700" />
-                        <h3 className="text-sm font-extrabold text-slate-800">특수 엔지니어링 연장선 리스크 관제</h3>
-                        <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded ml-2">우선 조치 필요</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] text-slate-600">
-                            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
-                                <tr>
-                                    <th className="px-3 py-2 rounded-tl-lg w-1/3">리스크/이슈 항목</th>
-                                    <th className="px-3 py-2 w-20 text-center">영향도</th>
-                                    <th className="px-3 py-2 rounded-tr-lg">설계 대책 / 저감 방안</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">수중운동실 소음 증폭 및 울림 현상</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                    <td className="px-3 py-2.5">타일 등 단단한 반사면으로 인한 울림 통제를 위해 방습형 다공질 흡음 천장재 및 슬록 댐퍼 설계</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">BIM 층고(Clearance) 확보 설계 중 시공 오차</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5">BIM 모델 상 여유 고도 200mm 추가 확보 원칙 적용. 휠체어 전복 우려가 있는 층간 바닥 단차(Threshold) 완전 배제</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">IoT 센서 노후화 및 운영 주체 혼란</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5">표준 개방형 프로토콜(BACnet) 적용으로 호환성 구비 및 관리자용 대시보드(DDC 제어) 직관적 매뉴얼 정리</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* ═══════════════ ENGINEERING METRICS SEAL ═══════════════ */}
-            <div className="absolute bottom-6 left-6 right-6 bg-white rounded-lg p-3 shadow-lg border border-slate-200 flex items-center justify-between pointer-events-none z-50">
-                <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
-                    <div className="bg-teal-600 text-white p-1.5 rounded-lg shadow-sm">
-                        <Cpu size={16} />
-                    </div>
+            {/* ════════════ STICKY HEADER ════════════ */}
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-6 py-4 shrink-0 shadow-sm">
+                <div className="max-w-[1600px] mx-auto flex justify-between items-center">
                     <div>
-                        <div className="text-[11px] font-black text-slate-800 leading-none mb-1">SPECIAL ENG. & BIM</div>
-                        <div className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Innovation Framework</div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <Layers className="text-teal-500" size={22} />
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                                디지털/특수 엔지니어링 융합 모듈
+                            </h2>
+                            <span className="ml-2 text-[9px] font-black tracking-widest bg-teal-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <ScanFace size={10} /> V3.0 AI SIMULATED
+                            </span>
+                        </div>
+                        <p className="text-slate-500 text-[12px] font-medium">
+                            ARCHE ARCHI · Phase C · 건축/설비 3D BIM 간섭 매트릭스 및 실내 음향 시뮬레이터
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                        <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200">
+                            타겟 LOD: Level 300 (기본설계)
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-bold border border-violet-200">
+                            특화 모드: {isSpecialUse ? 'BF 및 소음 민감 대응' : '일반 표준'}
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 flex justify-evenly text-[10px] font-medium px-2 text-center">
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">음향 제어</span><span className="text-slate-500 text-[9px]">RT60 0.5초 / STC 50+</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">빌딩 제어</span><span className="text-slate-500 text-[9px]">미세먼지 연동 IBMS</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">Clash 대상</span><span className="text-slate-500 text-[9px]">무장애 램프 간섭 제외</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">디지털 에셋</span><span className="text-slate-500 text-[9px]">LOD 350 Asset</span></div>
+            </div>
+
+            {/* ════════════ MAIN GRID ════════════ */}
+            <div className="flex-1 px-6 py-5">
+                <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-5">
+
+                    {/* ═══════ SKILL ROADMAP SIDEBAR (Col 1-3) ═══════ */}
+                    <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-teal-50 rounded-bl-full -z-10"></div>
+                            <div className="text-[10px] font-black tracking-widest text-teal-600 mb-3">I-SERIES DIGITAL SKILLS</div>
+                            {[
+                                { id: 'I1', name: 'AcousticOptima', desc: '실내 잔향(RT60) 및 차음(STC)', icon: <Waves size={14}/>, status: 'Active' },
+                                { id: 'I2', name: 'SmartIBMS', desc: 'IoT 센싱 (출퇴근/재난 모드)', icon: <Cpu size={14}/>, status: 'Active' },
+                                { id: 'I3', name: 'BIM-Clash', desc: '구조/설비 다분야 간섭 탐지', icon: <Radar size={14}/>, status: 'Active' },
+                                { id: 'I4', name: 'Parametric', desc: '외피 루버 파라메트릭 추론', icon: <Hexagon size={14}/>, status: 'Active' },
+                                { id: 'I5', name: 'TwinSync', desc: 'LCC 기반 디지털 트윈 예행연습', icon: <Building2 size={14}/>, status: 'Active' },
+                            ].map((mod, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-50 last:border-b-0">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-teal-400 to-violet-500 text-white shadow-sm">
+                                        {mod.icon}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[11px] font-black text-slate-800">{mod.id}</span>
+                                            <span className="text-[10px] text-slate-600 font-bold truncate">{mod.name}</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 truncate">{mod.desc}</div>
+                                    </div>
+                                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 bg-violet-50 text-violet-600 border border-violet-200">
+                                        {mod.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* IBMS Smart Building Mode Widget */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm border-t-4 border-t-violet-500 flex flex-col gap-3">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-1.5">
+                                    <Network size={14} className="text-violet-500"/>
+                                    <span className="text-[11px] font-extrabold text-slate-800">I2 IBMS 시나리오 제어</span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[9px] font-bold">
+                                <div className="bg-slate-50 border border-slate-100 rounded flex flex-col p-2 text-center opacity-70">
+                                    <span className="text-slate-400">보안 관제 (Night)</span>
+                                    <span className="text-slate-600">Standby</span>
+                                </div>
+                                <div className="bg-violet-50 border border-violet-200 rounded flex flex-col p-2 text-center shadow-inner relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-full h-0.5 bg-violet-500 animate-pulse"></div>
+                                    <span className="text-violet-600 text-[8px] uppercase tracking-wider mb-0.5">Active Mode</span>
+                                    <span className="text-violet-800">피크타임 (집중)</span>
+                                </div>
+                            </div>
+                            <p className="text-[9px] text-slate-500 leading-tight">
+                                건물 내 PM2.5, 조도, 온도 센서 연동. 재실 인원 밀도 임계치 도달로 공조(CO2 배기) 능동 가동 중.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ═══════ MAIN CONTENT AREA (Col 4-12) ═══════ */}
+                    <div className="col-span-12 lg:col-span-9 flex flex-col gap-5">
+
+                        {/* ─── SECTION 1: I1 AcousticOptima ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col lg:flex-row overflow-hidden relative border-l-4 border-l-teal-500">
+                            <div className="w-full lg:w-4/12 p-5 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col justify-center">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                    <Waves size={16} className="text-teal-500" />
+                                    <span className="text-[12px] font-extrabold text-slate-800">I1 · RT60 공간 음향 (Acoustics)</span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-medium mb-4">
+                                    다목적 및 특수 목적실의 체적(Volume) 대비 마감재 흠음계수(α)를 파동 연산합니다. Sabine 공식을 차용.
+                                </p>
+                                
+                                <div className="bg-teal-50 p-3 rounded-lg border border-teal-100 mb-2">
+                                    <div className="text-[10px] font-bold text-teal-700 mb-1">STC (소음차단등급) / 경량충격음</div>
+                                    <div className="text-lg font-black text-teal-600">50 이상 <span className="text-[10px] text-teal-500 ml-1">/ 58dB 이하 합격</span></div>
+                                </div>
+                                
+                                {isSpecialUse && (
+                                    <div className="flex items-start gap-1.5 bg-violet-50 p-2 rounded border border-violet-100 text-[9px]">
+                                        <div className="bg-violet-200 text-violet-700 p-1 rounded shrink-0"><ShieldAlert size={10}/></div>
+                                        <div className="text-violet-800 font-medium">수중운동실 및 음악치료실 특수 용도 감지. <strong className="font-bold">다공질 흡음 씰링</strong> 마감 예산 편성 자동 추가됨.</div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 p-4 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center relative">
+                                <AcousticChartSVG />
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 2: I3 BIM Clash & I4 Parametric ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            
+                            {/* I3 BIM Clash Radar */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 flex items-center gap-1.5">
+                                    <Radar size={16} className="text-slate-800" />
+                                    <span className="text-[12px] font-extrabold text-slate-800">I3 · 다분야 BIM 간섭 매트릭스</span>
+                                    <span className="ml-auto text-[9px] text-teal-600 bg-teal-50 font-bold px-2 py-0.5 rounded border border-teal-100">CDE 동기화</span>
+                                </div>
+                                <div className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                                    <div className="w-1/2 flex justify-center">
+                                        <BimRadarSVG />
+                                    </div>
+                                    <div className="w-1/2 flex flex-col gap-2 w-full">
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-[10px] flex justify-between items-center">
+                                            <span className="text-slate-600 font-bold">건축 ↔ 설비 (배관)</span>
+                                            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black">2 Soft</span>
+                                        </div>
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-[10px] flex justify-between items-center border-l-2 border-l-red-500">
+                                            <span className="text-slate-600 font-bold">구조(보) ↔ 기계(덕트)</span>
+                                            <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-black">1 Hard</span>
+                                        </div>
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-[10px] flex justify-between items-center">
+                                            <span className="text-slate-600 font-bold">BF 램프 ↔ 소화수도</span>
+                                            <span className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded font-black">Clear</span>
+                                        </div>
+                                        <p className="text-[9px] text-slate-400 font-medium mt-1 leading-tight">Hard Clash 검출 구역 발생. 설계자 Alert 발송 준비 상태.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* I4 Parametric Facade */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 flex items-center gap-1.5 bg-white">
+                                    <Hexagon size={16} className="text-violet-500" />
+                                    <span className="text-[12px] font-extrabold text-slate-800">I4 · 파라메트릭 외피 (Parametric)</span>
+                                </div>
+                                <div className="p-5 flex flex-col justify-center h-full gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-12 h-12 bg-slate-100 rounded-lg shrink-0 flex items-center justify-center p-2">
+                                            <div className="grid grid-cols-2 gap-0.5 w-full h-full opacity-50 transform -skew-x-12">
+                                                <div className="bg-violet-500 h-full"></div>
+                                                <div className="bg-slate-400 h-full mt-1"></div>
+                                                <div className="bg-slate-400 h-full mt-1"></div>
+                                                <div className="bg-violet-500 h-full mt-2"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[11px] font-bold text-slate-800 mb-1">GH(Grasshopper) 기반 일사량 최적화</h4>
+                                            <p className="text-[10px] text-slate-500 leading-snug">
+                                                남향 및 서향 파사드의 일사 열취득(SHGC)을 방어하기 위해 수직/수평 루버의 회전 각도를 딥러닝 추론하여 에너지 부하 사전 절감.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                        <div className="bg-violet-500 h-full" style={{width: '85%'}}></div>
+                                    </div>
+                                    <div className="text-right text-[9px] text-violet-600 font-bold">SHGC 방어율 85% 달성</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 3: 리스크 보드 (I-Series Risk) ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-4">
+                                <ShieldAlert size={16} className="text-slate-800" />
+                                <h3 className="text-sm font-extrabold text-slate-800">디지털 융합 & 특수 성능 리스크 보드 (Risk Horizon)</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[11px] text-slate-600">
+                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                                        <tr>
+                                            <th className="px-3 py-2 rounded-tl-lg w-1/3">탐지된 첨단/특수 리스크</th>
+                                            <th className="px-3 py-2 w-20 text-center">심각도</th>
+                                            <th className="px-3 py-2 rounded-tr-lg">설계 대책 / 자동 조정안</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">특수치료실 정밀기기 층간 소음 전이</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">Hard</span></td>
+                                            <td className="px-3 py-2.5">바닥 플로팅 슬래브(Floating Slab) 및 제진 패드 설계 데이터 삽입. 기계실 경로 회피 맵핑.</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">다분야 BIM 좌표 부정합 (Clash)</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">경고</span></td>
+                                            <td className="px-3 py-2.5">공용 배관 루트 CDE 절대 좌표 기준 통합 (LOD 300 체계 강제 정렬 동기화 수행).</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">IBMS 시스템 초기 도입(CAPEX) 예산 초과</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded font-bold">Soft</span></td>
+                                            <td className="px-3 py-2.5">유선 인프라를 최소화하고 Lora망/Zigbee 기반 무선 IoT 센서로 스위칭하여 공사비 12% Down 처리.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
+
+            {/* ════════════ ENGINEERING METRICS SEAL (Sticky Bottom) ════════════ */}
+            <div className="sticky bottom-0 z-30 mx-6">
+                <div className="max-w-[1600px] mx-auto bg-gradient-to-r from-slate-900 via-teal-950 to-violet-950 rounded-xl p-3.5 shadow-xl border border-teal-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 pr-4 border-r border-teal-800/50">
+                        <div className="bg-teal-500 text-white p-1.5 rounded-lg shadow-sm">
+                            <Layers size={16} />
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-black text-white leading-none mb-0.5">SPECIAL & CDE ENGINE</div>
+                            <div className="text-[8px] text-teal-400 uppercase font-bold tracking-widest">Digital Twin · V3.0</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
+                        {[
+                            { label: 'BIM 레벨', value: 'LOD 300 확정' },
+                            { label: '음향/진동', value: 'RT60 1.2s 타겟' },
+                            { label: '간섭 회피', value: 'Clash Radar On' },
+                            { label: 'IBMS 연동', value: 'IoT Sensor 140ea' }
+                        ].map((stat, i) => (
+                            <div key={i} className="flex flex-col">
+                                <span className="text-violet-300/80 text-[8px] uppercase tracking-wider mb-0.5 font-bold">{stat.label}</span>
+                                <span className="text-white font-bold">{stat.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="pl-4 border-l border-teal-800/50 flex items-center gap-2">
+                        <div className="text-right">
+                            <div className="text-[9px] text-teal-500 font-bold uppercase mb-0.5">Virtual Integrity</div>
+                            <div className="text-[11px] text-violet-300 font-black tracking-tight">SYNCHRONIZED</div>
+                        </div>
+                        <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse ring-4 ring-violet-400/20"></div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 };
 
 export default SpecialEngineeringPanel;
+
+// ======================= SVG Components =======================
+
+const AcousticChartSVG = () => (
+    <svg viewBox="0 0 300 120" className="w-full h-full min-h-[140px] max-w-[400px]">
+        {/* Background Grid */}
+        <g stroke="#f1f5f9" strokeWidth="1">
+            {[20, 50, 80, 110].map(y => <line key={y} x1="30" y1={y} x2="280" y2={y} />)}
+            {[30, 80, 130, 180, 230, 280].map(x => <line key={x} x1={x} y1="20" x2={x} y2="110" />)}
+        </g>
+        
+        {/* Legend */}
+        <text x="35" y="15" fontSize="8" fill="#14b8a6" fontWeight="bold">기본 RT60 곡선</text>
+        <line x1="85" y1="12" x2="105" y2="12" stroke="#14b8a6" strokeWidth="2"/>
+        
+        <text x="125" y="15" fontSize="8" fill="#8b5cf6" fontWeight="bold">최적화 후 RT 곡선 (-0.3s)</text>
+        <line x1="205" y1="12" x2="225" y2="12" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="3 2"/>
+
+        {/* Axis Labels */}
+        <text x="5" y="65" fontSize="8" fill="#64748b" transform="rotate(-90 10,65)">잔향시간 (RT60 sec)</text>
+        <text x="140" y="125" fontSize="8" fill="#64748b">Frequency (Hz)</text>
+
+        {/* X Axis texts */}
+        <g fontSize="7" fill="#94a3b8" textAnchor="middle">
+            <text x="30" y="118">125</text>
+            <text x="80" y="118">250</text>
+            <text x="130" y="118">500</text>
+            <text x="180" y="118">1k</text>
+            <text x="230" y="118">2k</text>
+            <text x="280" y="118">4k</text>
+        </g>
+        
+        {/* Y Axis texts */}
+        <g fontSize="7" fill="#94a3b8" textAnchor="end">
+            <text x="25" y="112">0.0</text>
+            <text x="25" y="82">1.0</text>
+            <text x="25" y="52">2.0</text>
+            <text x="25" y="22">3.0</text>
+        </g>
+
+        {/* Base Curve (Teal) */}
+        <path d="M 30 40 C 80 50, 130 65, 180 75 C 230 85, 280 80, 280 80" fill="none" stroke="#14b8a6" strokeWidth="2" />
+        {/* Optimized Curve (Violet) */}
+        <path d="M 30 60 C 80 65, 130 80, 180 95 C 230 100, 280 95, 280 95" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="4 2" />
+
+        {/* Data Point Focus */}
+        <circle cx="130" cy="80" r="3" fill="#8b5cf6" />
+        <text x="130" y="70" fontSize="8" fill="#8b5cf6" fontWeight="bold" textAnchor="middle">Speech Freq.</text>
+    </svg>
+);
+
+const BimRadarSVG = () => (
+    <svg viewBox="0 0 100 100" className="w-[100%] h-auto max-w-[120px] drop-shadow-sm">
+        {/* Background Radar Rings */}
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" strokeWidth="1" />
+        <circle cx="50" cy="50" r="30" fill="none" stroke="#e2e8f0" strokeWidth="1" />
+        <circle cx="50" cy="50" r="15" fill="none" stroke="#cbd5e1" strokeWidth="1" />
+        
+        {/* Core & Scan Line */}
+        <circle cx="50" cy="50" r="3" fill="#64748b" />
+        <path d="M50 50 L 50 5 A 45 45 0 0 1 95 50 Z" fill="#8b5cf6" fillOpacity="0.1" className="transform origin-[50px_50px] animate-[spin_4s_linear_infinite]"/>
+        <line x1="50" y1="50" x2="50" y2="5" stroke="#8b5cf6" strokeWidth="1.5" className="transform origin-[50px_50px] animate-[spin_4s_linear_infinite]" />
+
+        {/* Crosshair Line */}
+        <line x1="50" y1="5" x2="50" y2="95" stroke="#94a3b8" strokeWidth="0.5" strokeDasharray="2 2" />
+        <line x1="5" y1="50" x2="95" y2="50" stroke="#94a3b8" strokeWidth="0.5" strokeDasharray="2 2" />
+
+        {/* Clash Dots */}
+        {/* Soft Clash */}
+        <circle cx="70" cy="30" r="3" fill="#f59e0b" className="animate-ping" style={{animationDuration: '2s'}}/>
+        <circle cx="70" cy="30" r="2" fill="#f59e0b" />
+        <circle cx="20" cy="60" r="3" fill="#f59e0b" className="animate-ping" style={{animationDuration: '2s', animationDelay: '0.5s'}}/>
+        <circle cx="20" cy="60" r="2" fill="#f59e0b" />
+        
+        {/* Hard Clash */}
+        <circle cx="65" cy="70" r="3" fill="#ef4444" className="animate-pulse" />
+        <circle cx="65" cy="70" r="4" fill="none" stroke="#ef4444" strokeWidth="1" />
+        <line x1="60" y1="65" x2="70" y2="75" stroke="#fff" strokeWidth="0.5"/>
+        <line x1="60" y1="75" x2="70" y2="65" stroke="#fff" strokeWidth="0.5"/>
+
+        <text x="50" y="98" fontSize="5" fill="#64748b" textAnchor="middle" fontWeight="bold">Clash Detected</text>
+    </svg>
+);

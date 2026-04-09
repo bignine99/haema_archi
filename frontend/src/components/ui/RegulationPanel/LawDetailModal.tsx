@@ -18,12 +18,12 @@ export function LawDetailModal({ law, items, onClose }: Props) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.2 }}
-                className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg max-h-[75vh] flex flex-col overflow-hidden"
+                className="bg-white rounded-lg shadow-2xl w-[90%] max-w-lg max-h-[75vh] flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 {/* 헤더 */}
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-blue-50 shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
                         <BookOpen size={14} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -40,7 +40,7 @@ export function LawDetailModal({ law, items, onClose }: Props) {
                     <ol className="space-y-3">
                         {items.map((item, i) => (
                             <li key={i} className="flex items-start gap-3 text-[13px] text-slate-700 leading-relaxed">
-                                <span className="text-indigo-400 font-mono shrink-0 mt-px text-[12px] w-5 text-right font-bold">
+                                <span className="text-orange-400 font-mono shrink-0 mt-px text-[12px] w-5 text-right font-bold">
                                     {i + 1}.
                                 </span>
                                 <span>{item.replace(/^\d+\.\s*/, '')}</span>

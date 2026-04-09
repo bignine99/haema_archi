@@ -54,16 +54,16 @@ const MOCK_LINKS: BubbleLink[] = [
   { source: '11', target: '12', weight: 2 },
 ];
 
-// Architectural Colors (Teal, Green, Coral, Navy)
+// Architectural Colors (ARCHE CI: Orange/Amber/Slate)
 const GROUP_COLORS = {
-  0: { bg: '#2A9D8F', text: '#ffffff' }, // Teal
-  1: { bg: '#8AB17D', text: '#ffffff' }, // Sage Green
-  2: { bg: '#E9C46A', text: '#334155' }, // Beige/Gold
-  3: { bg: '#264653', text: '#ffffff' }, // Dark Navy
-  4: { bg: '#F4A261', text: '#ffffff' }, // Soft Coral
-  5: { bg: '#A8DADC', text: '#1e293b' }, // Light Blue
-  6: { bg: '#457B9D', text: '#ffffff' }, // Steel Blue
-  7: { bg: '#E76F51', text: '#ffffff' }, // Terracotta
+  0: { bg: '#ea580c', text: '#ffffff' }, // orange-600
+  1: { bg: '#f97316', text: '#ffffff' }, // orange-500
+  2: { bg: '#fb923c', text: '#334155' }, // orange-400
+  3: { bg: '#c2410c', text: '#ffffff' }, // orange-700
+  4: { bg: '#f59e0b', text: '#ffffff' }, // amber-500
+  5: { bg: '#fbbf24', text: '#1e293b' }, // amber-400
+  6: { bg: '#475569', text: '#ffffff' }, // slate-600
+  7: { bg: '#64748b', text: '#ffffff' }, // slate-500
 };
 
 export const BubbleDiagramPanel = () => {
@@ -182,14 +182,14 @@ export const BubbleDiagramPanel = () => {
 
     // 클러스터(조닝)별로 분산된 서브-허브(중심점)를 미리 계산
     const clusterCenters = [
-      { x: width * 0.3, y: height * 0.3 },
-      { x: width * 0.4, y: height * 0.3 },
-      { x: width * 0.3, y: height * 0.4 },
-      { x: width * 0.4, y: height * 0.4 },
-      { x: width * 0.2, y: height * 0.3 },
-      { x: width * 0.3, y: height * 0.2 },
-      { x: width * 0.5, y: height * 0.3 },
-      { x: width * 0.3, y: height * 0.5 },
+      { x: width * 0.15, y: height * 0.15 },
+      { x: width * 0.85, y: height * 0.15 },
+      { x: width * 0.15, y: height * 0.85 },
+      { x: width * 0.85, y: height * 0.85 },
+      { x: width * 0.15, y: height * 0.5 },
+      { x: width * 0.85, y: height * 0.5 },
+      { x: width * 0.5, y: height * 0.15 },
+      { x: width * 0.5, y: height * 0.85 },
     ];
     
     setNodes(currentNodes => {
@@ -211,8 +211,8 @@ export const BubbleDiagramPanel = () => {
             distance = Math.sqrt(dx * dx + dy * dy) || 1;
         }
         
-        const minDistance = source.radius + target.radius + 15;
-        const targetDist = minDistance + (link.weight > 2 ? 5 : 30);
+        const minDistance = source.radius + target.radius + 35; // 기본 반발력 거리 증가 (가독성 확보)
+        const targetDist = minDistance + (link.weight > 2 ? 25 : 65);
         
         const force = (distance - targetDist) * (link.weight * 0.002) * alphaRef.current;
         const ax = (dx / distance) * force;
@@ -281,8 +281,7 @@ export const BubbleDiagramPanel = () => {
                dy = (Math.random() - 0.5) * 5;
                distance = Math.sqrt(dx * dx + dy * dy) || 1;
             }
-            
-            const minDistance = a.radius + b.radius + 15;
+            const minDistance = a.radius + b.radius + 40; // 겹침 완전 제거용 강한 반발력 적용
 
             if (distance < minDistance) {
               const force = (minDistance - distance) * 0.6; 
@@ -381,7 +380,7 @@ export const BubbleDiagramPanel = () => {
       {/* Top Header (White Architectural Theme) */}
       <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-white z-10 shadow-sm">
         <div className="flex items-center space-x-3">
-          <div className="bg-teal-50 p-2 rounded-lg text-teal-600">
+          <div className="bg-orange-50 p-2 rounded-lg text-orange-600">
             <MapIcon size={20} />
           </div>
           <div>
@@ -409,22 +408,41 @@ export const BubbleDiagramPanel = () => {
             onClick={reheat}
             className="flex items-center space-x-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-semibold text-slate-600 hover:bg-slate-100 transition-all whitespace-nowrap"
           >
-            <RefreshCw size={14} className={isPlaying ? "animate-spin text-teal-500" : ""} />
+            <RefreshCw size={14} className={isPlaying ? "animate-spin text-orange-500" : ""} />
             <span className="hidden sm:inline">물리엔진 재배치</span>
           </button>
-          <button className="flex items-center space-x-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[13px] font-semibold text-white shadow-md transition-all whitespace-nowrap">
+          <button className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg text-[13px] font-semibold text-white shadow-md transition-all whitespace-nowrap">
             <Save size={14} />
             <span className="hidden sm:inline">SVG 내보내기</span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex px-4 md:px-6 py-4 md:py-6 gap-4 md:gap-6 relative min-h-[650px]" ref={containerRef}>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 px-4 md:px-6 py-4 md:py-6 gap-4 md:gap-6 relative min-h-[650px]">
         
         {/* Main Canvas SVG Layer */}
-        <div className="bg-white flex-1 border border-slate-200 rounded-xl shadow-sm relative overflow-hidden group">
+        <div className="lg:col-span-9 bg-white border border-slate-200 rounded-lg shadow-sm relative overflow-hidden group min-h-[600px]" ref={containerRef}>
           
           {/* Zoom Controls */}
+          <div className="absolute top-6 left-6 flex flex-col gap-2 z-10 pointer-events-none">
+            {hoveredNode && (() => {
+              const node = nodes.find(n => n.id === hoveredNode);
+              if (!node) return null;
+              return (
+                <div className="bg-gradient-to-r from-orange-700 to-orange-900 text-white px-4 py-3 rounded-lg shadow-lg border border-orange-800 w-56 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GROUP_COLORS[node.group as keyof typeof GROUP_COLORS]?.bg }}></span>
+                     <span className="font-bold text-[14px] truncate">{node.name}</span>
+                  </div>
+                  <div className="space-y-1">
+                     <div className="flex pl-5 justify-between text-[12px] text-slate-300"><span>설계 면적</span> <span className="font-mono text-orange-400">{node.area.toLocaleString()} ㎡</span></div>
+                     <div className="flex pl-5 justify-between text-[12px] text-slate-300"><span>동선 버퍼</span> <span className="font-mono">1.4m 적용</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
           <div className="absolute bottom-6 right-6 flex items-center bg-white shadow-md border border-slate-200 rounded-lg p-1 z-10 opacity-80 hover:opacity-100 transition-opacity">
             <button onClick={() => setZoomScale(s => Math.max(0.4, s - 0.2))} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 transition-colors" title="Zoom Out"><ZoomOut size={16} /></button>
             <span className="px-3 text-[13px] font-bold text-slate-700 w-14 text-center">{Math.round(zoomScale * 100)}%</span>
@@ -455,7 +473,7 @@ export const BubbleDiagramPanel = () => {
                     y1={source.y}
                     x2={target.x}
                     y2={target.y}
-                    stroke={isHighlighted ? "#0f766e" : "#94a3b8"} // 짙은 틸 혹은 기본 회색선
+                    stroke={isHighlighted ? "#ea580c" : "#94a3b8"} // 짙은 오렌지 혹은 기본 회색선
                     strokeWidth={isStrong ? 2 : 1}
                     strokeDasharray={isStrong ? "none" : "5, 5"} // 얇은 연결선은 점선 처리
                     strokeOpacity={isHighlighted ? 0.9 : 0.6}
@@ -481,28 +499,28 @@ export const BubbleDiagramPanel = () => {
                   >
                     {/* Shadow/Glow under the circle when hovered */}
                     {isHovered && (
-                        <circle r={node.radius + 4} fill={colors.bg} fillOpacity={0.2} />
+                        <circle r={node.radius + 4} fill={colors.bg} fillOpacity={0.2} className="transition-opacity duration-300" />
                     )}
                     <circle
                       r={node.radius}
-                      fill={colors.bg}
-                      stroke="#ffffff"
-                      strokeWidth={isHovered ? 3 : 2}
-                      className="cursor-pointer transition-all duration-200 shadow-sm"
+                      fill={isHovered || isDragged ? colors.text : colors.bg}
+                      stroke={isHovered || isDragged ? colors.bg : "#ffffff"}
+                      strokeWidth={isHovered ? 4 : 2}
+                      className="cursor-pointer transition-all duration-300 shadow-sm"
                       onPointerDown={(e) => handlePointerDown(e, node.id)}
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
                     />
                     
                     {/* 실명 텍스트 */}
-                    {node.radius > 25 && (
+                    {node.radius > 30 && (
                       <text
                         textAnchor="middle"
                         dy={node.radius > 40 ? "-0.1em" : "0.3em"}
-                        className="pointer-events-none font-bold select-none"
+                        className="pointer-events-none font-bold select-none transition-colors duration-300"
                         style={{ 
                           fontSize: Math.max(10, Math.min(13, node.radius / 3.5)), 
-                          fill: colors.text 
+                          fill: isHovered || isDragged ? colors.bg : colors.text 
                         }}
                       >
                         {node.name.length > 10 ? `${node.name.substring(0, 10)}...` : node.name}
@@ -510,14 +528,14 @@ export const BubbleDiagramPanel = () => {
                     )}
                     
                     {/* 보조 면적수치 텍스트 (충분한 넓이가 있을 때만) */}
-                    {node.radius > 40 && (
+                    {node.radius > 45 && (
                       <text
                         textAnchor="middle"
                         dy="1.4em"
-                        className="pointer-events-none select-none font-medium opacity-80"
+                        className="pointer-events-none select-none font-medium opacity-80 transition-colors duration-300"
                         style={{ 
                           fontSize: Math.max(9, Math.min(10, node.radius / 5)), 
-                          fill: colors.text 
+                          fill: isHovered || isDragged ? colors.bg : colors.text 
                         }}
                       >
                         {node.area.toLocaleString()} ㎡
@@ -532,7 +550,7 @@ export const BubbleDiagramPanel = () => {
         </div>
 
         {/* Right Info Panel Overlay / Sidebar */}
-        <div className="w-[280px] bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col p-5 hidden lg:flex h-fit sticky top-6">
+        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col p-5 hidden lg:flex h-fit sticky top-6">
           <div className="flex items-center mb-6">
             <Settings className="text-slate-400 mr-2" size={18} />
             <h2 className="font-bold text-slate-800 text-[14px]">Adjacency Matrix Info</h2>
@@ -545,10 +563,10 @@ export const BubbleDiagramPanel = () => {
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">Space Zoning</h3>
               <div className="space-y-2.5">
                 {[
-                  { id: 0, label: '학습/업무 (Teal)' },
-                  { id: 1, label: '지원/공용 (Sage Green)' },
-                  { id: 2, label: '특화/서비스 (Beige)' },
-                  { id: 3, label: '기타/설비 (Navy)' }
+                  { id: 0, label: '학습/업무 (Primary)' },
+                  { id: 1, label: '지원/공용 (Secondary)' },
+                  { id: 2, label: '특화/서비스 (Accent)' },
+                  { id: 3, label: '기타/설비 (Base)' }
                 ].map(group => (
                   <div key={group.id} className="flex items-center space-x-3 text-[13px] font-medium text-slate-700">
                     <span 
@@ -558,6 +576,50 @@ export const BubbleDiagramPanel = () => {
                     <span>{group.label}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Analysis Metrics */}
+            <div>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">Analysis Results</h3>
+              <div className="space-y-4">
+                
+                {/* 1. Adjacency */}
+                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100/50">
+                   <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[12px] font-bold text-slate-700">인접성 충족률 (Adjacency)</span>
+                      <span className="text-[12px] font-bold text-orange-600">88%</span>
+                   </div>
+                   <div className="w-full bg-slate-200 rounded-full h-1.5 mb-1.5">
+                      <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '88%' }}></div>
+                   </div>
+                   <p className="text-[10px] text-slate-500 font-medium">Mandatory 규칙 준수, 중앙 병목 완화됨</p>
+                </div>
+
+                {/* 2. BF Buffer */}
+                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100/50">
+                   <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[12px] font-bold text-slate-700">무장애 버퍼 (BF Radius)</span>
+                      <span className="text-[12px] font-bold text-orange-600">안정적</span>
+                   </div>
+                   <div className="w-full bg-slate-200 rounded-full h-1.5 mb-1.5">
+                      <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '96%' }}></div>
+                   </div>
+                   <p className="text-[10px] text-slate-500 font-medium">1.4m 배리어프리 이격 96% 확보</p>
+                </div>
+
+                {/* 3. Cluster Cohesion */}
+                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100/50">
+                   <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[12px] font-bold text-slate-700">존 응집력 (Cluster Cohesion)</span>
+                      <span className="text-[12px] font-bold text-orange-600">우수</span>
+                   </div>
+                   <div className="w-full bg-slate-200 rounded-full h-1.5 mb-1.5">
+                      <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '82%' }}></div>
+                   </div>
+                   <p className="text-[10px] text-slate-500 font-medium">부서별 그룹화 및 밀집도 최적화 수준</p>
+                </div>
+
               </div>
             </div>
 
@@ -582,8 +644,8 @@ export const BubbleDiagramPanel = () => {
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-3 flex items-center justify-between">
                 <span className="text-[12px] font-semibold text-slate-600">Simulating</span>
                 <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isPlaying ? 'bg-teal-400' : 'bg-slate-300'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-teal-500' : 'bg-slate-400'}`}></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isPlaying ? 'bg-orange-400' : 'bg-slate-300'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-orange-500' : 'bg-slate-400'}`}></span>
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed font-medium">

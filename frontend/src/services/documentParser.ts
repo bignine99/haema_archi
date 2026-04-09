@@ -543,25 +543,21 @@ function analyzeDocument(text: string): ParsedProjectData {
     }
 
     // ═══ 3. 용도지역 ═══
-    const zoneM = n.match(/용\s*도\s*지\s*역\s*[:：\-]?\s*(.+)/);
-    if (zoneM) {
-        const raw = zoneM[1].split('\n')[0].trim();
-        const zonePat = raw.match(/(제\s*\d\s*종\s*[가-힣]+지역|[가-힣]+주거지역|[가-힣]+상업지역|[가-힣]+공업지역)/);
-        data.zoneType = zonePat ? zonePat[1].replace(/\s+/g, ' ').trim() : raw.split(/[,，\s]{2,}/)[0].trim();
-    }
-    if (!data.zoneType) {
-        const zoneAlt = n.match(/지\s*역\s*[\/·]\s*지\s*구\s*[:：\-]?\s*(.+)/);
-        if (zoneAlt) {
-            const raw = zoneAlt[1].split('\n')[0].trim();
+    for (const pat of [/용\s*도\s*지\s*역\s*[:：\-]?\s*(.+)/, /지\s*역\s*[\/·]?\s*지\s*구\s*[:：\-]?\s*(.+)/]) {
+        const m = n.match(pat);
+        if (m) {
+            const raw = m[1].split('\n')[0].trim();
             data.zoneType = raw.split(/[,，]/)[0].trim();
+            break;
         }
     }
 
     // ═══ 4. 부지면적 / 대지면적 ═══
-    for (const pat of [/부\s*지\s*면\s*적\s*[:：\-]?\s*([^\n]*)/, /대\s*지\s*면\s*적\s*[:：\-]?\s*([^\n]*)/]) {
+    for (const pat of [/실\s*사\s*용\s*([0-9][0-9,]*\.?\d*)/, /부\s*지\s*면\s*적\s*[:：\-]?\s*([^\n]*)/, /대\s*지\s*면\s*적\s*[:：\-]?\s*([^\n]*)/]) {
         const m = n.match(pat);
         if (m) {
-            const num = extractNumber(m[1]);
+            const numText = pat.source.includes('실사용') ? m[1] : m[1];
+            const num = extractNumber(numText);
             if (num && num > 0) { data.landArea = num; break; }
         }
     }
@@ -595,10 +591,10 @@ function analyzeDocument(text: string): ParsedProjectData {
     }
 
     // ═══ 9. 주용도 ═══
-    for (const pat of [/주\s*용\s*도\s*[:：\-]?\s*([^\n]+)/, /건\s*축\s*용\s*도\s*[:：\-]?\s*([^\n]+)/]) {
+    for (const pat of [/주\s*용\s*도\s*[:：\-]?\s*([^\n]+)/, /건\s*축\s*용\s*도\s*[:：\-]?\s*([^\n]+)/, /용\s*도\s*[:：\-]?\s*([^\n]+)/]) {
         const m = n.match(pat);
         if (m) {
-            let use = m[1].split('\n')[0].trim().replace(/\s+\d+[\.\\)]\s.*$/, '').replace(/\s*\([^)]*\)\s*$/, '').split(/[,，]/)[0].trim();
+            let use = m[1].split('\n')[0].trim().replace(/\s+\d+[\.\\)]\s.*$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
             if (use.length > 1) { data.buildingUse = use; break; }
         }
     }

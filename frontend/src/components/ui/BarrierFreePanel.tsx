@@ -11,7 +11,7 @@ export default function BarrierFreePanel() {
             {/* 상단 헤더 영역 */}
             <div className="p-6 border-b border-slate-200 bg-white flex justify-between items-center shrink-0 shadow-sm z-10">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
                         <ShieldCheck size={24} />
                     </div>
                     <div>
@@ -26,7 +26,7 @@ export default function BarrierFreePanel() {
                 <div className="max-w-4xl mx-auto space-y-6">
                     
                     {/* 안내 패널 */}
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-blue-800">
+                    <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex gap-3 text-orange-800">
                         <Info className="shrink-0 mt-0.5" size={20} />
                         <div className="text-sm">
                             <p className="font-semibold mb-1">과업지시서 기반 특화사항 연동 안내</p>
@@ -35,7 +35,7 @@ export default function BarrierFreePanel() {
                     </div>
 
                     {/* 주요 BF 설정 폼 */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
                             <h3 className="font-bold text-slate-800">기본 무장애(Barrier-Free) 설계 기준</h3>
                         </div>
@@ -49,7 +49,7 @@ export default function BarrierFreePanel() {
                                         type="number" 
                                         value={bfChecklist.rampSlopeConfig}
                                         onChange={e => setBfChecklist({ rampSlopeConfig: Number(e.target.value) })}
-                                        className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                                     />
                                 </div>
                                 <p className="text-[10px] text-slate-400">※ 휠체어 사용자를 위해 통상 1/12 이하 적용, 특수학교는 1/18 권장</p>
@@ -62,7 +62,7 @@ export default function BarrierFreePanel() {
                                     step="0.1"
                                     value={bfChecklist.corridorWidth}
                                     onChange={e => setBfChecklist({ corridorWidth: Number(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                                 />
                                 <p className="text-[10px] text-slate-400">※ 양방향 교행 진입장벽을 낮추기 위한 편복도 규격 (권장 3.3m 이상)</p>
                             </div>
@@ -73,7 +73,7 @@ export default function BarrierFreePanel() {
                                     type="text"
                                     value={bfChecklist.wheelchairRotation}
                                     onChange={e => setBfChecklist({ wheelchairRotation: e.target.value })}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                                 />
                                 <p className="text-[10px] text-slate-400">※ 실내 점프, 교차점, 화장실 앞 여유 공간</p>
                             </div>
@@ -84,7 +84,7 @@ export default function BarrierFreePanel() {
                                     type="text"
                                     value={bfChecklist.elevatorCapacity}
                                     onChange={e => setBfChecklist({ elevatorCapacity: e.target.value })}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                                 />
                                 <p className="text-[10px] text-slate-400">※ 베드형 엘리베이터(병원급) 투입 권장 규모 표기</p>
                             </div>

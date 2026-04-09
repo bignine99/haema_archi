@@ -212,23 +212,14 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
 
     const handleEnter = async () => {
         setError(null);
-        if (password !== 'haema2026') {
-            setError('비밀번호가 일치하지 않습니다.');
-            return;
-        }
+        // By user request: "비밀번호 로그인 기능도 잠시 중지시켜줘. 그냥 로그인 버튼을 클릭하면 누구나 사용할 수 있도록"
         if (!apiKey.trim()) {
-            setError('API 키를 기입해주세요.');
-            return;
-        }
-
-        setIsLoading(true);
-        const isValid = await validateApiKey(apiKey.trim());
-        setIsLoading(false);
-
-        if (isValid) {
+            // Provide a dummy key if none is provided so the app can function or bypass
+            setStoreApiKey('demo_mode_no_key');
+        } else {
             setStoreApiKey(apiKey.trim());
-            onEnter();
         }
+        onEnter();
     };
 
     return (
@@ -240,7 +231,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                 
                 {/* Editorial Top Nav */}
                 <div className="absolute top-10 left-8 md:left-24 text-[9px] tracking-[0.3em] uppercase font-bold text-slate-800">
-                    HAEMA PLATFORM
+                    ARCHE PLATFORM
                 </div>
                 <div className="absolute top-10 right-8 md:right-24 text-[9px] tracking-[0.2em] uppercase text-slate-500 hidden sm:flex gap-8">
                     <span className="cursor-pointer hover:text-black transition-colors">Architecture</span>
@@ -411,7 +402,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                             <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                             <div className="text-[9px] tracking-[0.2em] uppercase text-white">Company Info</div>
                         </div>
-                        <p className="text-[9px] text-neutral-600 tracking-widest">© 2026 HAEMA ARCHITECTURE. ALL RIGHTS RESERVED.</p>
+                        <p className="text-[9px] text-neutral-600 tracking-widest">© 2026 ARCHE ARCHITECTURE. ALL RIGHTS RESERVED.</p>
                     </div>
                 </div>
                 
@@ -420,34 +411,22 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                     <div className="flex items-center gap-6 mb-20">
                         <span className="font-serif-elegant italic text-4xl text-white">&.</span>
                         <div className="flex flex-col gap-1">
-                            <a href="https://www.haemaarch.com" target="_blank" rel="noreferrer" className="text-[14px] font-medium tracking-wide text-white hover:text-neutral-300 transition-colors underline underline-offset-4">
-                                www.haemaarch.com
-                            </a>
-                            <span className="text-[10px] text-neutral-500">Access strictly restricted</span>
+                            <span className="text-[14px] font-medium tracking-wide text-white">
+                                ARCHE PLATFORM
+                            </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-16 mb-16">
+                    <div className="grid grid-cols-1 gap-x-12 gap-y-16 mb-16">
                         <div className="flex flex-col">
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-4 ml-1">Password</label>
-                            <input 
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
-                                className="input-minimal w-full py-2 text-sm"
-                                placeholder="비밀번호"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-4 ml-1">Gemini API Key</label>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-4 ml-1">Access Token (Optional)</label>
                             <input 
                                 type="password"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
                                 className="input-minimal w-full py-2 text-sm font-mono tracking-widest"
-                                placeholder="AIzaSy..."
+                                placeholder="Press 'Login' to enter..."
                             />
                         </div>
                     </div>
@@ -466,7 +445,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                             disabled={isLoading}
                             className="bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] py-6 px-12 hover:bg-neutral-200 transition-colors disabled:opacity-50"
                         >
-                            {isLoading ? 'Verifying...' : 'Send Request'} 
+                            {isLoading ? 'Verifying...' : 'Login'} 
                         </button>
                         <div className="mt-4 text-[9px] text-neutral-600 tracking-widest flex items-center gap-2">
                             <span className="w-2 h-2 border border-neutral-600 inline-block"></span>

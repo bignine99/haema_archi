@@ -30,32 +30,25 @@ export default function Sidebar({ activeMenu, setActiveMenu, setIsAuthorized }: 
             className="text-slate-300 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.15)] z-50 border-r border-slate-800"
             style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '220px', backgroundColor: '#0f172a' }}
         >
-            <div className="px-6" style={{ paddingTop: '20px', paddingBottom: '16px' }}>
+            <div className="px-6 flex flex-col items-center" style={{ paddingTop: '20px', paddingBottom: '16px' }}>
                 <style>{`
-                    @keyframes haemaColorShift {
-                        0% { background-position: 0% 50%; }
-                        100% { background-position: 200% 50%; }
-                    }
-                    @keyframes haemaGlow {
-                        0%, 100% { box-shadow: 0 0 12px rgba(251,146,60,0.3); }
-                        50% { box-shadow: 0 0 24px rgba(251,146,60,0.7), 0 0 48px rgba(251,146,60,0.3); }
+                    @keyframes archeGlow {
+                        0%, 100% { filter: drop-shadow(0 0 6px rgba(232,119,34,0.25)); }
+                        50% { filter: drop-shadow(0 0 14px rgba(232,119,34,0.55)); }
                     }
                 `}</style>
-                <h1 className="text-lg font-bold tracking-widest flex items-center gap-2">
-                    <span
-                        className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm shadow-lg shrink-0"
-                        style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
-                    >H</span>
-                    <span
-                        className="bg-clip-text text-transparent whitespace-nowrap"
-                        style={{
-                            backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
-                            backgroundSize: '200% 100%',
-                            animation: 'haemaColorShift 3s linear infinite',
-                        }}
-                    >HAEMA ARCHI</span>
-                </h1>
-                <p className="mt-1 mb-1 text-[9px] text-slate-500 tracking-wider">AI ARCHITECTURE PLATFORM</p>
+                {/* ARCHE 로고 — 텍스트 기반 */}
+                <div className="w-full flex items-center justify-center mb-1 pt-1" style={{ animation: 'archeGlow 3s ease-in-out infinite' }}>
+                    <span className="font-serif-elegant text-4xl font-bold text-[#E87722] tracking-wider italic pr-2">
+                        ARCHE
+                    </span>
+                    <div className="relative flex items-center justify-center">
+                        <circle cx="176" cy="13" r="4.5" fill="#F5A623"/>
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#E87722]"></span>
+                        <span className="absolute w-1.5 h-1.5 rounded-full bg-[#F5A623]"></span>
+                    </div>
+                </div>
+                <p className="mt-1 text-[9px] text-orange-400/60 tracking-widest font-bold uppercase text-center">AI ARCHITECTURE PLATFORM</p>
             </div>
 
             <nav className="flex-1 overflow-y-auto px-4 py-2" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
@@ -91,7 +84,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, setIsAuthorized }: 
                                             <button
                                                 onClick={() => setActiveMenu(item.id)}
                                                 className={`w-full text-left px-5 py-1.5 rounded-lg flex items-center transition-all duration-200 ${isActive
-                                                    ? 'bg-blue-600 font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]'
+                                                    ? 'bg-orange-600 font-semibold text-white shadow-[0_4px_12px_rgba(234,88,12,0.25)]'
                                                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                                                     }`}
                                             >

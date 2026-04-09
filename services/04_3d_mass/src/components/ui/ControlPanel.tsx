@@ -128,7 +128,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
             <div className="flex items-center gap-3 mb-2">
                 <div
                     className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center font-bold text-white text-sm shrink-0"
-                    style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
+                    style={{ animation: 'archeGlow 2s ease-in-out infinite' }}
                 >H</div>
                 <div>
                     <h1
@@ -136,9 +136,9 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                         style={{
                             backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
                             backgroundSize: '200% 100%',
-                            animation: 'haemaColorShift 3s linear infinite',
+                            animation: 'archeColorShift 3s linear infinite',
                         }}
-                    >HAEMA ARCHI</h1>
+                    >ARCHE ARCHI</h1>
                     <p className="text-[10px] text-slate-500 -mt-0.5">AI 건축기획설계 · Phase 1-C</p>
                 </div>
             </div>

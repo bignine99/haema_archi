@@ -176,7 +176,7 @@ export default function MapPanel() {
         : 'w-[280px] h-[200px]';
 
     return (
-        <div className={`absolute bottom-14 left-4 ${panelSize} rounded-xl overflow-hidden border border-slate-300 shadow-2xl z-30 transition-all duration-300`}
+        <div className={`absolute bottom-14 left-4 ${panelSize} rounded-lg overflow-hidden border border-slate-300 shadow-2xl z-30 transition-all duration-300`}
             style={{ background: '#f1f5f9' }}
         >
             {/* 헤더 */}
@@ -214,7 +214,7 @@ export default function MapPanel() {
             {address && (
                 <div className="absolute bottom-1 left-1 right-1 z-30">
                     <div className="bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1.5 shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
                         <span className="text-[8px] text-slate-700 truncate">{address}</span>
                     </div>
                 </div>

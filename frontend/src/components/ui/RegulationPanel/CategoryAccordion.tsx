@@ -12,7 +12,7 @@ export function CategoryAccordion({ category }: { category: RegulationCategory }
     const naLaws = category.laws.filter(l => l.risk === 'na');
 
     return (
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="rounded-lg border border-slate-200 overflow-hidden">
             <button
                 onClick={() => setOpen(!open)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 bg-white hover:bg-slate-50 transition-colors text-left"

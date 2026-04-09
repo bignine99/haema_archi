@@ -1,217 +1,338 @@
 import React from 'react';
-import { Zap, Plug, Lightbulb, Wifi, ShieldAlert, Cpu, BellRing, BatteryCharging } from 'lucide-react';
+import { Zap, Activity, Radio, Shield, Cpu, Lightbulb, CheckCircle2, BatteryCharging, Network } from 'lucide-react';
+import { useProjectStore } from '@/store/projectStore';
+
+/* ═══════════════════════════════════════════════════════════════
+   C-4  전기·통신 엔지니어링 분석 모듈
+   SKILL: H1 PowerGrid · H2 SmartLight · H3 NetworkHub · H4 SafetyAlarm · H5 BEMS-Core
+   Layout: 12-Column Cyber-Dashboard · Amber/Indigo/Purple CI
+   ═══════════════════════════════════════════════════════════════ */
 
 const ElectricalEngineeringPanel = () => {
+    const store = useProjectStore();
+    const isSpecialUse = store.buildingUse === '의료시설' || store.buildingUse === '교육연구시설';
+    
     return (
-        <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
+        <div className="h-full flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative pb-28">
             
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6 shrink-0 z-10">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                        <Zap className="text-slate-600" fill="currentColor" size={24} />
-                        건축 전기/통신 시스템 분석서
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1 font-medium">
-                        안정성(UPS), 조명 피로도 저감 및 통합 보안 통신망 인프라 구축 명세서
-                    </p>
-                </div>
-            </div>
-
-            {/* Grid Content */}
-            <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
-                
-                {/* ════════ 1. 수변전/비상전원 시스템 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
-                    {/* Left: Power Distribution */}
-                    <div className="w-full md:w-7/12 p-6 border-r border-slate-100 flex flex-col justify-center">
-                        <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">POWER & DISTRIBUTION STRATEGY</div>
-                        <h3 className="text-xl font-extrabold text-slate-800 mb-3">고효율 몰드 변압기 및 무정전/이중화 회선 구성</h3>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-5 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            안정적 전력 공급을 위해 <span className="font-bold text-slate-800">22.9kV 고압 수전</span> 방식으로 인입하며, 의료·재활 장비 전원 품질 유지를 위해 
-                            난연성이 우수한 <span className="font-bold text-amber-600">고효율 몰드 변압기 (알루미늄 3상)</span>를 적용합니다. 소방 및 특수재활 부하는 상시/비상 회선을 분리합니다.
-                        </p>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="border-l-4 border-amber-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 flex flex-col justify-between">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-1.5"><Plug size={14} className="text-amber-500"/><span className="text-[10px] text-slate-500 font-bold">변압기 예상 용량</span></div>
-                                    <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">여유율 20%</span>
-                                </div>
-                                <div>
-                                    <div className="text-lg font-black text-slate-800">1,250<span className="text-[10px] font-normal ml-1 text-slate-500">kVA</span></div>
-                                    <div className="text-[9px] text-amber-600 font-medium">조명/동력(800) + 비상/특수(450)</div>
-                                </div>
-                            </div>
-                            <div className="border-l-4 border-orange-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 flex flex-col justify-between">
-                                <div className="flex items-center gap-1.5 mb-1.5"><BatteryCharging size={14} className="text-orange-500"/><span className="text-[10px] text-slate-500 font-bold">주요 전동기 기동 방식</span></div>
-                                <div>
-                                    <div className="text-sm font-black text-slate-800">인버터 (VVVF) 100%</div>
-                                    <div className="text-[9px] text-slate-500 font-medium mt-1">EHP 공조 및 펌프류 부하 모터 연동</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right: UPS & Generator Backup */}
-                    <div className="w-full md:w-5/12 p-5 flex flex-col relative overflow-hidden bg-gradient-to-b from-amber-50/50 to-white">
-                        <div className="absolute top-[-10%] right-[-5%] opacity-5 text-amber-600"><Zap fill="currentColor" size={150} /></div>
-                        <div className="flex items-center gap-1.5 mb-4 relative z-10">
-                            <BatteryCharging size={16} className="text-amber-500" />
-                            <span className="text-[12px] font-bold text-slate-800">응급 의료·재활 장비 전용 무정전전원장치(UPS)</span>
-                        </div>
-                        <div className="flex-1 flex flex-col justify-center gap-4 relative z-10">
-                            <div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-[10px] font-bold text-slate-700">UPS 백업 배터리 가용 시간</span>
-                                    <span className="text-[10px] text-amber-600 font-bold">목표: 30분 초과 (발전기 가동 대기)</span>
-                                </div>
-                                <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex relative shadow-inner border border-slate-200">
-                                    <div className="bg-gradient-to-r from-amber-400 to-amber-500 h-full flex items-center justify-end pr-3" style={{width: '100%'}}>
-                                        <span className="text-[9px] font-bold text-white shadow-sm">PASS</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-3 rounded shadow-sm border border-amber-100">
-                                <div className="text-[10px] font-bold text-slate-500 mb-1.5 flex justify-between">
-                                    <span>비상발전기(디젤) 부하 분배</span>
-                                    <span className="text-orange-600">정전 후 40초 내 투입</span>
-                                </div>
-                                <div className="flex flex-col gap-1.5 text-[9px]">
-                                    <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded"><span className="text-slate-600 font-bold">소방(스프링클러/제연팬)</span> <span className="text-slate-800">1순위 투입</span></div>
-                                    <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded"><span className="text-slate-600 font-bold">재활 치료기기(생명유지)</span> <span className="text-slate-800">1순위 투입</span></div>
-                                    <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded"><span className="text-slate-600 font-bold">일반 비상조명 및 대피로</span> <span className="text-slate-800">2순위 투입</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ════════ 2. 시각 보호 조명 & 3. 통신/보안 (Col 1-12 / 2단 분할) ════════ */}
-                <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    
-                    {/* Lighting & Dimming Control */}
-                    <div className="bg-white rounded-xl border border-yellow-200/60 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-yellow-50 bg-gradient-to-r from-yellow-50 to-white flex items-center gap-1.5">
-                            <Lightbulb size={16} className="text-yellow-500"/>
-                            <span className="text-[12px] font-bold text-yellow-800">스마트 조명 퀄리티 및 디밍 제어</span>
-                        </div>
-                        <div className="p-5 flex-1 flex flex-col gap-4">
-                            <div className="flex bg-slate-50 p-3 rounded-lg border border-slate-100 items-center justify-between">
-                                <div>
-                                    <div className="text-[9px] font-bold text-slate-500 mb-0.5">시각 장애 및 빛 민감성 학생 배려</div>
-                                    <div className="text-[13px] font-black text-slate-800">Flicker-Free LED + 간접 조명화</div>
-                                </div>
-                                <div className="text-[10px] text-right text-slate-500 max-w-[130px]">
-                                    경련/시각 스트레스 방지를 위한 직사 광원 노출 원천 차단
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mt-1">
-                                <div className="border border-slate-100 rounded-lg p-3 text-center shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
-                                    <div className="text-[9px] font-bold text-slate-400 mb-2">교실/치료실 (조도)</div>
-                                    <div className="text-xl font-bold text-slate-800 mb-0.5">500~750<span className="text-[11px] ml-1 text-slate-500 font-normal">lx</span></div>
-                                    <div className="text-[8px] bg-yellow-100 text-yellow-700 px-1 py-0.5 rounded inline-block mt-1">DALI 네크워크 디밍 제어</div>
-                                </div>
-                                <div className="border border-slate-100 rounded-lg p-3 text-center shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
-                                    <div className="text-[9px] font-bold text-slate-400 mb-2">전력 밀도 (LPD 기준)</div>
-                                    <div className="text-xl font-bold text-slate-800 mb-0.5">10.5<span className="text-[11px] ml-1 text-slate-500 font-normal">W/m²</span></div>
-                                    <div className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded inline-block mt-1">11.0 이하 에너지 고효율 기준 만족</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Telecom, Network & Security */}
-                    <div className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-indigo-50 bg-gradient-to-r from-indigo-50 to-white flex items-center gap-1.5">
-                            <Wifi size={16} className="text-indigo-600"/>
-                            <span className="text-[12px] font-bold text-indigo-800">통합 통신/방범 및 생활 안전 통신망</span>
-                        </div>
-                        <div className="p-5 flex flex-col gap-3 flex-1 justify-center">
-                            <div className="flex items-start gap-3 bg-indigo-50/40 p-2.5 rounded border border-indigo-100/50">
-                                <div className="bg-indigo-100 text-indigo-600 p-1.5 rounded-full shrink-0 mt-0.5"><BellRing size={13}/></div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-700">배리어프리(BF) 비상 호출 핫라인</div>
-                                    <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                                        장애인용 휠체어 화장실, 수중운동실 내부, 샤워실 곳곳에 방수형 비상 호출벨(양방향 음성) 설치 및 방재센터 다이렉트 푸시 연동.
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 bg-slate-50 p-2.5 rounded border border-slate-100">
-                                <div className="bg-slate-200 text-slate-600 p-1.5 rounded-full shrink-0 mt-0.5"><Wifi size={13}/></div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-700">사각지대 없는 무선망 및 스마트 CCTV</div>
-                                    <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                                        교사 내 10Gbps 광케이블(백본) 인프라 위, 휠체어 전복 및 전도 사고 감지를 위한 지능형 2MP CCTV 사각지대 없이 배치.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ════════ 4. 리스크 및 이슈 관리 ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
-                    <div className="flex items-center gap-1.5 mb-4">
-                        <ShieldAlert size={18} className="text-slate-700" />
-                        <h3 className="text-sm font-extrabold text-slate-800">전기/통신 및 생활안전 보안 리스크 (Risk Mitigation)</h3>
-                        <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded ml-2">치명적 요인 중점</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] text-slate-600">
-                            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
-                                <tr>
-                                    <th className="px-3 py-2 rounded-tl-lg w-1/3">리스크/이슈 항목</th>
-                                    <th className="px-3 py-2 w-20 text-center">영향도</th>
-                                    <th className="px-3 py-2 rounded-tr-lg">설계 대책 / 저감 방안</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">특수 재활기기 정전 시 인명 안전 위험</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                    <td className="px-3 py-2.5">치료실 중요 콘센트를 적색(비상)으로 분리 배선, UPS 및 비상발전기 최우선 1순위 계통 투입</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">강한 빛 깜빡임(Flicker)으로 인한 학생 발작 유발</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                    <td className="px-3 py-2.5">교실 및 공용구역 100% 플리커 프리 인증 LED 기구 사용 및 조도 균제도를 높이는 간접조명 루버 반영</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">전기 입상 샤프트(EPS) 면적 부족에 따른 유지보수 악화</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5">건축 동선 장애물 제거 과정에서 좁아진 EPS실의 대안으로 케이블 트레이 입면 입체설계 BIM 검토 수행</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* ═══════════════ ENGINEERING METRICS SEAL ═══════════════ */}
-            <div className="absolute bottom-6 left-6 right-6 bg-white rounded-lg p-3 shadow-lg border border-slate-200 flex items-center justify-between pointer-events-none z-50">
-                <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
-                    <div className="bg-yellow-500 text-white p-1.5 rounded-lg shadow-sm">
-                        <Cpu size={16} />
-                    </div>
+            {/* ════════════ STICKY HEADER ════════════ */}
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-6 py-4 shrink-0 shadow-sm">
+                <div className="max-w-[1600px] mx-auto flex justify-between items-center">
                     <div>
-                        <div className="text-[11px] font-black text-slate-800 leading-none mb-1">ELECTRICAL & DATA CORE</div>
-                        <div className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Configuration Verified</div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <Zap className="text-amber-500" size={22} fill="currentColor"/>
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                                인공지능 전기·통신 엔지니어링 모듈
+                            </h2>
+                            <span className="ml-2 text-[9px] font-black tracking-widest bg-amber-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <Activity size={10} /> V3.0 AI SIMULATED
+                            </span>
+                        </div>
+                        <p className="text-slate-500 text-[12px] font-medium">
+                            ARCHE ARCHI · Phase C · 수변전 설계, DALI 조명 제어 및 스마트 통신·보안망
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                        <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200">
+                            특수 전력망: {isSpecialUse ? '2회선 수전 (Dual Feed)' : '일반 수전'}
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                            예측 전력피크: {store.grossFloorArea ? Math.round(store.grossFloorArea * 0.08) : 0} kW
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 flex justify-evenly text-[10px] font-medium px-2 text-center">
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">수전 전압</span><span className="text-slate-500 text-[9px]">22.9kV 특고압 인입</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">비상 전원</span><span className="text-slate-500 text-[9px]">디젤 발전기 + UPS</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">조도 제어</span><span className="text-slate-500 text-[9px]">디밍 제어(간접광)</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">생활 안전망</span><span className="text-slate-500 text-[9px]">지능형 감지/호출벨</span></div>
+            </div>
+
+            {/* ════════════ MAIN GRID ════════════ */}
+            <div className="flex-1 px-6 py-5">
+                <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-5">
+
+                    {/* ═══════ SKILL ROADMAP SIDEBAR (Col 1-3) ═══════ */}
+                    <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -z-10"></div>
+                            <div className="text-[10px] font-black tracking-widest text-amber-600 mb-3">H-SERIES SKILL MODULES</div>
+                            {[
+                                { id: 'H1', name: 'PowerGrid', desc: '고압 수변전 (22.9kV) 및 발전', icon: <Zap size={14}/>, status: 'Active' },
+                                { id: 'H2', name: 'SmartLight', desc: 'DALI 생체리듬 디밍(Dimming)', icon: <Lightbulb size={14}/>, status: isSpecialUse ? 'Special Mode' : 'Active' },
+                                { id: 'H3', name: 'NetworkHub', desc: '10Gbps 백본 및 UPS 최적화', icon: <Network size={14}/>, status: 'Active' },
+                                { id: 'H4', name: 'SafetyAlarm', desc: '재난 통신 및 방수 비상콜망', icon: <Radio size={14}/>, status: 'Active' },
+                                { id: 'H5', name: 'BEMS-Core', desc: 'BACnet 수요반응(DR) 전력제어', icon: <Cpu size={14}/>, status: 'Active' },
+                            ].map((mod, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-50 last:border-b-0">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+                                        {mod.icon}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[11px] font-black text-slate-800">{mod.id}</span>
+                                            <span className="text-[10px] text-slate-600 font-bold truncate">{mod.name}</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 truncate">{mod.desc}</div>
+                                    </div>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border ${mod.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-indigo-50 text-indigo-600 border-indigo-200'}`}>
+                                        {mod.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* UPS & Generator Widget */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm border-t-4 border-t-indigo-500">
+                            <div className="flex justify-between items-center mb-3">
+                                <div className="flex items-center gap-2">
+                                    <BatteryCharging size={14} className="text-indigo-500"/>
+                                    <span className="text-[11px] font-extrabold text-slate-800">무정전 (UPS) 백업</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-white bg-indigo-500 px-1.5 py-0.5 rounded">100% Load 기준</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="w-12 h-12 relative flex items-center justify-center">
+                                    <svg viewBox="0 0 36 36" className="w-full h-full">
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="80, 100" className="animate-[spin_3s_ease-in-out]" />
+                                    </svg>
+                                    <span className="absolute text-[9px] font-black text-indigo-600">30m</span>
+                                </div>
+                                <p className="text-[9px] text-slate-500 flex-1">주요 EPS(데이터망/소방기기 등) 안정 작동 보장. <strong className="text-indigo-600">비상발전기(디젤 72시간)</strong> 예비 확보.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ═══════ MAIN CONTENT AREA (Col 4-12) ═══════ */}
+                    <div className="col-span-12 lg:col-span-9 flex flex-col gap-5">
+
+                        {/* ─── SECTION 1: H1 수변전 단선결선도 (Single Line Diagram) ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative border-l-4 border-l-amber-500">
+                            <div className="p-4 border-b border-slate-100 flex items-center justify-between z-10 bg-white">
+                                <div className="flex items-center gap-1.5">
+                                    <Zap size={16} className="text-amber-500" />
+                                    <span className="text-[12px] font-extrabold text-slate-800">H1 · 수변전 (PowerGrid) 22.9kV 수전망 SLD 미니맵</span>
+                                </div>
+                                {isSpecialUse && <span className="text-[9px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-100 animate-pulse">2회선 수전(Dual Feed) 필수 적용</span>}
+                            </div>
+                            <div className="flex flex-col lg:flex-row gap-5 p-5 bg-gradient-to-br from-slate-50 to-white">
+                                <div className="flex-1 flex justify-center items-center bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                                    <SingleLineDiagramSVG isSpecialUse={isSpecialUse}/>
+                                </div>
+                                <div className="w-full lg:w-1/3 flex flex-col justify-center gap-3">
+                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                        <div className="text-[10px] font-bold text-amber-700 mb-1">TR (유입/몰드 변압기) 사용률</div>
+                                        <div className="text-2xl font-black text-amber-600 mb-1">68.5<span className="text-xs text-amber-400 ml-0.5">%</span></div>
+                                        <div className="w-full h-1.5 bg-amber-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-amber-500 rounded-full" style={{width: '68.5%'}}></div>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-600 p-2 leading-relaxed">
+                                        산출된 용량 합계에서 <strong className="text-slate-800">안전 여유율(Safety Factor) 20%</strong> 할당 반영.<br/>소방 팬 및 피난 유도등은 <strong className="text-indigo-600">FR-CV/HFIX(내화)</strong> 연동. UTP Cat.6A와 이격거리 확보 완료.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 2: H2 SmartLight & H5 BEMS ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            
+                            {/* H5 BEMS Area Chart */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <Cpu size={16} className="text-indigo-500" />
+                                        <span className="text-[12px] font-extrabold text-slate-800">H5 · BEMS 전력 수요 반응 (DR)</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 flex flex-col items-center">
+                                    <BemsDemandChartSVG />
+                                    <div className="mt-3 text-[10px] text-slate-500 font-medium bg-slate-50 p-2 rounded-lg w-full text-center border border-slate-100">
+                                        14:00~16:00 <strong className="text-red-500">Peak Demand Limit</strong> 도달 임박 시<br/>공조기 인버터 자동 하향 BACnet 프로토콜 송출 시연.
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* H2 SmartLight DALI Gradient */}
+                            <div className={`bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden ${isSpecialUse ? 'border-indigo-400 ring-2 ring-indigo-100 scale-[1.02] transform transition-transform' : 'border-slate-200'}`}>
+                                <div className="p-4 border-b border-slate-100 flex items-center gap-1.5 bg-white">
+                                    <Lightbulb size={16} className="text-indigo-500" />
+                                    <span className="text-[12px] font-extrabold text-slate-800">H2 · SmartLight 생체리듬 & 눈부심 방지 (DALI)</span>
+                                </div>
+                                <div className="p-5 flex flex-col gap-4">
+                                    {isSpecialUse ? (
+                                        <div className="bg-indigo-50 border border-indigo-100 p-2 text-[10px] text-indigo-700 font-bold rounded flex items-center gap-1.5 mb-2">
+                                            <CheckCircle2 size={12}/> Flicker-Free 조명 및 특수 디밍 필수 구간 감지.
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-50 border border-slate-100 p-2 text-[10px] text-slate-600 font-medium rounded mb-2">
+                                            일반 오피스 환경 LPD(조명 밀도) 11W/㎡ 준수.
+                                        </div>
+                                    )}
+                                    
+                                    <div>
+                                        <div className="flex justify-between text-[9px] font-bold text-slate-400 mb-1">
+                                            <span>아침 (집중 6000K)</span>
+                                            <span>점심 (휴식 3000K)</span>
+                                            <span>저녁 (따뜻한 2700K)</span>
+                                        </div>
+                                        <div className="h-4 w-full rounded-full bg-gradient-to-r from-blue-300 via-amber-200 to-orange-400 mb-1 shadow-inner border border-slate-200/50"></div>
+                                        <p className="text-[10px] text-slate-500 text-center font-bold">DALI(Digital Addressable Lighting) 자동 색온도 변환</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 3: 리스크 보드 (H4 SafetyAlarm) ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-4">
+                                <Shield size={16} className="text-slate-800" />
+                                <h3 className="text-sm font-extrabold text-slate-800">전기·통신 특화 리스크 식별 / 보안 연동 조치사항</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[11px] text-slate-600">
+                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                                        <tr>
+                                            <th className="px-3 py-2 rounded-tl-lg w-1/3">리스크 경고 안내</th>
+                                            <th className="px-3 py-2 w-20 text-center">조치</th>
+                                            <th className="px-3 py-2 rounded-tr-lg">설계 스마트 솔루션 내역</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">발전기실 배기 소음 민원 가능성</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">건축 간섭</span></td>
+                                            <td className="px-3 py-2.5">지하/옥상 방음 갤러리 도어 및 머플러(소음기) 추가 반영 요청 (Acoustic 모듈 송신).</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">수중운동실 100% 방수형 콘센트 누락 우려</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">안전 법규</span></td>
+                                            <td className="px-3 py-2.5">IP68 등급 방수 콘센트 일괄 지정 및 비상호출벨 무선 연동 라인 이중화(H4 SafetyAlarm).</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">심적 불안 유도형 조명 설계 (눈부심/플리커)</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">해결 마킹</span></td>
+                                            <td className="px-3 py-2.5">직접 조명 최소화 (루버 채용) 및 생체리듬 친화형 간접 조명(Flicker-Free 인증)으로 승급.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
+
+            {/* ════════════ ENGINEERING METRICS SEAL (Sticky Bottom) ════════════ */}
+            <div className="sticky bottom-0 z-30 mx-6">
+                <div className="max-w-[1600px] mx-auto bg-gradient-to-r from-amber-600/90 to-indigo-900/95 backdrop-blur-md rounded-xl p-3.5 shadow-xl border border-indigo-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 pr-4 border-r border-indigo-700/50">
+                        <div className="bg-white/10 text-amber-300 p-1.5 rounded-lg shadow-sm">
+                            <Zap size={16} fill="currentColor"/>
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-black text-white leading-none mb-0.5">ELEC & TEL ENGINE</div>
+                            <div className="text-[8px] text-amber-300 uppercase font-bold tracking-widest">Power Control · V3.0</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
+                        {[
+                            { label: 'TR 변압기 적재율', value: '안전 보장 (68.5%)' },
+                            { label: 'BEMS 피크 컷', value: 'Inverter-Down Ready' },
+                            { label: '네트워크 백본', value: '10Gbps 광케이블' },
+                            { label: '조명 인증 레벨', value: 'DALI Flicker-Free' }
+                        ].map((stat, i) => (
+                            <div key={i} className="flex flex-col">
+                                <span className="text-indigo-200/80 text-[8px] uppercase tracking-wider mb-0.5 font-bold">{stat.label}</span>
+                                <span className="text-white font-bold tracking-wide">{stat.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="pl-4 border-l border-indigo-700/50 flex items-center gap-2">
+                        <div className="text-right">
+                            <div className="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Matrix Link</div>
+                            <div className="text-[11px] text-amber-400 font-black tracking-tight">FULLY ENERGIZED</div>
+                        </div>
+                        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ring-4 ring-amber-400/20"></div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 };
 
 export default ElectricalEngineeringPanel;
+
+// ======================= SVG Components =======================
+
+const SingleLineDiagramSVG = ({isSpecialUse}: {isSpecialUse?: boolean}) => (
+    <svg viewBox="0 0 200 100" className="w-[100%] h-auto max-w-[250px] drop-shadow-sm">
+        <text x="0" y="10" fontSize="7" fill="#64748b" fontWeight="bold">22.9kV 수전</text>
+        {isSpecialUse && <text x="35" y="10" fontSize="7" fill="#ef4444" fontWeight="bold">(Dual Feed 2회선)</text>}
+        
+        {/* Main Feed Line */}
+        <polyline points="20,15 20,40" fill="none" stroke="#f59e0b" strokeWidth="2"/>
+        {isSpecialUse && <polyline points="30,15 30,40" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="2 2"/>}
+        
+        {/* VCB & TR */}
+        <rect x="15" y="40" width="20" height="15" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5" rx="1"/>
+        <text x="17" y="50" fontSize="6" fill="#d97706" fontWeight="bold">VCB</text>
+        
+        <polyline points="25,55 25,65" fill="none" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="25" cy="70" r="5" fill="none" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="25" cy="75" r="5" fill="none" stroke="#f59e0b" strokeWidth="1.5"/>
+        <text x="33" y="75" fontSize="6" fill="#64748b" fontWeight="bold">TR 1</text>
+        
+        {/* Generator Branch */}
+        <polyline points="25,25 90,25 90,40" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3"/>
+        <circle cx="90" cy="45" r="6" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1.5"/>
+        <text x="87" y="47" fontSize="6" fill="#64748b" fontWeight="bold">G</text>
+        <text x="100" y="47" fontSize="6" fill="#64748b" fontStyle="italic">비상 자가발전기(ATS)</text>
+
+        {/* LV Distribution */}
+        <polyline points="25,80 25,90 120,90" fill="none" stroke="#6366f1" strokeWidth="2"/>
+        <polyline points="90,51 90,90" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="3 3"/>
+        
+        <rect x="130" y="85" width="25" height="10" fill="#e0e7ff" stroke="#6366f1" rx="1"/>
+        <text x="133" y="93" fontSize="6" fill="#4f46e5" fontWeight="bold">LV BUS</text>
+    </svg>
+);
+
+const BemsDemandChartSVG = () => (
+    <div className="w-full h-full min-h-[140px] flex items-end pt-5 relative">
+        <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+            {/* Grid */}
+            <g stroke="#f1f5f9" strokeWidth="1">
+                {[20, 50, 80, 110].map(y => <line key={y} x1="0" y1={y} x2="300" y2={y} />)}
+            </g>
+            {/* Demand Limit Line */}
+            <line x1="0" y1="30" x2="300" y2="30" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4 2" />
+            <rect x="235" y="22" width="65" height="14" rx="2" fill="#ef4444" />
+            <text x="240" y="32" fontSize="8" fill="#fff" fontWeight="bold">Demand Limit</text>
+            
+            {/* Limit Warning Area (Peak Cut) */}
+            <rect x="150" y="30" width="30" height="25" fill="#ef4444" fillOpacity="0.1" />
+
+            {/* Area Chart Gradient */}
+            <defs>
+                <linearGradient id="purpleArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4"/>
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0"/>
+                </linearGradient>
+            </defs>
+            
+            {/* Data Curve */}
+            <path d="M 0 110 L 30 100 C 60 90, 80 50, 100 60 C 120 70, 140 20, 165 35 C 190 50, 210 60, 240 70 L 300 90" fill="none" stroke="#6366f1" strokeWidth="2.5" />
+            <path d="M 0 110 L 30 100 C 60 90, 80 50, 100 60 C 120 70, 140 20, 165 35 C 190 50, 210 60, 240 70 L 300 90 L 300 120 L 0 120 Z" fill="url(#purpleArea)" />
+            
+            {/* Data Points */}
+            <circle cx="155" cy="27" r="4" fill="#fff" stroke="#ef4444" strokeWidth="2" className="animate-pulse" />
+            <text x="140" y="15" fontSize="8" fill="#ef4444" fontWeight="bold">Inverter-Down</text>
+
+            <circle cx="80" cy="50" r="3" fill="#fff" stroke="#6366f1" strokeWidth="2" />
+
+            {/* X-axis */}
+            <text x="10" y="130" fontSize="8" fill="#64748b">00:00</text>
+            <text x="75" y="130" fontSize="8" fill="#64748b">08:00 (Start)</text>
+            <text x="145" y="130" fontSize="8" fill="#ef4444" fontWeight="bold">15:00 (Peak)</text>
+            <text x="280" y="130" fontSize="8" fill="#64748b">24:00</text>
+        </svg>
+    </div>
+);

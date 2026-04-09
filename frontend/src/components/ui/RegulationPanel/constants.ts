@@ -4,7 +4,7 @@ import { Building, Car, Shield, Heart, Leaf, Zap, ClipboardList } from 'lucide-r
 export const RISK_CONFIG = {
     required: { label: '필수', color: 'bg-red-100 text-red-700 border-red-200', dot: '🔴' },
     review: { label: '검토', color: 'bg-amber-100 text-amber-700 border-amber-200', dot: '🟡' },
-    info: { label: '참고', color: 'bg-blue-100 text-blue-700 border-blue-200', dot: '🔵' },
+    info: { label: '참고', color: 'bg-orange-100 text-orange-700 border-orange-200', dot: '🔵' },
     na: { label: '해당없음', color: 'bg-slate-100 text-slate-500 border-slate-200', dot: '⚪' },
 };
 

@@ -127,8 +127,8 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
             {/* ─── 로고 ─── */}
             <div className="flex items-center gap-3 mb-2">
                 <div
-                    className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center font-bold text-white text-sm shrink-0"
-                    style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
+                    className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center font-bold text-white text-sm shrink-0"
+                    style={{ animation: 'archeGlow 2s ease-in-out infinite' }}
                 >H</div>
                 <div>
                     <h1
@@ -136,9 +136,9 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                         style={{
                             backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
                             backgroundSize: '200% 100%',
-                            animation: 'haemaColorShift 3s linear infinite',
+                            animation: 'archeColorShift 3s linear infinite',
                         }}
-                    >HAEMA ARCHI</h1>
+                    >ARCHE ARCHI</h1>
                     <p className="text-[10px] text-slate-500 -mt-0.5">AI 건축기획설계 · Phase 1-C</p>
                 </div>
             </div>
@@ -161,14 +161,14 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                                className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 transition-all"
                                 placeholder="주소 입력 (예: 강남구 역삼동 123-45)"
                             />
                         </div>
                         <button
                             onClick={executeSearch}
                             disabled={isSearching || !searchQuery.trim()}
-                            className="px-4 py-2.5 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0 shadow-lg shadow-blue-500/20"
+                            className="px-4 py-2.5 rounded-lg font-semibold text-xs text-white bg-gradient-to-r from-blue-500 to-amber-500 hover:from-blue-600 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0 shadow-lg shadow-blue-500/20"
                         >
                             {isSearching ? (
                                 <Loader2 size={14} className="animate-spin" />
@@ -183,15 +183,15 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                     <AnimatePresence>
                         {showDropdown && kakaoResults.length > 0 && (
                             <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                                className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xl max-h-[280px] overflow-y-auto"
+                                className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-2xl max-h-[280px] overflow-y-auto"
                                 style={{ zIndex: 9999 }}
                             >
                                 <div className="px-3 py-1.5 border-b border-slate-100">
-                                    <span className="text-[9px] text-blue-600 font-semibold">카카오 검색 결과 ({kakaoResults.length}건) — 클릭하여 선택</span>
+                                    <span className="text-[9px] text-orange-600 font-semibold">카카오 검색 결과 ({kakaoResults.length}건) — 클릭하여 선택</span>
                                 </div>
                                 {kakaoResults.map((r, i) => (
                                     <button key={i} onClick={() => handleSelectKakaoResult(r)}
-                                        className="w-full text-left px-3 py-2.5 text-xs hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                                        className="w-full text-left px-3 py-2.5 text-xs hover:bg-orange-50 transition-colors border-b border-slate-100 last:border-0"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Globe size={10} className="text-green-600 shrink-0" />
@@ -199,7 +199,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                                         </div>
                                         <div className="flex items-center gap-2 mt-1 ml-4">
                                             {r.address && <span className="text-[9px] text-slate-500">법정동: {r.address.b_code}</span>}
-                                            {r.road_address && <span className="text-[9px] text-cyan-500">{r.road_address.address_name}</span>}
+                                            {r.road_address && <span className="text-[9px] text-amber-500">{r.road_address.address_name}</span>}
                                         </div>
                                     </button>
                                 ))}
@@ -220,9 +220,9 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
 
                 {/* 로딩 상태 */}
                 {store.isLoading && (
-                    <div className="mb-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                        <Loader2 size={12} className="text-blue-500 animate-spin" />
-                        <span className="text-[10px] text-blue-600">Vworld에서 필지 폴리곤 조회 중...</span>
+                    <div className="mb-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-2">
+                        <Loader2 size={12} className="text-orange-500 animate-spin" />
+                        <span className="text-[10px] text-orange-600">Vworld에서 필지 폴리곤 조회 중...</span>
                     </div>
                 )}
             </div>
@@ -240,17 +240,17 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                         className="glass-panel p-4 overflow-hidden max-w-full"
                     >
                         <div className="flex items-center gap-2 mb-3">
-                            <FileText size={14} className="text-emerald-600" />
+                            <FileText size={14} className="text-orange-600" />
                             <span className="text-xs font-semibold text-slate-700">과업지시서 반영 현황</span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 ml-auto">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 ml-auto">
                                 {store.documentInfo.fileName}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-1.5 text-[11px] overflow-hidden">
                             {store.documentInfo.rawData.projectName && (
-                                <div className="bg-emerald-50 rounded-lg px-3 py-2 col-span-2 overflow-hidden">
-                                    <span className="text-emerald-600 text-[10px]">사업명</span>
+                                <div className="bg-orange-50 rounded-lg px-3 py-2 col-span-2 overflow-hidden">
+                                    <span className="text-orange-600 text-[10px]">사업명</span>
                                     <p className="text-slate-800 font-semibold text-xs truncate">{store.documentInfo.rawData.projectName}</p>
                                 </div>
                             )}
@@ -263,7 +263,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                             {store.documentInfo.rawData.zoneType && (
                                 <div className="bg-slate-50 rounded-lg px-3 py-2 overflow-hidden">
                                     <span className="text-slate-500 text-[10px]">용도지역</span>
-                                    <p className="text-blue-600 font-semibold truncate">{store.documentInfo.rawData.zoneType}</p>
+                                    <p className="text-orange-600 font-semibold truncate">{store.documentInfo.rawData.zoneType}</p>
                                 </div>
                             )}
                             {store.documentInfo.rawData.buildingUse && (
@@ -285,15 +285,15 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                                 </div>
                             )}
                             {store.documentInfo.rawData.buildingCoverageLimit && (
-                                <div className="bg-blue-50 rounded-lg px-3 py-2 overflow-hidden">
-                                    <span className="text-blue-500 text-[10px]">건폐율</span>
-                                    <p className="text-blue-700 font-bold truncate">{store.documentInfo.rawData.buildingCoverageLimit}%</p>
+                                <div className="bg-orange-50 rounded-lg px-3 py-2 overflow-hidden">
+                                    <span className="text-orange-500 text-[10px]">건폐율</span>
+                                    <p className="text-orange-700 font-bold truncate">{store.documentInfo.rawData.buildingCoverageLimit}%</p>
                                 </div>
                             )}
                             {store.documentInfo.rawData.floorAreaRatioLimit && (
-                                <div className="bg-cyan-50 rounded-lg px-3 py-2 overflow-hidden">
-                                    <span className="text-cyan-600 text-[10px]">용적률</span>
-                                    <p className="text-cyan-700 font-bold truncate">{store.documentInfo.rawData.floorAreaRatioLimit}%</p>
+                                <div className="bg-amber-50 rounded-lg px-3 py-2 overflow-hidden">
+                                    <span className="text-amber-600 text-[10px]">용적률</span>
+                                    <p className="text-amber-700 font-bold truncate">{store.documentInfo.rawData.floorAreaRatioLimit}%</p>
                                 </div>
                             )}
                         </div>
@@ -317,13 +317,13 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
 
                         {/* 총사업비 */}
                         {store.constructionCost && (
-                            <div className="mt-2 bg-violet-50 rounded-lg px-3 py-2 overflow-hidden">
-                                <span className="text-violet-600 text-[10px]">총사업비</span>
-                                <p className="text-violet-800 font-bold text-xs truncate">{store.constructionCost}</p>
+                            <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2 overflow-hidden">
+                                <span className="text-amber-600 text-[10px]">총사업비</span>
+                                <p className="text-amber-800 font-bold text-xs truncate">{store.constructionCost}</p>
                             </div>
                         )}
 
-                        <p className="text-[9px] text-emerald-600 mt-2">✓ 위 정보가 대시보드·법규분석 등 각 페이지에 기본값으로 반영되었습니다.</p>
+                        <p className="text-[9px] text-orange-600 mt-2">✓ 위 정보가 대시보드·법규분석 등 각 페이지에 기본값으로 반영되었습니다.</p>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -331,7 +331,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
             {/* ─── 대지 정보 카드 ─── */}
             <div className="glass-panel p-4">
                 <div className="flex items-center gap-2 mb-3">
-                    <MapPin size={14} className="text-blue-600" />
+                    <MapPin size={14} className="text-orange-600" />
                     <span className="text-xs font-semibold text-slate-700">대지 정보</span>
                     {store.isRealParcel ? (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 ml-auto flex items-center gap-1">
@@ -385,13 +385,13 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                                     const isActive = store.selectedParcelId === p.id;
                                     return (
                                         <button key={p.id} onClick={() => handleSelectParcel(p)}
-                                            className={`w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-center gap-3 ${isActive ? 'bg-blue-50 border border-blue-300 shadow-md shadow-blue-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100 hover:border-slate-200'}`}
+                                            className={`w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-center gap-3 ${isActive ? 'bg-orange-50 border border-orange-300 shadow-md shadow-blue-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100 hover:border-slate-200'}`}
                                         >
                                             <ParcelShape polygon={p.polygon} active={isActive} />
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-semibold text-slate-800 truncate">{p.address.split(' ').slice(1).join(' ')}</div>
                                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-cyan-50 text-cyan-700'}`}>{p.landArea}㎡</span>
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-orange-100 text-orange-700' : 'bg-amber-50 text-amber-700'}`}>{p.landArea}㎡</span>
                                                     <span className="text-[9px] text-slate-500">{p.shapeLabel}</span>
                                                 </div>
                                             </div>
@@ -407,22 +407,22 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
             {/* ─── 용도지역 ─── */}
             <div className="glass-panel p-4">
                 <div className="flex items-center gap-2 mb-3">
-                    <Building2 size={14} className="text-cyan-400" />
+                    <Building2 size={14} className="text-amber-400" />
                     <span className="text-xs font-semibold text-slate-300">용도지역 · 건축용도</span>
                 </div>
                 <label className="text-[10px] text-slate-500 mb-1 block">용도지역</label>
                 <select value={store.zoneType} onChange={(e) => store.setZoneType(e.target.value)}
-                    className="w-full bg-surface-900/50 border border-surface-700 rounded-lg px-3 py-2 text-xs text-slate-200 mb-3 focus:outline-none focus:border-blue-500/50">
+                    className="w-full bg-surface-900/50 border border-surface-700 rounded-lg px-3 py-2 text-xs text-slate-200 mb-3 focus:outline-none focus:border-orange-500/50">
                     {ZONE_TYPES.map(z => <option key={z} value={z}>{z}</option>)}
                 </select>
                 <label className="text-[10px] text-slate-500 mb-1 block">건축 용도</label>
                 <select value={store.buildingUse} onChange={(e) => store.setBuildingUse(e.target.value as BuildingUse)}
-                    className="w-full bg-surface-900/50 border border-surface-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500/50">
+                    className="w-full bg-surface-900/50 border border-surface-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-orange-500/50">
                     {BUILDING_USES.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
                 <div className="grid grid-cols-2 gap-2 mt-3 text-[11px]">
-                    <div className="stat-badge"><span className="text-slate-400 text-[10px]">건폐율 한도</span><p className="text-blue-300 font-bold text-base">{store.buildingCoverageLimit}%</p></div>
-                    <div className="stat-badge"><span className="text-slate-400 text-[10px]">용적률 한도</span><p className="text-cyan-300 font-bold text-base">{store.floorAreaRatioLimit}%</p></div>
+                    <div className="stat-badge"><span className="text-slate-400 text-[10px]">건폐율 한도</span><p className="text-orange-300 font-bold text-base">{store.buildingCoverageLimit}%</p></div>
+                    <div className="stat-badge"><span className="text-slate-400 text-[10px]">용적률 한도</span><p className="text-amber-300 font-bold text-base">{store.floorAreaRatioLimit}%</p></div>
                 </div>
             </div>
 
@@ -443,7 +443,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="text-[10px] text-slate-500">저층 (상가/특수)</label>
-                            <span className="text-[11px] text-blue-300 font-semibold">{store.commercialFloors}층</span>
+                            <span className="text-[11px] text-orange-300 font-semibold">{store.commercialFloors}층</span>
                         </div>
                         <input type="range" min="0" max="5" step="1" value={store.commercialFloors} onChange={(e) => store.setCommercialFloors(parseInt(e.target.value))} />
                     </div>
@@ -460,12 +460,12 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
             {/* ─── Max Envelope 컨트롤 (Phase 1-C) ─── */}
             <div className="glass-panel p-4">
                 <div className="flex items-center gap-2 mb-3">
-                    <Box size={14} className="text-blue-400" />
+                    <Box size={14} className="text-orange-400" />
                     <span className="text-xs font-semibold text-slate-700">법적 최대 볼륨</span>
                     <button
                         onClick={() => store.setShowMaxEnvelope(!store.showMaxEnvelope)}
                         className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${store.showMaxEnvelope
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
@@ -477,16 +477,16 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                 {store.maxEnvelope && (
                     <>
                         {/* 건축가능영역 면적 */}
-                        <div className="bg-blue-50 rounded-lg px-3 py-2 mb-2">
+                        <div className="bg-orange-50 rounded-lg px-3 py-2 mb-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-blue-600">건축가능영역 면적</span>
-                                <span className="text-xs text-blue-800 font-bold">
+                                <span className="text-[10px] text-orange-600">건축가능영역 면적</span>
+                                <span className="text-xs text-orange-800 font-bold">
                                     {store.maxEnvelope.buildablePolygonArea.toFixed(1)} ㎡
                                 </span>
                             </div>
                             <div className="flex justify-between items-center mt-0.5">
-                                <span className="text-[9px] text-blue-500">최대 높이</span>
-                                <span className="text-[11px] text-blue-700 font-semibold">
+                                <span className="text-[9px] text-orange-500">최대 높이</span>
+                                <span className="text-[11px] text-orange-700 font-semibold">
                                     {store.maxEnvelope.effectiveMaxHeight}m ({store.maxEnvelope.maxFloors}층)
                                 </span>
                             </div>
@@ -578,7 +578,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                 <button
                     onClick={() => store.generateMassing(store.selectedTypology)}
                     disabled={store.massingLoading}
-                    className="w-full py-2.5 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                    className="w-full py-2.5 rounded-lg font-semibold text-xs text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
                 >
                     {store.massingLoading ? (
                         <Loader2 size={14} className="animate-spin" />
@@ -668,7 +668,7 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="text-[10px] text-slate-500">시간 {store.showSunlight ? '' : '(태양 ON 필요)'}</label>
-                            <span className="text-[11px] text-blue-600 font-semibold">
+                            <span className="text-[11px] text-orange-600 font-semibold">
                                 {Math.floor(store.simulationHour).toString().padStart(2, '0')}:{(store.simulationHour % 1 * 60).toString().padStart(2, '0')}
                             </span>
                         </div>
@@ -687,9 +687,9 @@ export default function ControlPanel({ onNavigate }: ControlPanelProps) {
                     <div className="border-t border-slate-100 pt-3 mt-3">
                         <button
                             onClick={() => store.setShowShadowAnalysis(!store.showShadowAnalysis)}
-                            className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                            className={`w-full py-2.5 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
                                 store.showShadowAnalysis 
-                                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                ? 'bg-orange-100 text-orange-700 border border-orange-200'
                                 : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                             }`}
                         >

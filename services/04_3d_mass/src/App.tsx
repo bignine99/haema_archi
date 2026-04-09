@@ -389,11 +389,11 @@ class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { 
             >
                 <div className="px-6" style={{ paddingTop: '28px', paddingBottom: '28px' }}>
                     <style>{`
-                        @keyframes haemaColorShift {
+                        @keyframes archeColorShift {
                             0% { background-position: 0% 50%; }
                             100% { background-position: 200% 50%; }
                         }
-                        @keyframes haemaGlow {
+                        @keyframes archeGlow {
                             0%, 100% { box-shadow: 0 0 12px rgba(251,146,60,0.3); }
                             50% { box-shadow: 0 0 24px rgba(251,146,60,0.7), 0 0 48px rgba(251,146,60,0.3); }
                         }
@@ -401,16 +401,16 @@ class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { 
                     <h1 className="text-lg font-bold tracking-widest flex items-center gap-2">
                         <span
                             className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm shadow-lg shrink-0"
-                            style={{ animation: 'haemaGlow 2s ease-in-out infinite' }}
+                            style={{ animation: 'archeGlow 2s ease-in-out infinite' }}
                         >H</span>
                         <span
                             className="bg-clip-text text-transparent whitespace-nowrap"
                             style={{
                                 backgroundImage: 'linear-gradient(90deg, #facc15, #fb923c, #ea580c, #facc15, #fb923c, #ea580c)',
                                 backgroundSize: '200% 100%',
-                                animation: 'haemaColorShift 3s linear infinite',
+                                animation: 'archeColorShift 3s linear infinite',
                             }}
-                        >HAEMA ARCHI</span>
+                        >ARCHE ARCHI</span>
                     </h1>
                     <p className="mt-2 mb-2 text-[10px] text-slate-500 tracking-wider">AI ARCHITECTURE PLATFORM</p>
                 </div>

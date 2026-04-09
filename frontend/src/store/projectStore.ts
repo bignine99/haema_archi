@@ -23,13 +23,29 @@ export interface BarrierFreeChecklist {
     elevatorCapacity: string;      // 권장 엘리베이터 사양
 }
 
+// Z2 · RoomCode — 실별 구분 태그 4단계
+export type RoomTag = 'legal' | 'project' | 'recommended' | 'optional';
+export const ROOM_TAG_LABELS: Record<RoomTag, string> = {
+    legal: '법정필수',
+    project: '사업필수',
+    recommended: '권장',
+    optional: '선택',
+};
+export const ROOM_TAG_COLORS: Record<RoomTag, string> = {
+    legal: 'bg-red-100 text-red-700 border-red-200',
+    project: 'bg-blue-100 text-blue-700 border-blue-200',
+    recommended: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    optional: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
 export interface Room {
     id: string;
     name: string;
     netArea: number;       // 전용면적
     commonArea: number;    // 공용면적
     totalArea: number;     // 합계
-    isRequired: boolean;   // 법적 필수 여부
+    isRequired: boolean;   // 법적 필수 여부 (하위 호환)
+    roomTag?: RoomTag;     // Z2·RoomCode: 법정필수/사업필수/권장/선택
 }
 
 export interface Zone {
@@ -319,6 +335,7 @@ export interface ProjectState {
     floorHeight: number;
     commercialFloors: number;
     residentialFloors: number;
+    undergroundFloors: number;
     totalFloors: number;
 
     grossFloorArea: number;
@@ -373,6 +390,7 @@ export interface ProjectState {
     // AI 종합 분석 결과 상태 유지
     siteAnalysisResult: SiteAnalysisResult | null;
     regulationAnalysisResult: RegulationAnalysisResult | null;
+    spaceStrategyResult: any | null;
 
     // Phase B: 공간 프로그래밍
     barrierFreeChecklist: BarrierFreeChecklist;
@@ -426,6 +444,7 @@ export interface ProjectState {
     // AI 분석 액션
     setSiteAnalysisResult: (result: SiteAnalysisResult | null) => void;
     setRegulationAnalysisResult: (result: RegulationAnalysisResult | null) => void;
+    setSpaceStrategyResult: (result: any | null) => void;
 
     // 사용자 입력 API 키
     geminiApiKey: string;
@@ -461,6 +480,7 @@ export interface ProjectState {
     removeRoomFromFloor: (floorId: string, roomId: string) => void;
     moveRoomToFloor: (roomId: string, sourceFloorId: string, targetFloorId: string) => void;
     updateRoomArea: (floorId: string, zoneId: string, roomId: string, field: 'netArea' | 'commonArea', value: number) => void;
+    updateRoomTag: (floorId: string, zoneId: string, roomId: string, tag: RoomTag) => void;
     autoGenerateSpaceProgram: () => Promise<void>;
     rescaleSpaceProgram: () => boolean;
 }
@@ -544,6 +564,7 @@ export const useProjectStore = create<ProjectState>()(
     floorHeight: 3.3,
     commercialFloors: 2,
     residentialFloors: 8,
+    undergroundFloors: 1,
     totalFloors: 10,
 
     grossFloorArea: 0,
@@ -706,14 +727,16 @@ export const useProjectStore = create<ProjectState>()(
 
     siteAnalysisResult: null,
     regulationAnalysisResult: null,
+    spaceStrategyResult: null,
     setSiteAnalysisResult: (result) => set({ siteAnalysisResult: result }),
     setRegulationAnalysisResult: (result) => set({ regulationAnalysisResult: result }),
+    setSpaceStrategyResult: (result) => set({ spaceStrategyResult: result }),
 
     geminiApiKey: typeof window !== 'undefined' 
-        ? (localStorage.getItem('haema_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '') 
+        ? (localStorage.getItem('arche_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '') 
         : '',
     setGeminiApiKey: (key: string) => {
-        if (typeof window !== 'undefined') localStorage.setItem('haema_gemini_api_key', key);
+        if (typeof window !== 'undefined') localStorage.setItem('arche_gemini_api_key', key);
         set({ geminiApiKey: key });
     },
 
@@ -1008,6 +1031,24 @@ export const useProjectStore = create<ProjectState>()(
         });
     },
 
+    updateRoomTag: (floorId, zoneId, roomId, tag) => {
+        set(state => {
+            const newFloorZoning = state.floorZoning.map(floor => {
+                if (floor.id !== floorId) return floor;
+                const newZones = floor.zones.map(zone => {
+                    if (zone.id !== zoneId) return zone;
+                    const newRooms = zone.rooms.map(room => {
+                        if (room.id !== roomId) return room;
+                        return { ...room, roomTag: tag, isRequired: tag === 'legal' || tag === 'project' };
+                    });
+                    return { ...zone, rooms: newRooms };
+                });
+                return { ...floor, zones: newZones };
+            });
+            return { floorZoning: newFloorZoning };
+        });
+    },
+
     autoGenerateSpaceProgram: async () => {
         const state = get();
         const targetGFA = state.grossFloorArea > 0 ? state.grossFloorArea : (state.landArea * (state.floorAreaRatioLimit / 100));
@@ -1254,7 +1295,32 @@ export const useProjectStore = create<ProjectState>()(
     },
 
     updateFromDocument: (fileName: string, parsedData: ParsedProjectData) => {
-        const updates: Partial<ProjectState> = {};
+        const updates: Partial<ProjectState> = {
+            // Reset old manual or project-specific data to ensure pure extraction
+            projectName: '',
+            address: '',
+            landArea: 0,
+            grossFloorArea: 0,
+            commercialFloors: 0,
+            residentialFloors: 0,
+            totalFloors: 0,
+            undergroundFloors: 0,
+            constructionCost: '',
+            designScope: '',
+            certifications: [],
+            generalGuidelines: [],
+            designGuidelines: [],
+            deliverables: [],
+            keyNotes: [],
+            facilityList: [],
+            designDirection: [],
+            buildingCoverageLimit: 0,
+            floorAreaRatioLimit: 0,
+            maxHeight: 0,
+            zoneType: '-',
+            buildingUse: '' as BuildingUse,
+            manualGrossFloorArea: null,
+        };
 
         if (parsedData.projectName) updates.projectName = parsedData.projectName;
         if (parsedData.address) updates.address = parsedData.address;
@@ -1370,10 +1436,10 @@ export const useProjectStore = create<ProjectState>()(
     },
 }),
 {
-    name: 'haema-frontend-storage',
+    name: 'arche-frontend-storage',
     partialize: (state) => Object.fromEntries(
         Object.entries(state).filter(([key]) => ![
-            'siteAnalysisResult', 'regulationAnalysisResult', 'maxEnvelope', 
+            'maxEnvelope', 
             'realSurroundingBuildings', 'kakaoResults',
             'massingResult', 'allTypologyResults', 'massingLoading',
             'showShadowAnalysis', 'showSunlight', 'massingError'

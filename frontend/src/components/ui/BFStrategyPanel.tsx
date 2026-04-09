@@ -1,189 +1,300 @@
 import React from 'react';
-import { ShieldCheck, Users, Target, ArrowRightLeft, Move, BellRing, DoorOpen, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Users, Target, ArrowRightLeft, Move, BellRing, DoorOpen, ShieldAlert, BadgeCheck, Navigation, Sparkles } from 'lucide-react';
+import { useProjectStore } from '@/store/projectStore';
+
+/* ═══════════════════════════════════════════════════════════════
+   C-9 무장애(Barrier Free) 및 유니버설 설계 모듈
+   SKILL: M1 BarrierFree 3D · M2 Universal-Route · M3 BF-Score Matrix · M4 Auto-Doors/VT · M5 Sanitary-Care
+   Layout: 12-Column Cyber-Dashboard · Indigo/Teal/Rose Theme · V3.0 AI Simulated
+   ═══════════════════════════════════════════════════════════════ */
 
 const BFStrategyPanel = () => {
+    const store = useProjectStore();
+    const isEducation = store.buildingUse === '교육연구시설';
+    const isPublic = isEducation || store.buildingUse === '업무시설(오피스)';
+    
     return (
-        <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
+        <div className="h-full flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
             
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6 shrink-0 z-10">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                        <ShieldCheck className="text-indigo-600" size={24} />
-                        유니버설 디자인 및 BF(장애물없는생활환경) 최우수 인증
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1 font-medium">
-                        최우수 등급(90점 이상) 목표 의무화 및 특수학교 맞춤형 이동/인지/생활 무장애 생태계 구축
-                    </p>
-                </div>
-            </div>
-
-            {/* Grid Content */}
-            <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
-                
-                {/* ════════ 1. 이동 동선 및 단차 제로화 (Col 1-12) ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
-                    {/* Left: Ultra-Wide Corridor & 0mm Threshold */}
-                    <div className="w-full md:w-7/12 p-6 border-r border-slate-100 flex flex-col justify-center">
-                        <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">MOBILITY & THRESHOLD-FREE CONTROL</div>
-                        <h3 className="text-xl font-extrabold text-slate-800 mb-3">전동 휠체어 입체 교행 및 무단차(0mm) 환경</h3>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-5 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100/30">
-                            특수학교 학생 특성을 고려하여 법적 기준(복도폭 1.5m)을 대폭 상회하는 <span className="font-bold text-indigo-700">전 구간 폭 2.1m~3.0m 수퍼와이드 복도</span>를 확보합니다. 또한 공간 전이에 있어 <span className="font-bold text-rose-600">절대 단차 제로화(0mm)</span>를 선언하여 휠체어 전복 및 보행 걸림을 원천 봉쇄합니다.
-                        </p>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="border border-teal-100 bg-white shadow-sm p-3 rounded-xl flex flex-col">
-                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                                    <div className="bg-teal-50 p-1.5 rounded-lg text-teal-600"><ArrowRightLeft size={16} /></div>
-                                    <span className="text-[11px] font-bold text-slate-700">휠체어 교행 유효 폭</span>
-                                </div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-2xl font-black text-teal-600">2,100<span className="text-[10px] ml-0.5 text-slate-400 font-normal">mm</span></span>
-                                    <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">법정: 1,500</span>
-                                </div>
-                                <div className="text-[8px] text-slate-500 font-medium">전동휠체어 2대 교차 통과 및 도우미 동행 가능</div>
-                            </div>
-                            <div className="border border-rose-100 bg-white shadow-sm p-3 rounded-xl flex flex-col">
-                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                                    <div className="bg-rose-50 p-1.5 rounded-lg text-rose-600"><Move size={16} /></div>
-                                    <span className="text-[11px] font-bold text-slate-700">공간 전이 하부 단차</span>
-                                </div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-2xl font-black text-rose-600 tracking-tighter">ZERO<span className="text-[10px] ml-1 text-slate-400 font-normal">(0mm)</span></span>
-                                    <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">법정: 20mm 이하</span>
-                                </div>
-                                <div className="text-[8px] text-slate-500 font-medium">문틀/재료 분리대 등 걸림 유발 인자 삭제 구조</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right: VT & Turning Radius */}
-                    <div className="w-full md:w-5/12 p-6 flex flex-col relative overflow-hidden bg-slate-800 text-white">
-                        <div className="absolute top-4 right-4 opacity-10 text-white"><Users fill="currentColor" size={120} /></div>
-                        <div className="flex items-center gap-2 mb-3 relative z-10">
-                            <Users size={18} className="text-teal-400" />
-                            <h3 className="text-sm font-bold text-slate-100">특수 엘리베이터 및 BIM 회전 반경</h3>
-                        </div>
-                        <ul className="space-y-3 relative z-10 text-[10px] text-slate-300 mt-2 flex-1">
-                            <li className="flex items-start gap-2 bg-slate-700/50 p-2.5 rounded border border-slate-600/50">
-                                <div className="w-1.5 h-1.5 bg-teal-400 rounded-full mt-1 shrink-0"></div>
-                                <div>
-                                    <strong className="text-slate-100 block mb-0.5">24인승 침대/휄체어용 E/V 코어 배치</strong>
-                                    스트레쳐카(환자용 침대) 및 전동 휠체어 복수 탑승이 가능한 1,600×2,300mm 메가 코어 기본 편제.
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-2 bg-slate-700/50 p-2.5 rounded border border-slate-600/50">
-                                <div className="w-1.5 h-1.5 bg-teal-400 rounded-full mt-1 shrink-0"></div>
-                                <div>
-                                    <strong className="text-slate-100 block mb-0.5">수중운동실 탈의-입수 무장애 로직 (BIM 검증)</strong>
-                                    샤워용 휠체어로 환승하는 데 필요한 지름 1.8m 이상의 회전 반경(Turning Circle) 전극 확보 여부 충돌 검사 완료.
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                {/* ════════ 2. 정보 인지와 위생 설비 (Col 1-12) ════════ */}
-                <div className="col-span-12 grid grid-cols-2 gap-5 mt-1">
-                    {/* Alarms and Signage */}
-                    <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-5 relative">
-                        <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                            <div className="flex items-center gap-2">
-                                <BellRing size={16} className="text-blue-600" />
-                                <h3 className="text-[12px] font-extrabold text-slate-800">다중 감각 정보 인지 네트워크</h3>
-                            </div>
-                            <span className="text-[9px] text-blue-600 font-black bg-blue-50 px-2 py-1 rounded">청각·시각장애 통합 연동</span>
-                        </div>
-                        <div className="space-y-3 text-[10px]">
-                            <div className="flex items-center gap-3">
-                                <span className="bg-blue-600 text-white w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold shrink-0">1</span>
-                                <div className="font-medium text-slate-600"><span className="text-slate-800 font-bold border-b border-blue-200">다중 감각 비상 알람:</span> 일반 사이렌(음향) + 코너별 초대형 LED 시각 경보기(섬광등) 크로스 배치.</div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="bg-blue-600 text-white w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold shrink-0">2</span>
-                                <div className="font-medium text-slate-600"><span className="text-slate-800 font-bold border-b border-blue-200">스마트 음성 & 점자:</span> 건물 주출입구부터 교실 및 E/V까지 이어지는 절대 단절 없는 점자 블록 및 BLE 비콘 음성 안내망 연결.</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Sanitary Facilities */}
-                    <div className="bg-white rounded-xl border border-teal-100 shadow-sm p-5 border-t-4 border-t-teal-500 flex flex-col justify-between">
-                        <div className="flex items-center gap-2 mb-3">
-                            <DoorOpen size={16} className="text-teal-600" />
-                            <h3 className="text-[12px] font-extrabold text-slate-800">자동화 슬라이딩 및 위생 스케일업</h3>
-                        </div>
-                        <div className="flex-1 flex gap-3 mt-1">
-                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 w-1/2 flex flex-col justify-between">
-                                <div className="text-[10px] font-bold text-slate-700 text-center mb-1">전구역 자동문 도입</div>
-                                <div className="text-[9px] text-slate-500 text-center leading-snug">악력 유지가 힘든 학생들을 위해 <b className="text-teal-700">근접 센서 방식 슬라이딩 자동문</b>을 전실 출입구에 편성 (여닫이문 배제).</div>
-                            </div>
-                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 w-1/2 flex flex-col justify-between">
-                                <div className="text-[10px] font-bold text-slate-700 text-center mb-1">장애인 화장실 스케일업</div>
-                                <div className="text-[9px] text-slate-500 text-center leading-snug">법정 규격(1.4×1.8m)을 뛰어넘는 <b className="text-teal-700">1.8×2.0m 규격</b> 적용. 침대형 기저귀 교환대 및 승하강식 대변기 거치.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ════════ 3. BF 본인증 리스크 관리 ════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
-                    <div className="flex items-center gap-1.5 mb-4">
-                        <ShieldAlert size={18} className="text-slate-700" />
-                        <h3 className="text-sm font-extrabold text-slate-800">BF 최우수(90점↑) 본인증 실사 리스크 타격(Audit) 방지</h3>
-                        <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded ml-2">시공단계 감리 집중감시점</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] text-slate-600">
-                            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
-                                <tr>
-                                    <th className="px-3 py-2 rounded-tl-lg w-[38%]">사용승인 직전 BF 실사 지적 위험요소 (Risks)</th>
-                                    <th className="px-3 py-2 w-20 text-center">감점파급</th>
-                                    <th className="px-3 py-2 rounded-tr-lg">설계단계/시공감리 원천 봉쇄 대책 (Mitigation)</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">각 실 출입구 도어실(문틀) 1cm 이상 마감 단차 발생</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">탈락 위험</span></td>
-                                    <td className="px-3 py-2.5">단차 무관용 원칙 적용. 설계도서에 "바닥 마감재-도어재료분리대 동일 수평 레벨(±0mm 지시)" 적색 강제 명기 및 먹매김 단계 전수검사.</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">건축/조경 마감재 충돌로 인한 점자 블록 연속성 훼손</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">대폭 감점</span></td>
-                                    <td className="px-3 py-2.5">외부 보도블록 경계석과 실내 로비로 이어지는 구간의 매립형 점자블록 재질 픽스. 끊김(Gap)이 150mm를 초과하지 않도록 샵드로잉 점검.</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">VE(가치공학) 명목 하에 전실 자동문을 여닫이문으로 하향</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">대폭 감점</span></td>
-                                    <td className="px-3 py-2.5">C-6 공사비산정 시, 자동문 공사비를 BF 전용 고정예산으로 락(Lock) 다운시켜 일반 건축 예산 삭감 표적에서 제외 조치.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* ═══════════════ ENGINEERING METRICS SEAL ═══════════════ */}
-            <div className="absolute bottom-6 left-6 right-6 bg-white rounded-lg p-3 shadow-lg border border-slate-200 flex items-center justify-between pointer-events-none z-50">
-                <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
-                    <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-sm">
-                        <Target size={16} />
-                    </div>
+            {/* ════════════ STICKY HEADER ════════════ */}
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-6 py-4 shrink-0">
+                <div className="max-w-[1600px] mx-auto flex justify-between items-center">
                     <div>
-                        <div className="text-[11px] font-black text-slate-800 leading-none mb-1">BF STANDARD</div>
-                        <div className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Universal Mobility</div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <ShieldCheck className="text-indigo-600" size={22} />
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                                인공지능 BF(무장애) 유니버설 디자인 검증서
+                            </h2>
+                            <span className="ml-2 text-[9px] font-black tracking-widest bg-indigo-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <Sparkles size={10} /> V3.0 AI SIMULATED
+                            </span>
+                        </div>
+                        <p className="text-slate-500 text-[12px] font-medium">
+                            ARCHE ARCHI · Phase C. 엔지니어링 · 동선 간섭 제로 / 다중감각 네트워크
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                        <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
+                            건물 용도: {store.buildingUse || '기본'}
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                            특화 조건: {isPublic ? 'BF 최우수(최상급) 인증 강제 달성 타겟' : '표준 이동성 적용'}
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 flex justify-evenly text-[10px] font-medium px-2 text-center">
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">본인증 획득 등급</span><span className="text-indigo-600 text-[9px] font-black">최우수 (90점↑)</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">단절 없는 바닥 단차</span><span className="text-rose-500 text-[9px] font-black">ZERO (0mm) 제한</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">복도 유효폭 (교행)</span><span className="text-teal-600 text-[9px] font-black">최소 2,100mm 확보</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">문 개폐 솔루션</span><span className="text-blue-600 text-[9px] font-black">전 구간 자동 / 슬라이딩</span></div>
+            </div>
+
+            {/* ════════════ MAIN GRID: 12-Column Cyber-Dashboard ════════════ */}
+            <div className="flex-1 px-6 py-5">
+                <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-5 pb-28">
+
+                    {/* ═══════ SKILL ROADMAP SIDEBAR (Col 1-3) ═══════ */}
+                    <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+
+                        {/* M-Series SKILL Modules Status */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                            <div className="text-[10px] font-bold tracking-widest text-indigo-600 mb-3">M-SERIES SKILL MODULES</div>
+                            {[
+                                { id: 'M1', name: 'BarrierFree 3D', desc: '0mm 무단차/교행 스캔', icon: <Move size={14}/>, status: 'Running' },
+                                { id: 'M2', name: 'Universal-Route', desc: '다면적 점자/음성 라우팅', icon: <Navigation size={14}/>, status: 'Running' },
+                                { id: 'M3', name: 'BF-Score Matrix', desc: '등급 인증 자동 스코어링', icon: <BadgeCheck size={14}/>, status: 'Running' },
+                                { id: 'M4', name: 'Auto-Doors/VT', desc: '수직수평 이동장벽 제거', icon: <DoorOpen size={14}/>, status: 'Running' },
+                                { id: 'M5', name: 'Sanitary-Care', desc: '특수 화장실 면적 보정', icon: <Users size={14}/>, status: 'Standby' },
+                            ].map((mod, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-50 last:border-b-0">
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${mod.status === 'Running' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        {mod.icon}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-black text-slate-700">{mod.id}</span>
+                                            <span className="text-[9px] text-slate-500 font-medium truncate">{mod.name}</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 truncate">{mod.desc}</div>
+                                    </div>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${mod.status === 'Running' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                                        {mod.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* 특화 환경 알림 */}
+                        {isEducation && (
+                            <div className="bg-white rounded-xl border border-rose-200 p-4 shadow-sm bg-gradient-to-b from-rose-50/30 to-white relative overflow-hidden">
+                                <div className="absolute top-[-10%] right-[-10%] opacity-10 text-rose-600"><Users size={120} /></div>
+                                <div className="flex items-center gap-1.5 mb-3 relative z-10">
+                                    <ShieldAlert size={14} className="text-rose-700"/>
+                                    <span className="text-[10px] font-bold text-slate-800">교육/맞춤형 기관 안전보정 장치 활성화</span>
+                                </div>
+                                <ul className="text-[9px] text-slate-600 space-y-2 list-disc pl-3 relative z-10 font-medium leading-relaxed">
+                                    <li>이동약자의 상시 교행을 위한 <span className="text-rose-700 font-bold">수퍼와이드 복도(Min 2.1m)</span> 강제 배정</li>
+                                    <li>악력이 불필요한 근접형 슬라이딩 자동문 100% 도입</li>
+                                    <li>위급 상황시 청각장애 대응 시각 경보기(섬광등) 교차 렌더링</li>
+                                </ul>
+                            </div>
+                        )}
+
+                    </div>
+
+                    {/* ═══════ MAIN CONTENT AREA (Col 4-12) ═══════ */}
+                    <div className="col-span-12 lg:col-span-9 flex flex-col gap-5">
+
+                        {/* ─── SECTION 1: M1 Threshold-Free & M4 VT ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col lg:flex-row">
+                            
+                            {/* M1 Mobility & Threshold-Free */}
+                            <div className="w-full lg:w-7/12 p-6 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col justify-center bg-white relative">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <ArrowRightLeft size={16} className="text-indigo-600" />
+                                    <h3 className="text-[12px] font-extrabold text-slate-800 tracking-tight">M1 · 공간 교행 및 단차 제로(0mm) 스캔</h3>
+                                </div>
+                                <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-5 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100/50">
+                                    도면 평면상의 동선 간섭을 회피합니다. 전동 휠체어의 여유로운 교차 통행과 1.5m×1.5m 턴(Turn) 반경을 전 구역에서 보장하며, 모든 실 구획 간 단차를 허용하지 않습니다.
+                                </p>
+                                
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="border border-slate-200 bg-slate-50 shadow-sm p-3 rounded-lg flex-1 text-center">
+                                        <div className="text-[10px] text-slate-500 font-bold mb-1.5 flex items-center justify-center gap-1.5"><ArrowRightLeft size={12}/> 유효 복도폭</div>
+                                        <div className="flex items-baseline justify-center gap-1">
+                                            <span className="text-2xl font-black text-indigo-600">2,100</span><span className="text-[9px] font-bold text-slate-500">mm</span>
+                                        </div>
+                                        <div className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full mt-2 font-bold w-full mx-auto inline-block">법정(1,500) 대비 1.4배</div>
+                                    </div>
+                                    <div className="border border-teal-200 bg-teal-50 shadow-sm p-3 rounded-lg flex-1 text-center">
+                                        <div className="text-[10px] text-teal-700 font-bold mb-1.5 flex items-center justify-center gap-1.5"><Move size={12}/> 공간 전이 단차</div>
+                                        <div className="flex items-baseline justify-center gap-1">
+                                            <span className="text-2xl font-black text-teal-600">0</span><span className="text-[9px] font-bold text-teal-600/70">mm</span>
+                                        </div>
+                                        <div className="text-[8px] bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded-full mt-2 font-bold w-full mx-auto inline-block">완전 평면 (문틀/분리대 삭제)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* M4 Auto-Doors & VT Core */}
+                            <div className="w-full lg:w-5/12 p-6 flex flex-col justify-center bg-gradient-to-br from-indigo-900 to-slate-900 text-white relative overflow-hidden">
+                                <div className="absolute top-4 right-4 opacity-10 text-white"><Users fill="currentColor" size={100} /></div>
+                                <div className="flex items-center gap-2 mb-3 relative z-10">
+                                    <DoorOpen size={16} className="text-teal-400" />
+                                    <h3 className="text-[12px] font-extrabold tracking-tight">M4 · 동력형 코어 제어</h3>
+                                </div>
+                                <div className="space-y-3 relative z-10 flex-1">
+                                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-3 rounded-lg mt-2">
+                                        <div className="text-[10px] font-bold text-teal-300 mb-1 flex justify-between items-center">
+                                            <span>침상/휠체어 멀티 E/V</span>
+                                            <span className="text-[8px] bg-teal-400/20 px-1 py-0.5 rounded">24인승 편제</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-300 leading-snug">스트레쳐카(환자용침대) 및 다수 휠체어 동시 탑승용 메가 코어 (1.6m × 2.3m 이상) 강제 배정.</div>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-3 rounded-lg">
+                                        <div className="text-[10px] font-bold text-teal-300 mb-1 flex justify-between items-center">
+                                            <span>슬라이딩 오토 도어망</span>
+                                            <span className="text-[8px] bg-teal-400/20 px-1 py-0.5 rounded">악력 0kg</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-300 leading-snug">로비, 화장실, 교실 등 통행이 빈번한 모든 전실에 비접촉 자동문 조기 예산 확보.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 2: M2 Universal Route & M3 BF Score ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            
+                            {/* M2 Universal-Route */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col relative overflow-hidden">
+                                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <BellRing size={16} className="text-rose-500" />
+                                        <h3 className="text-[12px] font-extrabold text-slate-800">M2 · 다중 감각 방어망 연동</h3>
+                                    </div>
+                                    <span className="text-[9px] text-rose-600 font-black bg-rose-50 px-2 py-1 rounded">청각·시각 보조</span>
+                                </div>
+                                <div className="space-y-3 mt-1">
+                                    <div className="flex items-start gap-3">
+                                        <span className="bg-rose-500 text-white w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-800 mb-0.5">비상 시각 점멸 알람 (섬광등)</div>
+                                            <div className="text-[9px] text-slate-500 leading-relaxed font-medium">소음 식별이 불가능한 청각 보조 요구 사용자를 위해 화재/비상 시 복도 및 화장실 내 적색 LED 스트로보 연동 가동.</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="bg-rose-500 text-white w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-800 mb-0.5">단절 없는 스마트 촉각·음성 라우팅</div>
+                                            <div className="text-[9px] text-slate-500 leading-relaxed font-medium">대지 진입로 ~ 코어 ~ 목적실명찰까지 연속 파이프라인 형성. BLE 비콘 기반 층고 및 위치 안내 음성 모듈 탑재.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* M3 BF Score Matrix */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 border-t-4 border-t-indigo-500 flex flex-col">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <BadgeCheck size={16} className="text-indigo-600" />
+                                        <h3 className="text-[12px] font-extrabold text-slate-800 tracking-tight">M3 · BF 최우수 인증 스코어링</h3>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="text-[28px] font-black text-indigo-600 leading-none">93.5<span className="text-sm text-slate-400 font-bold ml-1">점</span></div>
+                                    <div className="text-[10px] text-indigo-700 bg-indigo-50 font-bold px-2 py-0.5 rounded-full border border-indigo-100">최우수 획득 (90점 컷)</div>
+                                </div>
+                                <div className="space-y-2.5 pt-2 border-t border-slate-100 mt-auto">
+                                    <div>
+                                        <div className="flex justify-between text-[9px] mb-1 font-bold text-slate-600">
+                                            <span>매개시설 (경사로, 동선)</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5"><div className="bg-indigo-500 h-1.5 rounded-full" style={{width: '98%'}}></div></div>
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between text-[9px] mb-1 font-bold text-slate-600">
+                                            <span>내부/위생 (단차 0, 화장실 크기)</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5"><div className="bg-indigo-500 h-1.5 rounded-full" style={{width: '95%'}}></div></div>
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between text-[9px] mb-1 font-bold text-slate-600">
+                                            <span>안내설비 (점자/음성)</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5"><div className="bg-indigo-500 h-1.5 rounded-full" style={{width: '92%'}}></div></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* ─── SECTION 3: Risk Management ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-4">
+                                <ShieldAlert size={16} className="text-slate-700" />
+                                <h3 className="text-sm font-extrabold text-slate-800">시공 오차 및 감리 위험 관리 (Audit Risks)</h3>
+                                <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded ml-2">시공 본인증 방어점</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[11px] text-slate-600">
+                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                                        <tr>
+                                            <th className="px-3 py-2 rounded-tl-lg w-[38%]">BF 본인증 탈락 위험요소</th>
+                                            <th className="px-3 py-2 w-20 text-center">파급력</th>
+                                            <th className="px-3 py-2 rounded-tr-lg">설계/감리 단계 해결 방안</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">현장 타설 시 바닥 단차(2cm 이상) 허용 오차 초과</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">인증 탈락</span></td>
+                                            <td className="px-3 py-2.5">도어 마감 간 0mm 지시 엄수 명기. 현장 먹매김 및 방통 타설 시 감리단 全 개소 레벨 역검측 의무화.</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">외부 조경 패턴과 점자 블록 연속성 충돌(Gap &gt; 15cm)</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">대폭 감점</span></td>
+                                            <td className="px-3 py-2.5">주진입로에서 현관으로 인입 시 재질 불명확성 배제. 조경과 겹치는 구간은 외부 매립형 화강석 점자 강제 지정.</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2.5 font-bold text-slate-700">VE 진행 중 수퍼와이드 복도 축소 및 자동문 삭감 압박</td>
+                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">효용 저하</span></td>
+                                            <td className="px-3 py-2.5">J1(5D 공사비)에서 '자동문' 셋을 BF 특수 예산으로 성역화(Lock)하여 건축 일반예산 감액 표적에서 이탈구조 화.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
+
+            {/* ════════════ ENGINEERING METRICS SEAL (Sticky Bottom) ════════════ */}
+            <div className="sticky bottom-0 z-30 mx-6 mb-4">
+                <div className="max-w-[1600px] mx-auto bg-gradient-to-b from-slate-900 to-slate-800 rounded-xl p-3.5 shadow-xl border border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 pr-4 border-r border-slate-600">
+                        <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-sm">
+                            <ShieldCheck size={16} />
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-black text-white leading-none mb-0.5">BF VALIDATION ENGINE</div>
+                            <div className="text-[8px] text-slate-400 uppercase font-bold tracking-widest">Universal Mobility · V3.0</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
+                        {[
+                            { label: '본인증 타겟', value: '최우수 (90점+)' },
+                            { label: '유효 폭 (교행)', value: '최소 2.1m 보장' },
+                            { label: '공간 단차', value: '0mm 완전 통제' },
+                            { label: '인식 보호', value: '시청각 멀티 알람' },
+                        ].map((m, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
+                                <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-white font-bold">{m.label}</span>
+                                    <span className="text-slate-400 text-[9px]">{m.value}</span>
+                                </div>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 };

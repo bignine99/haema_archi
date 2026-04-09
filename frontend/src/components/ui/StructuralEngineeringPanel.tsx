@@ -1,282 +1,446 @@
 import React from 'react';
-import { Settings, ShieldAlert, Cpu, SearchCheck, Activity, Wind, Layers } from 'lucide-react';
+import { Settings, ShieldAlert, Cpu, SearchCheck, Activity, Wind, Layers, Sparkles, Anchor, Building2, Gauge, Radio } from 'lucide-react';
+import { useProjectStore } from '@/store/projectStore';
+
+/* ═══════════════════════════════════════════════════════════════
+   C-1  구조 엔지니어링 분석 모듈
+   SKILL: E1 GeoBase · E2 SuperStruct · E3 SeismicSim · E4 SlabTech · E5 LifeSafety
+   Layout: 12-Column Cyber-Dashboard · ARCHE Orange CI · V3.0 AI Simulated
+   ═══════════════════════════════════════════════════════════════ */
 
 const StructuralEngineeringPanel = () => {
+    const store = useProjectStore();
+
+    // ─── Dynamic: 층수 비례 횡력 저항 시스템 결정 ───
+    const totalFloors = store.totalFloors || 4;
+    const isSpecialUse = ['교육연구시설', '의료시설', '노유자시설'].some(u => (store.buildingUse || '').includes(u));
+    const seismicGrade = isSpecialUse ? '내진 특등급' : totalFloors > 30 ? '내진 1등급' : '내진 2등급';
+    const importanceFactor = isSpecialUse ? 1.5 : totalFloors > 30 ? 1.2 : 1.0;
+
+    const lfrsData = totalFloors <= 10
+        ? { system: '모멘트골조(MRF) / 전단벽', damper: '불필요 (필수 내진상세만 적용)', drift: 'PASS', tier: '10층 이하' }
+        : totalFloors <= 30
+        ? { system: '이중골조(Dual System) 코어 혼합', damper: '브레이스 골조(BF) 또는 점성유체댐퍼(VFD)', drift: 'SAFE', tier: '11~30층' }
+        : { system: '코어월 + 아웃리거/벨트트러스', damper: '마찰 진자 FPS, TMD 보강 및 제어 최적화', drift: 'Critical Control', tier: '31층 이상' };
+
     return (
-        <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6 shrink-0 z-10">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                        <Settings className="text-slate-600" size={24} />
-                        구조 엔지니어링 분석서
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1 font-medium">
-                        구조 시스템 계획 및 구조 해석 / 내진 설계 통합 시뮬레이션 결과
-                    </p>
+        <div className="h-full flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar font-sans relative">
+
+            {/* ════════════ STICKY HEADER ════════════ */}
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-6 py-4 shrink-0">
+                <div className="max-w-[1600px] mx-auto flex justify-between items-center">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <Settings className="text-orange-500" size={22} />
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                                인공지능 구조 엔지니어링 분석서
+                            </h2>
+                            <span className="ml-2 text-[9px] font-black tracking-widest bg-orange-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <Sparkles size={10} /> V3.0 AI SIMULATED
+                            </span>
+                        </div>
+                        <p className="text-slate-500 text-[12px] font-medium">
+                            ARCHE ARCHI · Phase C. 엔지니어링 · 기초 / 상부구조 / 내진·풍동 / 슬래브 / SHM 통합 분석
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                        <span className="px-2 py-1 rounded-full bg-orange-50 text-orange-700 font-bold border border-orange-200">
+                            {store.projectName || '프로젝트'}
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
+                            {seismicGrade}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            {/* Grid Content */}
-            <div className="flex-1 grid grid-cols-12 gap-5 pb-24 relative">
-                
-                {/* ═══════════════ 1. 구조 시스템 최적화 모듈 (Col 1-12) ═══════════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-0 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
-                    {/* Left: Overall Structural Strategy Info */}
-                    <div className="w-full md:w-3/12 p-6 flex flex-col justify-between border-r border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
-                        <div className="absolute top-[-20%] right-[-20%] opacity-5"><Settings size={180} /></div>
-                        <div className="relative z-10">
-                            <div className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">STRUCTURAL STRATEGY</div>
-                            <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight leading-tight mb-2">하이브리드<br />구조 시스템</h3>
-                            <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-4">
-                                용도와 하중 특성에 맞춘 이종(RC+철골+PC) 하이브리드 구조 설계를 통해 시공성과 경제성을 극대화합니다.
-                            </p>
+            {/* ════════════ MAIN GRID: 12-Column Cyber-Dashboard ════════════ */}
+            <div className="flex-1 px-6 py-5">
+                <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-5 pb-28">
+
+                    {/* ═══════ SKILL ROADMAP SIDEBAR (Col 1-3) ═══════ */}
+                    <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+
+                        {/* E-Series SKILL Modules Status */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                            <div className="text-[10px] font-bold tracking-widest text-orange-600 mb-3">E-SERIES SKILL MODULES</div>
+                            {[
+                                { id: 'E1', name: 'GeoBase', desc: '지반 저항성 및 기초', icon: <Anchor size={14}/>, status: 'Running' },
+                                { id: 'E2', name: 'SuperStruct', desc: '상부 구조 최적화', icon: <Building2 size={14}/>, status: 'Running' },
+                                { id: 'E3', name: 'SeismicSim', desc: '내진/풍동 시뮬레이터', icon: <Activity size={14}/>, status: 'Running' },
+                                { id: 'E4', name: 'SlabTech', desc: '특수 슬래브 층고 저감', icon: <Layers size={14}/>, status: 'Running' },
+                                { id: 'E5', name: 'LifeSafety', desc: 'SHM 균열/침하 모니터링', icon: <Radio size={14}/>, status: 'Standby' },
+                            ].map((mod, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-50 last:border-b-0">
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${mod.status === 'Running' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        {mod.icon}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-black text-slate-700">{mod.id}</span>
+                                            <span className="text-[9px] text-slate-500 font-medium truncate">{mod.name}</span>
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 truncate">{mod.desc}</div>
+                                    </div>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${mod.status === 'Running' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                                        {mod.status}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
-                        <div className="relative z-10 bg-white p-3 rounded-lg border border-slate-200 shadow-sm mt-4">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <SearchCheck size={14} className="text-slate-600"/>
+
+                        {/* BIM 3D 간섭 체크 */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-3">
+                                <SearchCheck size={14} className="text-orange-500"/>
                                 <span className="text-[10px] font-bold text-slate-800">BIM 3D 간섭 체크</span>
                             </div>
-                            <div className="flex bg-slate-50 rounded border border-slate-100 p-1">
-                                <div className="flex-1 text-center border-r border-slate-200 px-1">
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-slate-50 rounded-lg p-2.5 text-center border border-slate-100">
                                     <div className="text-[8px] text-slate-500">배관/구조 크래시</div>
-                                    <div className="text-[12px] font-black text-emerald-600">0<span className="text-[8px] font-normal">건</span></div>
+                                    <div className="text-lg font-black text-orange-600">0<span className="text-[9px] font-normal text-slate-400">건</span></div>
                                 </div>
-                                <div className="flex-1 text-center px-1">
+                                <div className="bg-slate-50 rounded-lg p-2.5 text-center border border-slate-100">
                                     <div className="text-[8px] text-slate-500">통합 최적화율</div>
-                                    <div className="text-[12px] font-black text-blue-600">98<span className="text-[8px] font-normal">%</span></div>
+                                    <div className="text-lg font-black text-orange-600">98<span className="text-[9px] font-normal text-slate-400">%</span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Middle: RC vs PC vs Steel Matrix */}
-                    <div className="w-full md:w-5/12 p-5 border-r border-slate-100 flex flex-col justify-center gap-3">
-                        <div className="text-[11px] font-bold text-slate-800 mb-1">부위별 최적 구조 시스템 제안</div>
-                        {[
-                            { title: 'RC (철근콘크리트)', usage: '일반교실 및 관리동', pros: '진동 저감 능력이 우수하며 심리적 안정감을 제공', color: 'blue' },
-                            { title: 'Steel (철골)', usage: '대강당 및 체육관', pros: '장스팬 무주공간 확보에 최적화, 경량화 달성', color: 'orange' },
-                            { title: 'PC (프리캐스트)', usage: '지하주차장 및 코어', pros: '공기 단축 획기적 절감 및 모듈화 품질 균일성 보장', color: 'emerald' },
-                        ].map((sys, i) => (
-                            <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50
-                                ${sys.color === 'blue' ? 'border-l-4 border-l-blue-500 border-t-slate-100 border-r-slate-100 border-b-slate-100' : 
-                                  sys.color === 'orange' ? 'border-l-4 border-l-orange-500 border-t-slate-100 border-r-slate-100 border-b-slate-100' : 
-                                  'border-l-4 border-l-emerald-500 border-t-slate-100 border-r-slate-100 border-b-slate-100'}
-                            `}>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between mb-0.5">
-                                        <h4 className="text-[12px] font-bold text-slate-800">{sys.title}</h4>
-                                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">{sys.usage}</span>
+                    {/* ═══════ MAIN CONTENT AREA (Col 4-12) ═══════ */}
+                    <div className="col-span-12 lg:col-span-9 flex flex-col gap-5">
+
+                        {/* ─── SECTION 1: E2 상부 구조 최적화 ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                                <Building2 size={16} className="text-orange-500" />
+                                <span className="text-[12px] font-extrabold text-slate-800">E2 · SuperStruct — 상부 구조 최적화 및 횡력 코어</span>
+                                <span className="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded font-bold border border-orange-100 ml-auto">하이브리드 매핑</span>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                                {/* 부위별 최적 구조 시스템 */}
+                                <div className="p-5 lg:col-span-2 flex flex-col gap-3">
+                                    <div className="text-[11px] font-bold text-slate-700 mb-1">부위별 최적 구조 시스템 제안</div>
+                                    {[
+                                        { title: 'RC (철근콘크리트)', usage: '표준 모듈 및 주요 기능구역', pros: '진동 저감 능력이 우수하며 심리적 안정감을 제공. CM-CR 편심률 ≤ 0.15', accent: 'orange' },
+                                        { title: 'Steel (철골)', usage: '대공간 및 특수 목적(장스팬)', pros: '장스팬 무주공간 확보에 최적화, 경량화 달성. 아웃리거 트러스 적용', accent: 'amber' },
+                                        { title: 'PC (프리캐스트)', usage: '지하주차장 및 구조 코어', pros: '공기 단축 획기적 절감 및 모듈화 품질 균일성 보장', accent: 'orange' },
+                                    ].map((sys, i) => (
+                                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-orange-500 border-t-slate-100 border-r-slate-100 border-b-slate-100 bg-white shadow-sm hover:bg-orange-50/30 transition-all">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <h4 className="text-[12px] font-bold text-slate-800">{sys.title}</h4>
+                                                    <span className="text-[9px] bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded font-bold border border-orange-100">{sys.usage}</span>
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 leading-tight">{sys.pros}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* LFRS 횡력 저항 시스템 현황 */}
+                                <div className="p-5 flex flex-col gap-3 bg-slate-50/50">
+                                    <div className="text-[11px] font-bold text-slate-700">LFRS 횡력 저항 시스템 (동적)</div>
+                                    <div className="text-[9px] text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                        현재 규모: {totalFloors}층 → {lfrsData.tier}
                                     </div>
-                                    <p className="text-[10px] text-slate-500 leading-tight">{sys.pros}</p>
+                                    <div className="flex flex-col gap-2 text-[10px]">
+                                        <div className="bg-white rounded-lg border border-slate-200 p-2.5">
+                                            <div className="text-[9px] text-slate-400 font-bold mb-0.5">주 횡력 저항 구조</div>
+                                            <div className="font-bold text-slate-700">{lfrsData.system}</div>
+                                        </div>
+                                        <div className="bg-white rounded-lg border border-slate-200 p-2.5">
+                                            <div className="text-[9px] text-slate-400 font-bold mb-0.5">보조 제어 메커니즘</div>
+                                            <div className="font-bold text-slate-700">{lfrsData.damper}</div>
+                                        </div>
+                                        <div className="bg-white rounded-lg border border-slate-200 p-2.5 flex items-center justify-between">
+                                            <span className="text-slate-500">층간변위 여유도</span>
+                                            <span className={`font-black text-[11px] ${lfrsData.drift === 'PASS' ? 'text-orange-500' : lfrsData.drift === 'SAFE' ? 'text-amber-600' : 'text-red-500'}`}>{lfrsData.drift}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* ─── SECTION 2: E3 내진 설계 및 동적 해석 ─── */}
+                        <div className="bg-white rounded-xl border border-orange-100 shadow-sm overflow-hidden">
+                            <div className="px-5 py-3 border-b border-orange-50 flex items-center gap-2">
+                                <ShieldAlert size={16} className="text-orange-500"/>
+                                <span className="text-[12px] font-extrabold text-slate-800">E3 · SeismicSim — 내진 및 풍하중 AI 시뮬레이터</span>
+                                {isSpecialUse && (
+                                    <span className="text-[9px] bg-orange-600 text-white px-1.5 py-0.5 rounded font-black ml-auto animate-pulse">내진 특등급 보호 지정</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col lg:flex-row">
+                                {/* 좌: 내진 정보 */}
+                                <div className="w-full lg:w-4/12 p-5 bg-gradient-to-br from-orange-50/60 to-white border-r border-orange-50 flex flex-col justify-center">
+                                    <h4 className="text-xl font-extrabold text-slate-800 mb-2">KDS 41 17 {seismicGrade}</h4>
+                                    <p className="text-[11px] text-slate-600 mb-4">비선형 동적해석 및 성능기반 설계를 통한 최고 수준의 재난 안전성 확보 결과입니다.</p>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
+                                            <span className="text-slate-600 font-medium">건축물 중요도 계수 (I)</span>
+                                            <span className="font-black text-orange-600">{importanceFactor} 적용</span>
+                                        </div>
+                                        <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
+                                            <span className="text-slate-600 font-medium">허용 층간변위 (Drift)</span>
+                                            <span className="font-extrabold text-slate-800">H/250 이내</span>
+                                        </div>
+                                        <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
+                                            <span className="text-slate-600 font-medium">탄성거동 응답 스펙트럼</span>
+                                            <span className="font-extrabold text-orange-600">PASS</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* 우: SVG Seismic Diagram */}
+                                <div className="w-full lg:w-8/12 p-4 bg-slate-50 flex items-center justify-center relative">
+                                    <SeismicDiagram />
+                                    <div className="absolute top-3 right-3 text-[10px] bg-white border border-slate-200 px-2 py-1 flex items-center gap-1 shadow-sm rounded-lg font-medium">
+                                        <Activity size={12} className="text-orange-500"/> 동적 지진하중 변위 시뮬레이션
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 3: E1 기초/부력 + E4 슬래브 (2-Column Split) ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                            {/* E1 GeoBase: 기초 매커니즘 */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                                    <Anchor size={16} className="text-orange-500"/>
+                                    <span className="text-[12px] font-extrabold text-slate-800">E1 · GeoBase — 기초 및 부력 검토</span>
+                                </div>
+                                <div className="p-5 flex-1 flex flex-col gap-3">
+                                    <div className="grid grid-cols-3 gap-2 text-[10px]">
+                                        {[
+                                            { label: 'N치 도달 심도', value: 'GL-12m', sub: 'N≥50' },
+                                            { label: '허용 지내력', value: '250 kN/m²', sub: '모래질 자갈' },
+                                            { label: '지하수위', value: 'GL-3.5m', sub: '부력 검토 필수' },
+                                        ].map((item, i) => (
+                                            <div key={i} className="bg-slate-50 rounded-lg p-2.5 border border-slate-100 text-center">
+                                                <div className="text-[8px] text-slate-400 font-bold">{item.label}</div>
+                                                <div className="text-[14px] font-black text-slate-800 my-0.5">{item.value}</div>
+                                                <div className="text-[8px] text-orange-600 font-medium">{item.sub}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-slate-700">추천 기초 모델</div>
+                                    {[
+                                        { model: 'MAT 기초 (온통형)', fit: '92%', desc: '대규모 집중 하중에 최적. 부등 침하 억제' },
+                                        { model: 'PHC 파일기초', fit: '85%', desc: '경제성 우수. 마찰 저항 + 선단 지지' },
+                                        { model: 'PRD 파일기초', fit: '78%', desc: '소음 저감형. 도심 시공 적합' },
+                                    ].map((f, i) => (
+                                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 bg-white hover:bg-orange-50/30 transition-all">
+                                            <div className="flex-1">
+                                                <div className="text-[11px] font-bold text-slate-700">{f.model}</div>
+                                                <div className="text-[9px] text-slate-400">{f.desc}</div>
+                                            </div>
+                                            <div className="text-[11px] font-black text-orange-600">{f.fit}</div>
+                                        </div>
+                                    ))}
+                                    <div className="text-[9px] text-orange-700 bg-orange-50 p-2 rounded-lg border border-orange-100 font-medium">
+                                        ⚠️ 부력(Uplift) 검토: 지하수위가 높아 Rock Anchor 또는 슬래브 자중 증가 대안 비교 검토 완료
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* E4 SlabTech: PT 슬래브 최적화 + 풍하중/배근율 */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                                    <Layers size={16} className="text-orange-500"/>
+                                    <span className="text-[12px] font-extrabold text-slate-800">E4 · SlabTech — 슬래브 및 층고 저감</span>
+                                    <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-200 rounded font-black ml-auto">+300mm 확보</span>
+                                </div>
+                                <div className="p-5 flex-1 flex flex-col gap-4">
+                                    {/* PT Diagram */}
+                                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex flex-col items-center shadow-inner">
+                                        <PostTensionDiagram />
+                                        <div className="mt-2 text-[9px] text-slate-500 text-center">
+                                            <span className="font-bold text-slate-700">시뮬레이션 결과:</span> 일반 RC보 대비 Beam 깊이 축소 → <span className="text-orange-600 font-bold">체감 층고 300mm 추가 확보</span>
+                                        </div>
+                                    </div>
+                                    {/* 배근율 */}
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <Gauge size={14} className="text-orange-500"/>
+                                            <span className="text-[10px] font-bold text-slate-700">AI 배근율 최적화 (Rebar Ratio)</span>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-600">기둥/벽체 수직부재</span><span className="text-orange-600">85~110 kg/m³</span></div>
+                                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-gradient-to-r from-orange-300 to-orange-500 rounded-full" style={{width: '55%'}}></div></div>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-600">보/슬래브 수평부재</span><span className="text-amber-600">110~135 kg/m³</span></div>
+                                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-gradient-to-r from-amber-300 to-amber-500 rounded-full" style={{width: '70%'}}></div></div>
+                                            </div>
+                                        </div>
+                                        <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">
+                                            기준 대비 <span className="font-bold text-orange-600">약 5~8% 철근 물량 절약</span> 및 단부 간섭 해소
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 4: 풍하중/적설하중 + E5 SHM (2-Column) ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            {/* 풍하중 및 적설하중 */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                                <div className="flex items-center gap-1.5 mb-3">
+                                    <Wind size={16} className="text-orange-500" />
+                                    <span className="text-[11px] font-bold text-slate-700">풍하중 및 적설하중 검토</span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-[110px] h-[90px] bg-slate-50 flex items-center justify-center rounded-lg border border-slate-100 shadow-inner p-2">
+                                        <WindLoadDiagram />
+                                    </div>
+                                    <div className="flex-1 flex flex-col justify-center gap-1.5">
+                                        <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">기본 풍속 (V0):</span> 26 m/s</div>
+                                        <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">노풍도 구분:</span> C (자유풍)</div>
+                                        <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">기본 적설하중:</span> 0.5 kN/m²</div>
+                                        <div className="text-[10px] text-orange-800 bg-orange-50 p-2 rounded-lg border border-orange-100 font-medium leading-tight mt-1">
+                                            외벽체 내풍압 및 대강당 지붕 적설하중 3D 시뮬레이션 완료
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* E5 LifeSafety: SHM 모니터링 */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                                <div className="flex items-center gap-1.5 mb-3">
+                                    <Radio size={16} className="text-orange-500" />
+                                    <span className="text-[11px] font-bold text-slate-700">E5 · LifeSafety — 구조 건전성 모니터링 (SHM)</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {[
+                                        { target: '부등 침하 궤적', sensor: '가속도계 + 변위센서', threshold: '±3mm 이내', status: 'Active' },
+                                        { target: '횡변위 피로 누적', sensor: 'LVDT 변위계', threshold: '기대주기 2500회', status: 'Active' },
+                                        { target: '콘크리트 균열망', sensor: '초음파 탐상기(UST)', threshold: '0.2mm 이하', status: 'Standby' },
+                                    ].map((m, i) => (
+                                        <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-100 bg-white hover:bg-orange-50/20 transition-all">
+                                            <div className="flex-1">
+                                                <div className="text-[11px] font-bold text-slate-700">{m.target}</div>
+                                                <div className="text-[9px] text-slate-400">{m.sensor} · 기준: {m.threshold}</div>
+                                            </div>
+                                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${m.status === 'Active' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                                                {m.status}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
+                                        BEMS + IoT 연동 — Digital Twin Safety 시스템과 실시간 통신 (Phase C+D)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── SECTION 5: 리스크 및 이슈 관리 (Risk Board) ─── */}
+                        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-4">
+                                <ShieldAlert size={18} className="text-slate-700" />
+                                <h3 className="text-sm font-extrabold text-slate-800">리스크 및 이슈 관리 (Risk & Issue Management)</h3>
+                                <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded ml-2 border border-orange-200">필수 검토사항</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[11px] text-slate-600">
+                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                                        <tr>
+                                            <th className="px-3 py-2 rounded-tl-lg">리스크 항목</th>
+                                            <th className="px-3 py-2 w-20 text-center">영향도</th>
+                                            <th className="px-3 py-2 w-24 text-center">발생 가능성</th>
+                                            <th className="px-3 py-2 rounded-tr-lg">대응 방안 / 대안 기술</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {[
+                                            { risk: '장스팬 구조로 인한 처짐·진동 문제', impact: '중', prob: '중', color: 'amber', solution: '포스트텐션(PT) 적용 및 바닥진동 1.0% g 이내 검토' },
+                                            { risk: '비정형 매스 편심률(CR 변위) 보정', impact: '상', prob: '중', color: 'orange', solution: 'BIM 3D 간섭 체크 + 최적 접합부(Hybrid) 사전 조율' },
+                                            { risk: '풍하중 고층부 층간변위 및 비틀림', impact: '중', prob: '하', color: 'amber', solution: '코어월 중앙 배치로 CR-CM 편심 최소화' },
+                                            { risk: '슬래브 국부 뚫림 전단(Punching Shear)', impact: '상', prob: '하', color: 'orange', solution: 'Drop Panel 또는 전단보강근(Shear Band) 자동 배치' },
+                                        ].map((row, i) => (
+                                            <tr key={i} className="hover:bg-orange-50/30 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>{row.impact}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.prob === '상' ? 'bg-orange-100 text-orange-700' : row.prob === '중' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{row.prob}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div> {/* end col-span-9 */}
+                </div> {/* end 12-col grid */}
+            </div>
+
+            {/* ════════════ ENGINEERING METRICS SEAL (Sticky Bottom) ════════════ */}
+            <div className="sticky bottom-0 z-30 mx-6 mb-4">
+                <div className="max-w-[1600px] mx-auto bg-gradient-to-b from-slate-900 to-slate-800 rounded-xl p-3.5 shadow-xl border border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 pr-4 border-r border-slate-600">
+                        <div className="bg-orange-500 text-white p-1.5 rounded-lg shadow-sm">
+                            <Cpu size={16} />
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-black text-white leading-none mb-0.5">STRUCTURAL CORE ENGINE</div>
+                            <div className="text-[8px] text-slate-400 uppercase font-bold tracking-widest">Calculated Metrics Verified · V3.0</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3">
+                        {[
+                            { label: '주요 구조', value: '하이브리드 (RC+S+PC)' },
+                            { label: '내진 등급', value: `${seismicGrade} (I=${importanceFactor})` },
+                            { label: '슬래브', value: 'PT 무량판 결합' },
+                            { label: '바닥 진동', value: '1.0% g 이내 (PASS)' },
+                        ].map((m, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
+                                <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-white font-bold">{m.label}</span>
+                                    <span className="text-slate-400 text-[9px]">{m.value}</span>
+                                </div>
+                            </React.Fragment>
                         ))}
                     </div>
-
-                    {/* Right: Post-Tension Optimization Diagram */}
-                    <div className="w-full md:w-4/12 p-5 flex flex-col bg-slate-50">
-                        <div className="flex justify-between items-center mb-3">
-                            <h4 className="text-[11px] font-bold text-slate-800">포스트텐션(PT) 장스팬 최적화</h4>
-                            <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-200 rounded font-black">높이 30cm 확보</span>
-                        </div>
-                        <div className="flex-1 bg-white border border-slate-200 rounded p-3 flex flex-col shadow-inner">
-                            <div className="flex-1 relative flex items-center justify-center">
-                                <PostTensionDiagram />
-                            </div>
-                            <div className="mt-3 text-[9px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
-                                <span className="font-bold text-slate-700 mr-1">시뮬레이션 결과:</span>
-                                일반 RC보 대비 Beam 깊이를 축소시켜 층고 제한 내에서도 <span className="text-orange-600 font-bold">내부 체감 층고 300mm 추가 확보</span> 및 배관 스페이스 최적화.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ═══════════════ 2. 내진 설계 및 동적 해석 (Col 1-12) ═══════════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-red-100 shadow-sm flex overflow-hidden lg:h-[220px]">
-                    <div className="w-full md:w-4/12 p-5 bg-gradient-to-br from-red-50 to-white border-r border-red-50 flex flex-col justify-center">
-                        <div className="flex items-center gap-1.5 mb-2">
-                            <ShieldAlert size={16} className="text-red-500" />
-                            <span className="text-[11px] font-bold text-red-700">재난 및 내진 구조 검토</span>
-                        </div>
-                        <h4 className="text-xl font-extrabold text-slate-800 mb-2">KDS 41 17 내진 특등급</h4>
-                        <p className="text-[11px] text-slate-600 mb-4">비선형 동적해석 및 성능기반 설계를 통한 최고 수준의 재난 안전성 확보 결과입니다.</p>
-                        <div className="flex flex-col gap-2">
-                            <div className="bg-white px-3 py-2 rounded border border-red-100 text-[11px] flex items-center justify-between">
-                                <span className="text-slate-600 font-medium">건축물 중요도 계수 (I)</span>
-                                <span className="font-black text-red-600">1.5 적용</span>
-                            </div>
-                            <div className="bg-white px-3 py-2 rounded border border-red-100 text-[11px] flex items-center justify-between">
-                                <span className="text-slate-600 font-medium">허용 층간변위 (Drift)</span>
-                                <span className="font-extrabold text-slate-800">H/250 이내</span>
-                            </div>
-                            <div className="bg-white px-3 py-2 rounded border border-red-100 text-[11px] flex items-center justify-between">
-                                <span className="text-slate-600 font-medium">동적 해석 (탄성거동 확보)</span>
-                                <span className="font-extrabold text-emerald-600">PASS</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-full md:w-8/12 p-3 bg-slate-50 flex items-center justify-center relative">
-                        <SeismicDiagram />
-                        <div className="absolute top-3 right-3 text-[10px] bg-white border border-slate-200 px-2 py-1 flex items-center gap-1 shadow-sm rounded font-medium">
-                            <Activity size={12} className="text-red-500"/> 동적 지진하중 변위 시뮬레이션
-                        </div>
-                    </div>
-                </div>
-
-                {/* ═══════════════ 3. 하중 시뮬레이션 및 배근율 최적화 (Col 1-12) ═══════════════ */}
-                <div className="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-5 mt-1">
-                    {/* Load Simulation */}
-                    <div className="bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col p-5">
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Wind size={16} className="text-blue-500" />
-                            <span className="text-[11px] font-bold text-slate-700">풍하중 및 적설하중 검토</span>
-                        </div>
-                        <div className="flex items-center gap-5 flex-1 p-2">
-                             <div className="flex-1 max-w-[120px] bg-slate-50 flex items-center justify-center rounded-lg border border-slate-100 shadow-inner p-3 relative h-[100px]">
-                                 <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-sm">
-                                    <path d="M 20 70 L 20 20 L 50 10 L 80 20 L 80 70 Z" fill="#e2e8f0" stroke="#94a3b8" />
-                                    {/* Wind Arrows horizontally */}
-                                    <path d="M 0 35 L 20 35" stroke="#3b82f6" strokeWidth="2" />
-                                    <polygon points="20,35 15,32 15,38" fill="#3b82f6" />
-                                    <path d="M 0 55 L 20 55" stroke="#3b82f6" strokeWidth="2" />
-                                    <polygon points="20,55 15,52 15,58" fill="#3b82f6" />
-                                    {/* Snow Arrows vertically */}
-                                    <path d="M 40 0 L 40 12" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="2 1" />
-                                    <polygon points="40,12 37,8 43,8" fill="#0ea5e9" />
-                                    <path d="M 60 0 L 60 12" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="2 1" />
-                                    <polygon points="60,12 57,8 63,8" fill="#0ea5e9" />
-                                 </svg>
-                             </div>
-                             <div className="flex-1 flex flex-col justify-center gap-2">
-                                <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">기본 풍속 (V0):</span> 26 m/s</div>
-                                <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">노풍도 구분:</span> C (자유풍)</div>
-                                <div className="text-[11px] text-slate-500"><span className="font-bold text-slate-700">기본 적설하중:</span> 0.5 kN/m²</div>
-                                <div className="text-[10px] text-blue-800 bg-blue-50 p-2 rounded border border-blue-100 font-medium leading-tight mt-1">
-                                    외벽체 내풍압 및 대강당 무주공간 지붕 적설하중 안전성 3D 시뮬레이션 완료
-                                </div>
-                             </div>
-                        </div>
-                    </div>
-
-                    {/* Rebar Ratio */}
-                    <div className="bg-white rounded-xl border border-orange-100 shadow-sm flex flex-col p-5">
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Layers size={16} className="text-orange-500" />
-                            <span className="text-[11px] font-bold text-slate-700">AI 철근 배근율 (Rebar Ratio) 최적화</span>
-                        </div>
-                        <div className="flex flex-col gap-4 flex-1 justify-center px-1">
-                            <div className="flex flex-col gap-1.5">
-                                <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-600">기둥/벽체 수직부재</span><span className="text-orange-600">85~110 kg/m³</span></div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-gradient-to-r from-orange-300 to-orange-500" style={{width: '55%'}}></div></div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-600">보/슬래브 수평부재</span><span className="text-amber-600">110~135 kg/m³</span></div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-gradient-to-r from-amber-300 to-amber-500" style={{width: '70%'}}></div></div>
-                            </div>
-                            <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100 leading-snug mt-1">
-                                단면 최적화 알고리즘을 통한 배근 배치 개선. 기준 대비 <span className="font-bold text-emerald-600">약 5~8% 철근 물량 절약</span> 및 단부 간섭 해소.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ═══════════════ 4. 리스크 및 이슈 관리 (Col 1-12) ═══════════════ */}
-                <div className="col-span-12 bg-white rounded-xl border border-slate-200 p-5 shadow-sm mt-1">
-                    <div className="flex items-center gap-1.5 mb-4">
-                        <ShieldAlert size={18} className="text-slate-700" />
-                        <h3 className="text-sm font-extrabold text-slate-800">리스크 및 이슈 관리 (Risk & Issue Management)</h3>
-                        <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded ml-2">필수 검토사항</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] text-slate-600">
-                            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
-                                <tr>
-                                    <th className="px-3 py-2 rounded-tl-lg">리스크 항목</th>
-                                    <th className="px-3 py-2 w-20 text-center">영향도</th>
-                                    <th className="px-3 py-2 w-24 text-center">발생 가능성</th>
-                                    <th className="px-3 py-2 rounded-tr-lg">대응 방안</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">장스팬 구조로 인한 처짐·진동 문제</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5">단면 확대 최소화를 위한 포스트텐션(PT) 적용 및 바닥진동(1.0% g 이내) 정밀 검토</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">건축 비정형 형태(복합 용도)로 인한 구조 복잡도 증가</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5">설계 초기 단계부터 건축·구조 BIM 3D 간섭 체크 및 최적 접합부(Hybrid) 사전 조율</td>
-                                </tr>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">풍하중에 의한 고층부 층간변위 및 비틀림 현상 우려</td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">하</span></td>
-                                    <td className="px-3 py-2.5">코어월 중앙 배치로 강성 중심(CR)과 질량 중심(CM) 편심 최소화 및 비틀림 불규칙성 선제 해결</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-
-             {/* ═══════════════ ENGINEERING METRICS SEAL ═══════════════ */}
-             <div className="absolute bottom-6 left-6 right-6 bg-white rounded-lg p-3 shadow-lg border border-slate-200 flex items-center justify-between pointer-events-none z-50">
-                <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
-                    <div className="bg-blue-500 text-white p-1.5 rounded-lg shadow-sm">
-                        <Cpu size={16} />
-                    </div>
-                    <div>
-                        <div className="text-[11px] font-black text-slate-800 leading-none mb-1">STRUCTURAL CORE</div>
-                        <div className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Calculated Metrics Verified</div>
-                    </div>
-                </div>
-                <div className="flex-1 flex justify-evenly text-[10px] font-medium px-2">
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">주요 구조</span><span className="text-slate-500 text-[9px]">하이브리드 (RC+S+PC)</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">내진 등급</span><span className="text-slate-500 text-[9px]">특등급 (I=1.5)</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">슬래브</span><span className="text-slate-500 text-[9px]">PT 무량판 결합</span></div>
-                    <div className="w-[1px] h-6 bg-slate-200"></div>
-                    <div className="flex flex-col items-center gap-0.5"><span className="text-slate-800 font-bold">바닥 진동</span><span className="text-slate-500 text-[9px]">1.0% g 이내 (PASS)</span></div>
                 </div>
             </div>
+
         </div>
     );
 };
 
 export default StructuralEngineeringPanel;
 
-// ======================= Sub Components & SVGs =======================
+// ======================= Sub Components & SVGs (ARCHE Orange CI) =======================
 
 const PostTensionDiagram = () => (
     <svg viewBox="0 0 200 100" className="w-[90%] h-auto opacity-90 drop-shadow-sm">
-        {/* Normal RC Beam */}
-        <g opacity="0.4">
+        {/* Normal RC Beam (faded) */}
+        <g opacity="0.35">
             <rect x="10" y="20" width="180" height="20" fill="#cbd5e1" />
             <rect x="90" y="40" width="20" height="40" fill="#94a3b8" />
             <text x="120" y="65" fontSize="8" fill="#64748b" fontWeight="bold">일반 RC (보 깊이 800mm)</text>
             <path d="M 115 50 L 115 80 M 110 50 L 120 50 M 110 80 L 120 80" stroke="#64748b" strokeWidth="1" />
         </g>
-        
-        {/* Post Tension Flat Plate/Beam */}
-        <g transform="translate(0, 0)">
-            <rect x="10" y="15" width="180" height="30" fill="#3b82f6" opacity="0.8" rx="2"/>
-            <path d="M 10 30 Q 50 15, 100 40 T 190 30" fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="3 2" />
-            <circle cx="10" cy="30" r="2" fill="#f97316" />
-            <circle cx="190" cy="30" r="2" fill="#f97316" />
-            <text x="70" y="10" fontSize="8" fill="#1d4ed8" fontWeight="bold">Post-Tension Slab (무량판/보 500mm)</text>
+        {/* Post Tension Flat Plate/Beam — Orange CI */}
+        <g>
+            <rect x="10" y="15" width="180" height="30" fill="#f97316" opacity="0.75" rx="2"/>
+            <path d="M 10 30 Q 50 15, 100 40 T 190 30" fill="none" stroke="#ea580c" strokeWidth="2" strokeDasharray="3 2" />
+            <circle cx="10" cy="30" r="2.5" fill="#ea580c" />
+            <circle cx="190" cy="30" r="2.5" fill="#ea580c" />
+            <text x="55" y="10" fontSize="8" fill="#9a3412" fontWeight="bold">Post-Tension Slab (무량판/보 500mm)</text>
         </g>
-
         {/* Saved Space Indicator */}
-        <rect x="90" y="45" width="20" height="35" fill="#fef08a" opacity="0.6" stroke="#ca8a04" strokeWidth="1" strokeDasharray="2 1"/>
-        <text x="20" y="65" fontSize="8" fill="#b45309" fontWeight="bold">여유 공간 +300mm 확보</text>
-        <path d="M 75 62 L 85 62" stroke="#b45309" strokeWidth="1.5" />
-        <polygon points="85,60 90,62 85,64" fill="#b45309" />
+        <rect x="90" y="45" width="20" height="35" fill="#fed7aa" opacity="0.7" stroke="#ea580c" strokeWidth="1" strokeDasharray="2 1"/>
+        <text x="20" y="65" fontSize="8" fill="#9a3412" fontWeight="bold">여유 공간 +300mm 확보</text>
+        <path d="M 75 62 L 85 62" stroke="#9a3412" strokeWidth="1.5" />
+        <polygon points="85,60 90,62 85,64" fill="#9a3412" />
     </svg>
 );
 
@@ -287,25 +451,36 @@ const SeismicDiagram = () => (
             {[...Array(6)].map((_, i) => <line key={`h${i}`} x1="0" y1={i*20} x2="200" y2={i*20} />)}
             {[...Array(10)].map((_, i) => <line key={`v${i}`} x1={i*20} y1="0" x2={i*20} y2="120" />)}
         </g>
-
         {/* Building Rest state outline */}
         <path d="M 80 110 L 80 20 L 120 20 L 120 110" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="4 2" />
         <polyline points="75,110 125,110" stroke="#64748b" strokeWidth="3" />
-
-        {/* Displaced Building (Seismic shift to right) */}
-        <polygon points="80,110 95,20 135,20 120,110" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" strokeWidth="2" />
-        <line x1="83" y1="80" x2="123" y2="80" stroke="#ef4444" strokeWidth="1" />
-        <line x1="88" y1="50" x2="128" y2="50" stroke="#ef4444" strokeWidth="1" />
-
+        {/* Displaced Building — Orange CI */}
+        <polygon points="80,110 95,20 135,20 120,110" fill="rgba(249, 115, 22, 0.1)" stroke="#f97316" strokeWidth="2" />
+        <line x1="83" y1="80" x2="123" y2="80" stroke="#f97316" strokeWidth="1" />
+        <line x1="88" y1="50" x2="128" y2="50" stroke="#f97316" strokeWidth="1" />
         {/* Dynamic Forces */}
-        <path d="M 40 40 C 60 30, 70 50, 90 25" fill="none" stroke="#f97316" strokeWidth="1.5" />
-        <polygon points="88,27 92,23 85,22" fill="#f97316" />
-        
+        <path d="M 40 40 C 60 30, 70 50, 90 25" fill="none" stroke="#ea580c" strokeWidth="1.5" />
+        <polygon points="88,27 92,23 85,22" fill="#ea580c" />
         {/* Ground Shake */}
         <path d="M 20 115 L 40 105 L 60 118 L 80 105 L 100 115 L 120 105 L 140 118 L 160 105 L 180 115" fill="none" stroke="#64748b" strokeWidth="1.5" />
-
         {/* Spec Label */}
-        <text x="145" y="40" fontSize="7" fill="#ef4444" fontWeight="bold">Max Drift: &lt; 1%</text>
+        <text x="145" y="40" fontSize="7" fill="#ea580c" fontWeight="bold">Max Drift: &lt; 1%</text>
         <text x="145" y="50" fontSize="6" fill="#64748b">탄성거동 확보 (PASS)</text>
+    </svg>
+);
+
+const WindLoadDiagram = () => (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-sm">
+        <path d="M 20 70 L 20 20 L 50 10 L 80 20 L 80 70 Z" fill="#e2e8f0" stroke="#94a3b8" />
+        {/* Wind Arrows — Orange */}
+        <path d="M 0 35 L 20 35" stroke="#f97316" strokeWidth="2" />
+        <polygon points="20,35 15,32 15,38" fill="#f97316" />
+        <path d="M 0 55 L 20 55" stroke="#f97316" strokeWidth="2" />
+        <polygon points="20,55 15,52 15,58" fill="#f97316" />
+        {/* Snow Arrows — Amber */}
+        <path d="M 40 0 L 40 12" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 1" />
+        <polygon points="40,12 37,8 43,8" fill="#f59e0b" />
+        <path d="M 60 0 L 60 12" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 1" />
+        <polygon points="60,12 57,8 63,8" fill="#f59e0b" />
     </svg>
 );
