@@ -417,17 +417,12 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-x-12 gap-y-16 mb-16">
+                    <div className="grid grid-cols-1 gap-x-12 gap-y-16 mb-4">
                         <div className="flex flex-col">
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-4 ml-1">Access Token (Optional)</label>
-                            <input 
-                                type="password"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
-                                className="input-minimal w-full py-2 text-sm font-mono tracking-widest"
-                                placeholder="Press 'Login' to enter..."
-                            />
+                            <h3 className="text-xl font-bold tracking-widest text-neutral-300 mb-2">OPEN ACCESS DEMONSTRATION</h3>
+                            <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">
+                                임시 데모 시스템입니다. 아래 버튼을 눌러 플랫폼에 바로 접속하실 수 있습니다.
+                            </p>
                         </div>
                     </div>
 
@@ -445,7 +440,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                             disabled={isLoading}
                             className="bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] py-6 px-12 hover:bg-neutral-200 transition-colors disabled:opacity-50"
                         >
-                            {isLoading ? 'Verifying...' : 'Login'} 
+                            {isLoading ? 'Loading...' : 'Enter Platform'} 
                         </button>
                         <div className="mt-4 text-[9px] text-neutral-600 tracking-widest flex items-center gap-2">
                             <span className="w-2 h-2 border border-neutral-600 inline-block"></span>
