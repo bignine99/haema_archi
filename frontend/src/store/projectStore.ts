@@ -8,6 +8,8 @@ import { type SiteParameters } from '@/services/siteParameterService';
 import { generateSpaceProgramWithAI } from '@/services/geminiSpaceService';
 import { type SiteAnalysisResult } from '@/services/siteAnalysisService';
 import { type RegulationAnalysisResult } from '@/services/regulationAnalysisService';
+import { type ProjectCharacteristicsResult } from '@/services/projectCharacteristicsService';
+import { type SpecializedDesignProposal } from '@/services/geminiSpecializedService';
 
 // ─── 건축 용도 타입 ───
 export type BuildingUse =
@@ -348,6 +350,8 @@ export interface ProjectState {
     designScope: string;
     certifications: string[];
     documentInfo: DocumentInfo | null;
+    isGeminiParsed: boolean; // 추가: Gemini 파싱 완료 여부
+
 
     // 과업지시서 세부 섹션
     generalGuidelines: string[];   // 일반지침
@@ -391,6 +395,12 @@ export interface ProjectState {
     siteAnalysisResult: SiteAnalysisResult | null;
     regulationAnalysisResult: RegulationAnalysisResult | null;
     spaceStrategyResult: any | null;
+    characteristicsAnalysisResult: ProjectCharacteristicsResult | null;
+    specializedDesignProposal: any | null;
+
+    // Phase C: 엔지니어링 분석 AI 결과 저장소
+    engineeringAnalysisData: Record<string, any>;
+    setEngineeringData: (domain: string, data: any) => void;
 
     // Phase B: 공간 프로그래밍
     barrierFreeChecklist: BarrierFreeChecklist;
@@ -445,6 +455,8 @@ export interface ProjectState {
     setSiteAnalysisResult: (result: SiteAnalysisResult | null) => void;
     setRegulationAnalysisResult: (result: RegulationAnalysisResult | null) => void;
     setSpaceStrategyResult: (result: any | null) => void;
+    setCharacteristicsAnalysisResult: (result: ProjectCharacteristicsResult | null) => void;
+    setSpecializedDesignProposal: (result: any | null) => void;
 
     // 사용자 입력 API 키
     geminiApiKey: string;
@@ -577,6 +589,8 @@ export const useProjectStore = create<ProjectState>()(
     designScope: '',
     certifications: [],
     documentInfo: null,
+    isGeminiParsed: false,
+
 
     // 과업지시서 세부 섹션
     generalGuidelines: [],
@@ -640,6 +654,12 @@ export const useProjectStore = create<ProjectState>()(
 
     chatLoading: false,
     aiComment: null,
+
+    // Phase C: 엔지니어링 분석 AI 결과
+    engineeringAnalysisData: {},
+    setEngineeringData: (domain, data) => set(state => ({
+        engineeringAnalysisData: { ...state.engineeringAnalysisData, [domain]: data }
+    })),
 
     // Phase B: 공간 프로그래밍 초기값
     barrierFreeChecklist: {
@@ -728,9 +748,13 @@ export const useProjectStore = create<ProjectState>()(
     siteAnalysisResult: null,
     regulationAnalysisResult: null,
     spaceStrategyResult: null,
+    characteristicsAnalysisResult: null,
+    specializedDesignProposal: null,
     setSiteAnalysisResult: (result) => set({ siteAnalysisResult: result }),
     setRegulationAnalysisResult: (result) => set({ regulationAnalysisResult: result }),
     setSpaceStrategyResult: (result) => set({ spaceStrategyResult: result }),
+    setCharacteristicsAnalysisResult: (result) => set({ characteristicsAnalysisResult: result }),
+    setSpecializedDesignProposal: (result) => set({ specializedDesignProposal: result }),
 
     geminiApiKey: typeof window !== 'undefined' 
         ? (localStorage.getItem('arche_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '') 
@@ -878,7 +902,17 @@ export const useProjectStore = create<ProjectState>()(
     setSiteParamsLoading: (loading) => set({ siteParamsLoading: loading }),
     setSiteParamsError: (error) => set({ siteParamsError: error }),
 
-    setAddress: (address) => set({ address }),
+    setAddress: (address) => {
+        const cleanAddress = address.trim();
+        const currentAddress = get().address;
+        if (cleanAddress !== currentAddress) {
+            set({ 
+                address: cleanAddress,
+                landUseRegulation: null,
+                landUseError: null
+            });
+        }
+    },
 
     setZoneType: (zoneType) => {
         const zone = ZONE_REGULATIONS[zoneType];
@@ -1248,6 +1282,8 @@ export const useProjectStore = create<ProjectState>()(
                     centerLng: parcel.centerLng,
                     polygonWGS84: parcel.polygonWGS84,
                     selectedFloor: null,
+                    landUseRegulation: null,
+                    landUseError: null,
                 };
 
                 if (hasDocument) {
@@ -1280,6 +1316,8 @@ export const useProjectStore = create<ProjectState>()(
                     centerLng: lng,
                     polygonWGS84: null,
                     apiError: 'Vworld에서 필지 폴리곤을 찾지 못했습니다.',
+                    landUseRegulation: null,
+                    landUseError: null,
                 };
                 if (!hasDocument) {
                     fallback.address = kakaoResult.address_name;
@@ -1320,15 +1358,18 @@ export const useProjectStore = create<ProjectState>()(
             zoneType: '-',
             buildingUse: '' as BuildingUse,
             manualGrossFloorArea: null,
+            isGeminiParsed: false,
+            landUseRegulation: null,
+            landUseError: null,
         };
 
         if (parsedData.projectName) updates.projectName = parsedData.projectName;
         if (parsedData.address) updates.address = parsedData.address;
-        if (parsedData.landArea) updates.landArea = parsedData.landArea;
-        if (parsedData.grossFloorArea) updates.grossFloorArea = parsedData.grossFloorArea;
-        if (parsedData.commercialFloors !== undefined) updates.commercialFloors = parsedData.commercialFloors;
-        if (parsedData.residentialFloors !== undefined) updates.residentialFloors = parsedData.residentialFloors;
-        if (parsedData.totalFloors !== undefined) updates.totalFloors = parsedData.totalFloors;
+        if (parsedData.landArea !== undefined) updates.landArea = Number(parsedData.landArea) || 0;
+        if (parsedData.grossFloorArea !== undefined) updates.grossFloorArea = Number(parsedData.grossFloorArea) || 0;
+        if (parsedData.commercialFloors !== undefined) updates.commercialFloors = Number(parsedData.commercialFloors) || 0;
+        if (parsedData.residentialFloors !== undefined) updates.residentialFloors = Number(parsedData.residentialFloors) || 0;
+        if (parsedData.totalFloors !== undefined) updates.totalFloors = Number(parsedData.totalFloors) || 0;
         if (parsedData.constructionCost) updates.constructionCost = parsedData.constructionCost;
         if (parsedData.designScope) updates.designScope = parsedData.designScope;
         if (parsedData.certifications) updates.certifications = parsedData.certifications;
@@ -1342,9 +1383,9 @@ export const useProjectStore = create<ProjectState>()(
         if (parsedData.designDirection) updates.designDirection = parsedData.designDirection;
 
         // 건폐율/용적률/높이제한 — 과업지시서 값이 있으면 법정 한도 대신 과업지시서 값 적용
-        if (parsedData.buildingCoverageLimit) updates.buildingCoverageLimit = parsedData.buildingCoverageLimit;
-        if (parsedData.floorAreaRatioLimit) updates.floorAreaRatioLimit = parsedData.floorAreaRatioLimit;
-        if (parsedData.maxHeight) updates.maxHeight = parsedData.maxHeight;
+        if (parsedData.buildingCoverageLimit !== undefined) updates.buildingCoverageLimit = Number(parsedData.buildingCoverageLimit) || 0;
+        if (parsedData.floorAreaRatioLimit !== undefined) updates.floorAreaRatioLimit = Number(parsedData.floorAreaRatioLimit) || 0;
+        if (parsedData.maxHeight !== undefined) updates.maxHeight = Number(parsedData.maxHeight) || 0;
 
         // 용도지역 — 과업지시서에서 추출된 경우 용도지역도 업데이트
         if (parsedData.zoneType) {
@@ -1358,6 +1399,8 @@ export const useProjectStore = create<ProjectState>()(
 
         if (/교육|학교|특수학교|초등|중학|고등|대학|어린이집|유치원|교사/.test(useHint)) {
             updates.buildingUse = '교육연구시설';
+        } else if (/경찰|청사|경찰청사|경찰서|파출소|소방서|공공청사|업무|사무|오피스/.test(useHint)) {
+            updates.buildingUse = '업무시설(오피스)';
         } else if (/병원|의료|요양|클리닉/.test(useHint)) {
             updates.buildingUse = '의료시설';
         } else if (/교회|성당|사찰|종교/.test(useHint)) {
@@ -1366,8 +1409,6 @@ export const useProjectStore = create<ProjectState>()(
             updates.buildingUse = '오피스텔';
         } else if (/아파트|공동주택|주택단지/.test(useHint)) {
             updates.buildingUse = '공동주택(아파트)';
-        } else if (/업무|사무|오피스/.test(useHint)) {
-            updates.buildingUse = '업무시설(오피스)';
         } else if (rawUse) {
             // 기본 매핑 시도
             const allUses: BuildingUse[] = [
@@ -1388,6 +1429,8 @@ export const useProjectStore = create<ProjectState>()(
             uploadedAt: new Date().toLocaleString('ko-KR'),
             rawData: parsedData,
         } as DocumentInfo;
+        
+        updates.isGeminiParsed = !!parsedData.isGeminiParsed;
 
         // Reset Phase B data so Z3, Z4, Z5 do not show stale project data
         updates.floorZoning = [];
@@ -1408,6 +1451,14 @@ export const useProjectStore = create<ProjectState>()(
         set({ landUseLoading: true, landUseError: null });
         try {
             const result = await fetchLandUseRegulation(cleanAddress);
+            if (result.error) {
+                set({ 
+                    landUseError: result.error, 
+                    landUseRegulation: null, 
+                    landUseLoading: false 
+                });
+                return;
+            }
             set({ landUseRegulation: result, landUseLoading: false });
 
             // API에서 조례 기반 건폐율/용적률이 조회되면 자동 반영

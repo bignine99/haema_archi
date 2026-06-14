@@ -208,6 +208,21 @@ export default function SiteAnalysisPanel() {
             </div>
 
             <div className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-2 text-red-700 shadow-sm relative z-10">
+                        <AlertTriangle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                        <div className="flex-1">
+                            <h5 className="text-xs font-bold mb-1">분석 중 오류 발생</h5>
+                            <p className="text-[11px] leading-relaxed font-medium">{error}</p>
+                        </div>
+                        <button 
+                            onClick={() => setError(null)} 
+                            className="text-xs text-red-400 hover:text-red-700 font-bold ml-auto px-1.5 py-0.5 rounded hover:bg-red-100 transition-colors"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
 
                 {/* 2. 대지 기본정보 블록 (항상 표시) */}
                 <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
@@ -234,11 +249,15 @@ export default function SiteAnalysisPanel() {
                         </div>
                         <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                             <span className="text-[10px] text-slate-500 font-medium block">건폐 / 용적률</span>
-                            <span className="text-xs font-bold text-slate-800 mt-1 block">{store.buildingCoverageLimit}% / {store.floorAreaRatioLimit}%</span>
+                            <span className="text-xs font-bold text-slate-800 mt-1 block">
+                                {store.buildingCoverageLimit > 0 ? `${store.buildingCoverageLimit}%` : '지구단위계획 준수'} / {store.floorAreaRatioLimit > 0 ? `${store.floorAreaRatioLimit}%` : '지구단위계획 준수'}
+                            </span>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                             <span className="text-[10px] text-slate-500 font-medium block">계획 층/높이</span>
-                            <span className="text-xs font-bold text-slate-800 mt-1 block">{store.totalFloors}층 / {store.maxHeight}m</span>
+                            <span className="text-xs font-bold text-slate-800 mt-1 block">
+                                {store.totalFloors > 0 ? `${store.totalFloors}층` : '설계자 제안'} / {store.maxHeight > 0 ? `${store.maxHeight}m` : '제한 없음'}
+                            </span>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                             <span className="text-[10px] text-slate-500 font-medium block">전면도로</span>

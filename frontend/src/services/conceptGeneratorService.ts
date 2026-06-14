@@ -1,6 +1,6 @@
 import { useProjectStore } from '@/store/projectStore';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export interface ConceptSolution {
   spec: string;
@@ -103,6 +103,9 @@ export async function generateDesignConcepts(vibes: string[]): Promise<DesignCon
             temperature: 0.8, // 다양성을 위해 온도를 약간 높임
             maxOutputTokens: 8192,
             responseMimeType: 'application/json',
+            thinkingConfig: {
+                thinkingBudget: 0
+            }
         },
       }),
     });

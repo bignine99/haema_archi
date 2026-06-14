@@ -33,7 +33,7 @@ import { type ShadowAnalysisResult } from '@/components/three/ShadowAnalysis';
 import { type SunPosition } from '@/utils/sunCalculator';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Globe, Loader2 } from 'lucide-react';
+import { Globe, Loader2, Sun } from 'lucide-react';
 
 const SceneViewer = lazy(() => import('@/components/three/SceneViewer'));
 const AIMassPanel = lazy(() => import('@/components/ui/AIMassPanel'));
@@ -166,6 +166,37 @@ export default function App() {
 
                     <Floating3DMetrics />
                     
+                    {/* 환경 시뮬레이션 토글 (우측 상단) */}
+                    <div className="absolute top-4 right-4 z-40 flex flex-col gap-2">
+                        <button
+                            onClick={() => store.setShowSunlight(!store.showSunlight)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold shadow-lg transition-all border ${
+                                store.showSunlight 
+                                ? 'bg-orange-500 text-white border-orange-600 shadow-orange-500/30' 
+                                : 'bg-white/95 backdrop-blur-md text-slate-600 border-slate-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200'
+                            }`}
+                        >
+                            <Sun size={14} className={store.showSunlight ? 'animate-spin-slow' : ''} />
+                            {store.showSunlight ? '태양광 궤적 (끄기)' : '태양광 궤적 (Sun Path)'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                store.setShowShadowAnalysis(!store.showShadowAnalysis);
+                                if (!store.showShadowAnalysis && !store.showSunlight) {
+                                    store.setShowSunlight(true);
+                                }
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold shadow-lg transition-all border ${
+                                store.showShadowAnalysis 
+                                ? 'bg-blue-600 text-white border-blue-700 shadow-blue-500/30' 
+                                : 'bg-white/95 backdrop-blur-md text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                            }`}
+                        >
+                            <Globe size={14} className={store.showShadowAnalysis ? 'animate-pulse' : ''} />
+                            {store.showShadowAnalysis ? '그림자 분석 (끄기)' : '그림자 간섭 분석 (Shadow)'}
+                        </button>
+                    </div>
+
                     <Suspense fallback={null}>
                         <AIMassPanel />
                     </Suspense>

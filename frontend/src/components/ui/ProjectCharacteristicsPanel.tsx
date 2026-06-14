@@ -1,22 +1,84 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
     MapPin, Users, Building, Activity, 
     ArrowRight, Heart, ShieldCheck, Accessibility,
     TrendingUp, Map, ShieldAlert, BadgeCheck,
-    Cpu, ActivitySquare, LayoutDashboard, Component, Globe, CheckCircle2, AlertCircle
+    Cpu, ActivitySquare, LayoutDashboard, Component, Globe, CheckCircle2, AlertCircle,
+    Search, RotateCcw, Loader2
 } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeProjectCharacteristics, type ProjectCharacteristicsInput } from '@/services/projectCharacteristicsService';
 
 export default function ProjectCharacteristicsPanel() {
     const store = useProjectStore();
+    const result = store.characteristicsAnalysisResult;
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleAnalyze = useCallback(async () => {
+        setIsAnalyzing(true);
+        setError(null);
+        try {
+            const input: ProjectCharacteristicsInput = {
+                projectName: store.projectName,
+                address: store.address,
+                buildingUse: store.buildingUse,
+                rawText: (store as any).documentInfo?.rawData?.rawText || undefined,
+            };
+            const res = await analyzeProjectCharacteristics(input);
+            if (res) {
+                store.setCharacteristicsAnalysisResult(res);
+            } else {
+                setError('특성 분석에 실패했습니다.');
+            }
+        } catch (err) {
+            setError('분석 중 오류가 발생했습니다.');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    }, [store]);
     
     // 동적 데이터 매핑 (폴백 포함)
     const projectName = store.projectName || "기본 프로젝트 (미정)";
     const address = store.address || "대지위치 미설정";
     const projectType = projectName.includes("학교") ? "학교/교육시설" : "해당 시설";
 
+    const demandCount = result?.demandStats?.trendCount || 1398;
+    const demandTrend = result?.demandStats?.trendText || "권역 내 지속 증가 예측";
+    const nimbyRate = result?.demandStats?.agreementRate || 98;
+    const nimbyText = result?.demandStats?.agreementText || "부정적 인식을 극복, 커뮤니티 거점화";
+
+    const regionalPoints = result?.regionalAnalysis?.points || [
+        { title: "이용 접근성 최적화", desc: "물리적 장벽 완화, 안전한 유입 동선 확보" },
+        { title: "주거/공공 인프라 융합", desc: "외곽이 아닌 중심부 입지로 주변 환경과 공생" }
+    ];
+    const regionalQuote = result?.regionalAnalysis?.quote || "선형 공원 및 열린 외부공간 연계 계획 필수";
+
+    const defaultLifecycleZones = [
+        { floorIndex: "4F", floorTitle: "생활 자립 / 역량 강화", floorDesc: "고등부·전공과 직업 실습" },
+        { floorIndex: "3F", floorTitle: "융합 학습 / 커뮤니티", floorDesc: "중등부 다목적 공용 존" },
+        { floorIndex: "2F", floorTitle: "기초 발달 / 신체 기반", floorDesc: "초등부 활동형 특별실" },
+        { floorIndex: "1F", floorTitle: "최단 동선 / 보호 관리", floorDesc: "유치부 및 행정지원 타워" },
+    ];
+    const lifecycleZones = result?.lifecycleZoning && result.lifecycleZoning.length > 0 ? result.lifecycleZoning : defaultLifecycleZones;
+
+    const communityScore = result?.communityLink?.score || 92;
+    const communityGrade = result?.communityLink?.grade || "우수";
+    const communityCategories = result?.communityLink?.categories || [
+        { title: "외부공간 개방성", desc: "공개공지 확보 비율 및 도로면 경계부 투명성 평가", scoreOutof25: 22.5 },
+        { title: "보행 동선 연계", desc: "공공보행로 물리적 접점 연결 수 및 주/부출입구 분산", scoreOutof25: 25.0 },
+        { title: "공용 프로그램", desc: "운동장, 다목적실 등 지역 주민 개방 공유 공간 면적 비율", scoreOutof25: 20.5 },
+        { title: "시각적 공생성", desc: "주거지 인접 1층 전면부 투명도 및 무장애 녹지축의 연속성", scoreOutof25: 24.0 },
+    ];
+
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] overflow-y-auto">
+        <div className="flex flex-col h-full bg-[#f8fafc] overflow-y-auto relative">
+            {error && (
+                <div className="absolute top-24 right-8 z-50 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg shadow-lg animate-fade-in flex items-center gap-2">
+                    <AlertCircle size={16} />
+                    <span className="text-sm font-bold">{error}</span>
+                </div>
+            )}
             {/* Header */}
             <div className="shrink-0 border-b border-slate-200 bg-white px-8 py-6 sticky top-0 z-20 shadow-sm">
                 <div className="flex items-end justify-between">
@@ -30,10 +92,36 @@ export default function ProjectCharacteristicsPanel() {
                             과업지시서, 대지 현황, 법규 검토를 종합한 <strong className="text-slate-700">{projectName}</strong> 건립의 정량적/정성적 타당성 분석
                         </p>
                     </div>
-                    <div className="text-right">
-                        <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">
+                    <div className="text-right flex flex-col items-end gap-2">
+                        <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full mb-1">
                             <ShieldCheck size={14} className="text-orange-500" />
                             ARCHE TECH CERTIFIED
+                        </div>
+                        <div className="flex items-center gap-2 mt-auto">
+                            {result && (
+                                <button
+                                    onClick={() => store.setCharacteristicsAnalysisResult(null)}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white hover:bg-orange-50 text-orange-700 border border-orange-200 font-bold text-xs shadow-sm transition-all whitespace-nowrap active:scale-95"
+                                >
+                                    <RotateCcw size={14} />
+                                    초기화
+                                </button>
+                            )}
+                            <button
+                                onClick={handleAnalyze}
+                                disabled={isAnalyzing}
+                                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-white font-bold text-[13px] shadow-sm transition-all whitespace-nowrap border-2 ${
+                                    isAnalyzing 
+                                        ? 'bg-slate-400 border-slate-400 cursor-not-allowed' 
+                                        : 'bg-orange-600 border-orange-600 hover:bg-orange-700 active:scale-95'
+                                }`}
+                            >
+                                {isAnalyzing ? (
+                                    <><Loader2 size={16} className="animate-spin text-white" /> 분석 중...</>
+                                ) : (
+                                    <><Search size={16} className="text-white" /> {result ? '진단 재분석' : '특성 분석'}</>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -64,11 +152,11 @@ export default function ProjectCharacteristicsPanel() {
                                         <div className="absolute top-0 right-0 p-2 opacity-5"><TrendingUp size={60}/></div>
                                         <div className="text-[10px] font-bold text-slate-500 mb-2">핵심 수요 대상자 추이</div>
                                         <div className="flex items-end gap-1 mb-1">
-                                            <span className="text-3xl font-black text-slate-800">1,398</span>
+                                            <span className="text-3xl font-black text-slate-800">{demandCount.toLocaleString()}</span>
                                             <span className="text-xs text-slate-500 mb-1">명/년</span>
                                         </div>
                                         <div className="text-[8px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 flex items-center gap-1 mt-1">
-                                            <TrendingUp size={10} /> 권역 내 지속 증가 예측
+                                            <TrendingUp size={10} /> {demandTrend}
                                         </div>
                                     </div>
                                     
@@ -79,13 +167,13 @@ export default function ProjectCharacteristicsPanel() {
                                             <div className="relative w-14 h-14 flex items-center justify-center">
                                                 <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                                                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#dbeafe" strokeWidth="4" />
-                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2563eb" strokeWidth="4" strokeDasharray="98, 100" />
+                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2563eb" strokeWidth="4" strokeDasharray={`${nimbyRate}, 100`} />
                                                 </svg>
-                                                <div className="absolute text-[11px] font-black text-orange-700">98%</div>
+                                                <div className="absolute text-[11px] font-black text-orange-700">{nimbyRate}%</div>
                                             </div>
                                         </div>
                                         <p className="text-[9px] text-orange-600 mt-2 leading-tight">
-                                            부정적 인식을 극복, 커뮤니티 거점화
+                                            {nimbyText}
                                         </p>
                                     </div>
                                 </div>
@@ -102,28 +190,21 @@ export default function ProjectCharacteristicsPanel() {
                                         <p className="text-[11px] text-slate-500 mb-4">{address}</p>
 
                                         <div className="space-y-3">
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-6 h-6 rounded bg-orange-50 flex items-center justify-center shrink-0 mt-0.5 border border-orange-100">
-                                                    <BadgeCheck size={14} className="text-orange-600" />
+                                            {regionalPoints.map((pt, i) => (
+                                                <div key={i} className="flex items-start gap-3">
+                                                    <div className="w-6 h-6 rounded bg-orange-50 flex items-center justify-center shrink-0 mt-0.5 border border-orange-100">
+                                                        {i === 0 ? <BadgeCheck size={14} className="text-orange-600" /> : <Building size={14} className="text-orange-600" />}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-800">{pt.title}</h4>
+                                                        <p className="text-[10px] text-slate-500">{pt.desc}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-slate-800">이용 접근성 최적화</h4>
-                                                    <p className="text-[10px] text-slate-500">물리적 장벽 완화, 안전한 유입 동선 확보</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-6 h-6 rounded bg-orange-50 flex items-center justify-center shrink-0 mt-0.5 border border-orange-100">
-                                                    <Building size={14} className="text-orange-600" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-slate-800">주거/공공 인프라 융합</h4>
-                                                    <p className="text-[10px] text-slate-500">외곽이 아닌 중심부 입지로 주변 환경과 공생</p>
-                                                </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
                                     <div className="mt-4 p-2.5 bg-slate-50 rounded border border-slate-100 text-[10px] text-slate-600 font-medium leading-relaxed">
-                                        "선형 공원 및 열린 외부공간 연계 계획 필수"
+                                        "{regionalQuote}"
                                     </div>
                                 </div>
 
@@ -174,38 +255,15 @@ export default function ProjectCharacteristicsPanel() {
                                 </div>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                    {/* 4F */}
-                                    <div className="flex items-stretch h-14">
-                                        <div className="w-12 bg-slate-100 text-slate-500 font-black flex items-center justify-center rounded-l-lg border-y border-l border-slate-200 shrink-0">4F</div>
-                                        <div className="flex-1 bg-orange-50 border border-orange-100 p-2.5 rounded-r-lg flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-orange-800">생활 자립 / 역량 강화</p>
-                                            <p className="text-[10px] text-orange-600 mt-0.5">고등부·전공과 직업 실습</p>
+                                    {lifecycleZones.map((zone, idx) => (
+                                        <div key={idx} className="flex items-stretch h-14">
+                                            <div className="w-12 bg-slate-100 text-slate-500 font-black flex items-center justify-center rounded-l-lg border-y border-l border-slate-200 shrink-0">{zone.floorIndex}</div>
+                                            <div className="flex-1 bg-orange-50 border border-orange-100 p-2.5 rounded-r-lg flex flex-col justify-center overflow-hidden">
+                                                <p className="text-xs font-bold text-orange-800 truncate">{zone.floorTitle}</p>
+                                                <p className="text-[10px] text-orange-600 mt-0.5 truncate">{zone.floorDesc}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    {/* 3F */}
-                                    <div className="flex items-stretch h-14">
-                                        <div className="w-12 bg-slate-100 text-slate-500 font-black flex items-center justify-center rounded-l-lg border-y border-l border-slate-200 shrink-0">3F</div>
-                                        <div className="flex-1 bg-amber-50 border border-amber-100 p-2.5 rounded-r-lg flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-amber-800">융합 학습 / 커뮤니티</p>
-                                            <p className="text-[10px] text-amber-600 mt-0.5">중등부 다목적 공용 존</p>
-                                        </div>
-                                    </div>
-                                    {/* 2F */}
-                                    <div className="flex items-stretch h-14">
-                                        <div className="w-12 bg-slate-100 text-slate-500 font-black flex items-center justify-center rounded-l-lg border-y border-l border-slate-200 shrink-0">2F</div>
-                                        <div className="flex-1 bg-orange-50 border border-orange-100 p-2.5 rounded-r-lg flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-orange-800">기초 발달 / 신체 기반</p>
-                                            <p className="text-[10px] text-orange-600 mt-0.5">초등부 활동형 특별실</p>
-                                        </div>
-                                    </div>
-                                    {/* 1F */}
-                                    <div className="flex items-stretch h-14">
-                                        <div className="w-12 bg-slate-100 text-slate-500 font-black flex items-center justify-center rounded-l-lg border-y border-l border-slate-200 shrink-0">1F</div>
-                                        <div className="flex-1 bg-orange-50 border border-orange-100 p-2.5 rounded-r-lg flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-orange-800">최단 동선 / 보호 관리</p>
-                                            <p className="text-[10px] text-orange-600 mt-0.5">유치부 및 행정지원 타워</p>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -221,47 +279,24 @@ export default function ProjectCharacteristicsPanel() {
                                     </div>
                                     <div className="text-right flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
                                         <span className="text-[11px] font-bold text-orange-800">통합 평가 등급:</span>
-                                        <span className="text-sm font-black text-orange-600">우수 (92점)</span>
+                                        <span className="text-sm font-black text-orange-600">{communityGrade} ({communityScore}점)</span>
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
-                                    <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-lg relative overflow-hidden group hover:border-orange-200 transition-colors">
-                                        <div className="absolute top-0 right-0 px-2 py-1 rounded-bl-lg bg-orange-100 flex items-center justify-center text-[9px] font-bold text-orange-700">배점 25</div>
-                                        <h4 className="text-xs font-bold text-slate-800 mb-1.5 w-4/5">외부공간 개방성</h4>
-                                        <p className="text-[10px] text-slate-500 leading-tight">공개공지 확보 비율 및 도로면 경계부 투명성 평가</p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden"><div className="bg-orange-500 h-1.5 rounded-full" style={{width: '90%'}}></div></div>
-                                            <span className="text-[9px] font-bold text-slate-600">22.5</span>
+                                    {communityCategories.map((cat, idx) => (
+                                        <div key={idx} className={`bg-slate-50 border border-slate-100 p-3.5 rounded-lg relative overflow-hidden group transition-colors ${idx % 2 === 0 ? 'hover:border-orange-200' : 'hover:border-amber-200'}`}>
+                                            <div className={`absolute top-0 right-0 px-2 py-1 rounded-bl-lg flex items-center justify-center text-[9px] font-bold ${idx % 2 === 0 ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>배점 25</div>
+                                            <h4 className="text-xs font-bold text-slate-800 mb-1.5 w-4/5 truncate">{cat.title}</h4>
+                                            <p className="text-[10px] text-slate-500 leading-tight h-[28px] overflow-hidden">{cat.desc}</p>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                                    <div className={`${idx % 2 === 0 ? 'bg-orange-500' : 'bg-amber-500'} h-1.5 rounded-full`} style={{width: `${(Number(cat.scoreOutof25) / 25) * 100}%`}}></div>
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-600">{Number(cat.scoreOutof25).toFixed(1)}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-lg relative overflow-hidden group hover:border-orange-200 transition-colors">
-                                        <div className="absolute top-0 right-0 px-2 py-1 rounded-bl-lg bg-orange-100 flex items-center justify-center text-[9px] font-bold text-orange-700">배점 25</div>
-                                        <h4 className="text-xs font-bold text-slate-800 mb-1.5 w-4/5">보행 동선 연계</h4>
-                                        <p className="text-[10px] text-slate-500 leading-tight">공공보행로 물리적 접점 연결 수 및 주/부출입구 분산</p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden"><div className="bg-orange-500 h-1.5 rounded-full" style={{width: '100%'}}></div></div>
-                                            <span className="text-[9px] font-bold text-slate-600">25.0</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-lg relative overflow-hidden group hover:border-amber-200 transition-colors">
-                                        <div className="absolute top-0 right-0 px-2 py-1 rounded-bl-lg bg-amber-100 flex items-center justify-center text-[9px] font-bold text-amber-700">배점 25</div>
-                                        <h4 className="text-xs font-bold text-slate-800 mb-1.5 w-4/5">공용 프로그램</h4>
-                                        <p className="text-[10px] text-slate-500 leading-tight">운동장, 다목적실 등 지역 주민 개방 공유 공간 면적 비율</p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden"><div className="bg-amber-500 h-1.5 rounded-full" style={{width: '82%'}}></div></div>
-                                            <span className="text-[9px] font-bold text-slate-600">20.5</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-lg relative overflow-hidden group hover:border-orange-200 transition-colors">
-                                        <div className="absolute top-0 right-0 px-2 py-1 rounded-bl-lg bg-orange-100 flex items-center justify-center text-[9px] font-bold text-orange-700">배점 25</div>
-                                        <h4 className="text-xs font-bold text-slate-800 mb-1.5 w-4/5">시각적 공생성</h4>
-                                        <p className="text-[10px] text-slate-500 leading-tight">주거지 인접 1층 전면부 투명도 및 무장애 녹지축의 연속성</p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden"><div className="bg-orange-500 h-1.5 rounded-full" style={{width: '96%'}}></div></div>
-                                            <span className="text-[9px] font-bold text-slate-600">24.0</span>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

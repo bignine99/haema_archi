@@ -167,11 +167,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                                     </div>
                                     <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">건폐/용적률 지침</span>
-                                        <p className="text-xs font-black">{store.buildingCoverageLimit}% / {store.floorAreaRatioLimit}%</p>
+                                        <p className="text-xs font-black">
+                                            {store.buildingCoverageLimit > 0 ? `${store.buildingCoverageLimit}%` : '지구단위계획 준수'} / {store.floorAreaRatioLimit > 0 ? `${store.floorAreaRatioLimit}%` : '지구단위계획 준수'}
+                                        </p>
                                     </div>
                                     <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">층수/최고높이</span>
-                                        <p className="text-xs font-black">최고 {store.totalFloors}층 ({store.maxHeight}m)</p>
+                                        <p className="text-xs font-black">
+                                            {store.totalFloors > 0 ? `최고 ${store.totalFloors}층` : '설계자 제안'} {store.maxHeight > 0 ? `(${store.maxHeight}m)` : ''}
+                                        </p>
                                     </div>
                                     <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100">
                                         <span className="text-[10px] text-slate-500 font-bold mb-1">추정 공사비/용역기간</span>
@@ -253,29 +257,58 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         <div className="col-span-12 xl:col-span-4 flex flex-col gap-6">
                             
                             {/* 엔지니어링 씰 (RFP Seal) */}
-                            <div className="bg-gradient-to-b from-orange-600 to-orange-700 rounded-lg p-6 text-white border border-orange-500 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-10">
-                                    <Hexagon size={120} />
-                                </div>
-                                <div className="relative z-10 flex flex-col items-center text-center">
-                                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20 backdrop-blur-md">
-                                        <ShieldCheck size={32} className="text-white" />
+                            {store.isGeminiParsed ? (
+                                <div className="bg-gradient-to-b from-orange-600 to-orange-700 rounded-lg p-6 text-white border border-orange-500 shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <Hexagon size={120} />
                                     </div>
-                                    <h4 className="text-[10px] text-orange-200 font-bold tracking-widest uppercase mb-1">ARCHE RFP INTELLIGENCE</h4>
-                                    <h2 className="text-[20px] font-black tracking-tight text-white mb-2">PARSING COMPLETE</h2>
-                                    <div className="h-px bg-white/20 w-full my-3"></div>
-                                    <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-orange-100 px-2">
-                                        <div className="flex justify-between w-full">
-                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 파싱 신뢰도</span>
-                                            <span className="text-white font-bold">98.5% (A+)</span>
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20 backdrop-blur-md">
+                                            <ShieldCheck size={32} className="text-white" />
                                         </div>
-                                        <div className="flex justify-between w-full">
-                                            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 누락 데이터 방어</span>
-                                            <span className="text-white font-bold">Pass</span>
+                                        <h4 className="text-[10px] text-orange-200 font-bold tracking-widest uppercase mb-1">ARCHE RFP INTELLIGENCE</h4>
+                                        <h2 className="text-[20px] font-black tracking-tight text-white mb-2">PARSING COMPLETE</h2>
+                                        <div className="h-px bg-white/20 w-full my-3"></div>
+                                        <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-orange-100 px-2">
+                                            <div className="flex justify-between w-full">
+                                                <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 파싱 신뢰도</span>
+                                                <span className="text-white font-bold">98.5% (A+)</span>
+                                            </div>
+                                            <div className="flex justify-between w-full">
+                                                <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-white"/> 누락 데이터 방어</span>
+                                                <span className="text-white font-bold">Pass</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="bg-gradient-to-b from-amber-600 to-amber-700 rounded-lg p-6 text-white border border-amber-500 shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <Hexagon size={120} />
+                                    </div>
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20 backdrop-blur-md">
+                                            <AlertTriangle size={32} className="text-white animate-bounce" />
+                                        </div>
+                                        <h4 className="text-[10px] text-amber-200 font-bold tracking-widest uppercase mb-1">ARCHE RFP INTELLIGENCE</h4>
+                                        <h2 className="text-[20px] font-black tracking-tight text-white mb-2">FALLBACK MODE</h2>
+                                        <div className="h-px bg-white/20 w-full my-3"></div>
+                                        <div className="flex flex-col gap-1.5 w-full text-[10px] font-medium text-amber-100 px-2 mb-3">
+                                            <div className="flex justify-between w-full">
+                                                <span className="flex items-center gap-1.5"><AlertCircle size={12} className="text-white"/> 파싱 신뢰도</span>
+                                                <span className="text-white font-bold">Low (규칙 기반)</span>
+                                            </div>
+                                            <div className="flex justify-between w-full">
+                                                <span className="flex items-center gap-1.5"><AlertCircle size={12} className="text-white"/> AI 분석 적용</span>
+                                                <span className="text-white font-bold">Fail (API Key 필요)</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[9px] text-amber-100/90 leading-relaxed text-left bg-black/20 p-2 rounded border border-white/10">
+                                            ⚠️ Gemini API 키가 설정되지 않아 단순 규칙 기반(Regex)으로 파싱되었습니다. 대지 정보 외의 요약 지침이 누락되거나 어긋날 수 있으니 우측 상단에서 API 키를 등록하고 다시 업로드해 주세요.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* 주요 설계 리스크/확인사항 */}
                             <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex-1">

@@ -79,7 +79,7 @@ async def process_chat_message(inp: MassingChatInput) -> dict:
         return {"error": "GEMINI_API_KEY가 설정되지 않았습니다."}
     
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash-lite', 
+        model = genai.GenerativeModel('gemini-2.5-flash', 
                                       system_instruction=SYSTEM_PROMPT,
                                       tools=UPDATE_MASSING_TOOL)
         

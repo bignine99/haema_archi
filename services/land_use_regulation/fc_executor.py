@@ -632,7 +632,7 @@ def build_gemini_tool_config() -> dict:
         import google.generativeai as genai
         
         model = genai.GenerativeModel(
-            'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
             tools=build_gemini_tool_config()["tools"],
         )
     """

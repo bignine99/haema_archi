@@ -37,6 +37,26 @@ frontend/.env.local
 frontend/test_gemini.js
 test_apis.js
 test_*.js
+tmp_*.js
+*.mjs
+*.ps1
+extract_police.js
+search_text.js
+police_text.txt
+tmp_nginx_config
+ninetynine_nginx.conf
+detailed_steps_modification_processes_haema.md
+.raw_data/
 
 # 빌드 산출물 (하드코딩된 키가 번들에 포함될 수 있음)
 services/04_3d_mass/dist/
+dist/
+build/
+
+# Agent sensitive files
+.agent/
+
+# Python cache files
+**/__pycache__/
+*.pyc
+

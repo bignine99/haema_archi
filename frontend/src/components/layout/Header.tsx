@@ -15,10 +15,12 @@ export function MassAddressSearch() {
     const address = useProjectStore(s => s.address);
     const isLoading = useProjectStore(s => s.isLoading);
     const apiError = useProjectStore(s => s.apiError);
+    const [searchError, setSearchError] = useState<string | null>(null);
 
     const handleSearch = async () => {
         if (!query.trim()) return;
         setSearching(true);
+        setSearchError(null);
         try {
             const res = await searchRealAddress(query);
             setResults(res);
@@ -28,10 +30,12 @@ export function MassAddressSearch() {
                 await loadRealParcel(res[0]);
                 setShowDropdown(false);
             } else {
+                setSearchError('검색 결과가 없는 주소입니다.');
                 setShowDropdown(false);
             }
         } catch (error) {
             console.error(error);
+            setSearchError('검색 중 오류가 발생했습니다.');
         } finally {
             setSearching(false);
         }
@@ -67,6 +71,9 @@ export function MassAddressSearch() {
             {apiError && (
                 <span className="text-xs text-red-500 font-medium pl-1">{apiError}</span>
             )}
+            {searchError && (
+                <span className="text-xs text-red-500 font-medium pl-1">{searchError}</span>
+            )}
 
             {/* 카카오 검색 결과 드롭다운 */}
             {showDropdown && results.length > 0 && (
@@ -98,6 +105,13 @@ interface HeaderProps {
 
 export default function Header({ activeMenu }: HeaderProps) {
     const store = useProjectStore();
+    const [showKeyInput, setShowKeyInput] = useState(false);
+    const [tempKey, setTempKey] = useState(store.geminiApiKey || '');
+
+    const handleSaveKey = () => {
+        store.setGeminiApiKey(tempKey);
+        setShowKeyInput(false);
+    };
 
     return (
         <header className="border-b border-slate-200 shrink-0 flex items-center justify-between px-6 bg-white z-20" style={{ height: '60px' }}>
@@ -114,17 +128,64 @@ export default function Header({ activeMenu }: HeaderProps) {
                 {['3dmass', 'siteplan', 'floorplan', 'concept_diagram'].includes(activeMenu) && (
                     <MassAddressSearch />
                 )}
-                {store.geminiApiKey ? (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 font-medium border border-orange-100 flex items-center gap-1.5 shadow-sm" title="Gemini API 연동 됨">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                        API 연동 완료
-                    </span>
-                ) : (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 font-medium border border-slate-200 flex items-center gap-1.5 shadow-sm" title="Gemini API 키가 설정되지 않음">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                        API 미연동 (재로그인 필요)
-                    </span>
-                )}
+                
+                <div className="relative">
+                    {store.geminiApiKey && store.geminiApiKey !== 'demo_mode_no_key' ? (
+                        <button 
+                            onClick={() => { setTempKey(store.geminiApiKey); setShowKeyInput(!showKeyInput); }}
+                            className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 flex items-center gap-1.5 shadow-sm hover:bg-emerald-100 transition-colors" 
+                            title="클릭하여 API 키 변경"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            API 연동 완료 (AI 모드)
+                        </button>
+                    ) : store.geminiApiKey === 'demo_mode_no_key' ? (
+                        <button 
+                            onClick={() => { setTempKey(''); setShowKeyInput(!showKeyInput); }}
+                            className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold border border-amber-200 flex items-center gap-1.5 shadow-sm hover:bg-amber-100 transition-colors animate-pulse" 
+                            title="클릭하여 API 키 등록 (현재 규칙 기반 작동 중)"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            데모 모드 (API 키 미등록)
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => { setTempKey(''); setShowKeyInput(!showKeyInput); }}
+                            className="text-xs px-2.5 py-1 rounded-full bg-red-50 text-red-600 font-semibold border border-red-200 flex items-center gap-1.5 shadow-sm hover:bg-red-100 transition-colors" 
+                            title="클릭하여 API 키 입력"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            API 미연동 (키 입력 필요)
+                        </button>
+                    )}
+                    {showKeyInput && (
+                        <div className="absolute right-0 mt-2 p-3 bg-white border border-slate-200 rounded-lg shadow-xl z-50 w-72 flex flex-col gap-2">
+                            <span className="text-xs font-semibold text-slate-700">Gemini API Key 설정</span>
+                            <input
+                                type="password"
+                                placeholder="AIzaSy..."
+                                value={tempKey}
+                                onChange={e => setTempKey(e.target.value)}
+                                className="px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-800 w-full outline-none focus:ring-1 focus:ring-orange-400"
+                            />
+                            <div className="flex justify-end gap-1.5">
+                                <button
+                                    onClick={() => setShowKeyInput(false)}
+                                    className="px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-100 rounded"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    onClick={handleSaveKey}
+                                    className="px-2 py-1 text-[11px] bg-orange-600 text-white font-bold rounded hover:bg-orange-700"
+                                >
+                                    저장
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <button className="text-[12px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
                     <span>프로젝트 내보내기</span>
                 </button>

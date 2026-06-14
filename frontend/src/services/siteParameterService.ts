@@ -1,7 +1,7 @@
 /**
  * SiteParameter 추출 서비스 — 정성적 대지분석 → 정량적 JSON 파라미터 변환 엔진
  * 
- * 모델: gemini-2.5-flash-lite
+ * 모델: gemini-2.5-flash
  * 역할: AI 법규분석 + 토지이용규제 결과를 기반으로
  *       3D 제너레이티브 디자인 엔진(Three.js)과 유전 알고리즘(GA)이
  *       직접 읽고 연산할 수 있는 정량적 JSON(SiteParameters)을 추출·생성
@@ -18,7 +18,7 @@ import { useProjectStore } from '@/store/projectStore';
 import type { ProjectInfoForRegulation, RegulationAnalysisResult } from './regulationAnalysisService';
 import type { LandUseRegulationResult } from './landUseService';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 // ══════════════════════════════════════════════
 // ███ SiteParameters 인터페이스 (3D 엔진 입력)
@@ -334,6 +334,9 @@ export async function extractSiteParameters(
                     temperature: 0,
                     maxOutputTokens: 8192,
                     responseMimeType: 'application/json',
+                    thinkingConfig: {
+                        thinkingBudget: 0
+                    }
                 },
             }),
         });

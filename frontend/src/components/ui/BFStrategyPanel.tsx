@@ -1,6 +1,8 @@
 import React from 'react';
 import { ShieldCheck, Users, Target, ArrowRightLeft, Move, BellRing, DoorOpen, ShieldAlert, BadgeCheck, Navigation, Sparkles } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-9 무장애(Barrier Free) 및 유니버설 설계 모듈
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const BFStrategyPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['bf'];
+    const sd = aiData?.sectionData || {} as any;
     const isEducation = store.buildingUse === '교육연구시설';
     const isPublic = isEducation || store.buildingUse === '업무시설(오피스)';
     
@@ -40,6 +47,39 @@ const BFStrategyPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                             특화 조건: {isPublic ? 'BF 최우수(최상급) 인증 강제 달성 타겟' : '표준 이동성 적용'}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'bf',
+                                        domainNameKor: '무장애(BF)/유니버설',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('bf', result);
+                                    } else {
+                                        alert('BF 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI BF/유니버설 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -240,21 +280,19 @@ const BFStrategyPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">현장 타설 시 바닥 단차(2cm 이상) 허용 오차 초과</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">인증 탈락</span></td>
-                                            <td className="px-3 py-2.5">도어 마감 간 0mm 지시 엄수 명기. 현장 먹매김 및 방통 타설 시 감리단 全 개소 레벨 역검측 의무화.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">외부 조경 패턴과 점자 블록 연속성 충돌(Gap &gt; 15cm)</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">대폭 감점</span></td>
-                                            <td className="px-3 py-2.5">주진입로에서 현관으로 인입 시 재질 불명확성 배제. 조경과 겹치는 구간은 외부 매립형 화강석 점자 강제 지정.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">VE 진행 중 수퍼와이드 복도 축소 및 자동문 삭감 압박</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">효용 저하</span></td>
-                                            <td className="px-3 py-2.5">J1(5D 공사비)에서 '자동문' 셋을 BF 특수 예산으로 성역화(Lock)하여 건축 일반예산 감액 표적에서 이탈구조 화.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['bf']?.riskBoard) ? store.engineeringAnalysisData['bf'].riskBoard : [
+                                            { risk: '현장 타설 시 바닥 단차(2cm 이상) 허용 오차 초과', impact: '상', prob: '중', solution: '도어 마감 간 0mm 지시 엄수 명기. 현장 먹매김 및 방통 타설 시 감리단 全 개소 레벨 역검측 의무화.' },
+                                            { risk: '외부 조경 패턴과 점자 블록 연속성 충돌(Gap > 15cm)', impact: '중', prob: '상', solution: '주진입로에서 현관으로 인입 시 재질 불명확성 배제. 조경과 겹치는 구간은 외부 매립형 화강석 점자 강제 지정.' },
+                                            { risk: 'VE 진행 중 수퍼와이드 복도 축소 및 자동문 삭감 압박', impact: '하', prob: '중', solution: 'J1(5D 공사비)에서 \'자동문\' 셋을 BF 특수 예산으로 성역화(Lock)하여 건축 일반예산 감액 표적에서 이탈구조 화.' },
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>{row.impact === '상' ? '인증 탈락' : row.impact === '중' ? '대폭 감점' : '효용 저하'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -277,12 +315,12 @@ const BFStrategyPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['bf']?.customMetrics) ? store.engineeringAnalysisData['bf'].customMetrics : [
                             { label: '본인증 타겟', value: '최우수 (90점+)' },
                             { label: '유효 폭 (교행)', value: '최소 2.1m 보장' },
                             { label: '공간 단차', value: '0mm 완전 통제' },
                             { label: '인식 보호', value: '시청각 멀티 알람' },
-                        ].map((m, i) => (
+                        ]).slice(0, 4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

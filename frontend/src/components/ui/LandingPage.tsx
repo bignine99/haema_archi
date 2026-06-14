@@ -23,7 +23,7 @@ const features = [
     { id: 'floorplan', title: '평면도', status: '예정', icon: Grid, desc: '공간 요구사항을 토대로 각 층별 최적화된 레이아웃을 분할합니다.' },
     { id: 'elevation', title: '입면도', status: '예정', icon: Building, desc: '재질과 창호 분할 비율 등을 고려하여 입면 디자인을 즉각적으로 생성합니다.' },
     { id: 'section', title: '단면도', status: '예정', icon: Ruler, desc: '수직적 구조를 기반으로 층고와 코어 구성 체계를 작성합니다.' },
-    { id: 'concept_diagram', title: '개념도', status: '예정', icon: Lightbulb, desc: '시뮬레이션 전반과 주요 건축 설계 전략을 다이어그램으로 산출합니다.' },
+    { id: 'engineering', title: '특화 엔지니어링', status: '완료', icon: Lightbulb, desc: '구조, 토목, 기계 등 9대 분야의 동적 AI 엔지니어링 데이터를 실시간 시각화합니다.' },
     { id: 'concept_image', title: '컨셉이미지', status: '예정', icon: ImageIcon, desc: '레퍼런스를 참조하여 다양한 스타일의 매력적인 투시도를 생성합니다.' },
     { id: 'rendering', title: '렌더링 생성', status: '예정', icon: Camera, desc: '고품질 엔진과 연동하여 최종 프레젠테이션용 리얼리스틱 뷰를 도출합니다.' },
 ];
@@ -190,7 +190,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
 
     const validateApiKey = async (key: string) => {
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite?key=${key}`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash?key=${key}`);
             if (response.ok) return true;
             if (response.status === 403) {
                 const data = await response.json();
@@ -375,6 +375,62 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                     <span className="text-slate-400">↑</span>
                     <span>02 / 03</span>
                     <span className="text-slate-400">↓</span>
+                </div>
+            </section>
+
+            {/* ─── SECTION 02.5: RECENT UPDATES ─── */}
+            <section className="w-full bg-[#f8fafc] px-8 md:px-16 lg:px-24 py-32 relative border-t border-slate-200">
+                <div className="flex flex-col lg:flex-row justify-between mb-24 items-start lg:items-end">
+                    <div className="relative mb-8 lg:mb-0">
+                        <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-[7.5rem] font-serif-elegant text-slate-900 tracking-tight leading-none mb-6">
+                            LATEST <br/> RELEASES
+                        </h2>
+                        <div className="flex items-center gap-4">
+                            <span className="w-12 h-[1px] bg-slate-400"></span>
+                            <span className="text-[10px] tracking-[0.2em] uppercase text-slate-500 font-bold">Version 3.0 Updates</span>
+                        </div>
+                    </div>
+                    <div className="lg:max-w-[400px]">
+                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                            ARCHE 플랫폼의 핵심인 9개 Phase C 특화 엔지니어링 모듈의 전면 리팩토링 및 
+                            과업지시서 파싱을 위한 Zero-Dropout AI 엔진 연동이 성공적으로 완료되었습니다.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-t border-l border-slate-200">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
+                        className="p-10 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                        <span className="text-[10px] font-bold tracking-[0.2em] text-[#ff7b00] uppercase mb-6 block">2026.04.10</span>
+                        <h3 className="text-2xl font-serif-elegant text-slate-900 mb-4">Phase C 동적 데이터 연동</h3>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            C-1부터 C-9까지의 9개 엔지니어링 패널이 하드코딩 템플릿 방식에서 벗어나, Gemini 기반 프로젝트 특화 데이터를 실시간으로 소비하는 지능형 대시보드로 격상되었습니다.
+                        </p>
+                    </motion.div>
+
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}
+                        className="p-10 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                        <span className="text-[10px] font-bold tracking-[0.2em] text-[#ff7b00] uppercase mb-6 block">2026.04.09</span>
+                        <h3 className="text-2xl font-serif-elegant text-slate-900 mb-4">AI 파싱 엔진 고도화</h3>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            과업지시서 분석 시 단순 정규식(Regex)을 초월하여 AI가 문맥 전체를 인지하고 제원을 완벽히 1대1 매핑하는 Zero-Dropout 프롬프트를 신규 적용했습니다.
+                        </p>
+                    </motion.div>
+
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }}
+                        className="p-10 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                        <span className="text-[10px] font-bold tracking-[0.2em] text-[#ff7b00] uppercase mb-6 block">2026.04.07</span>
+                        <h3 className="text-2xl font-serif-elegant text-slate-900 mb-4">브랜드 CI 디자인 통합</h3>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            전 패널에 걸쳐 범람하던 고전적 시스템 컬러를 걷어내고, Haema Orange 중심의 프리미엄 12-Column 디자인 레이아웃으로 완벽한 통일감을 구사합니다.
+                        </p>
+                    </motion.div>
                 </div>
             </section>
 

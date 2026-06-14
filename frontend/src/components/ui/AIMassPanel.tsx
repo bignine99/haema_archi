@@ -132,7 +132,49 @@ export default function AIMassPanel({ onClose }: { onClose?: () => void }) {
                     </div>
                 </div>
 
-                {/* 1.5. 인센티브 완화 스위치 */}
+                {/* 1.5. 환경 시뮬레이션 분석 (태양/일조) */}
+                <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg p-3 border border-blue-100">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                            <Sparkles size={12} className="text-blue-500" />
+                            <span className="text-[11px] font-bold text-slate-700">환경 시뮬레이션 분석</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="flex items-center justify-between cursor-pointer group">
+                            <span className={`text-[10px] transition-colors ${store.showSunlight ? 'text-orange-600 font-bold' : 'text-slate-600 group-hover:text-slate-900'}`}>태양광 궤적 분석 (Sun Path)</span>
+                            <div className={`w-7 h-4 rounded-full transition-colors relative shadow-inner ${store.showSunlight ? 'bg-orange-500' : 'bg-slate-300'}`}>
+                                <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full shadow transition-transform ${store.showSunlight ? 'translate-x-3' : ''}`} />
+                            </div>
+                            <input 
+                                type="checkbox" 
+                                className="hidden" 
+                                checked={store.showSunlight} 
+                                onChange={(e) => store.setShowSunlight(e.target.checked)} 
+                            />
+                        </label>
+
+                        <label className="flex items-center justify-between cursor-pointer group">
+                            <span className={`text-[10px] transition-colors ${store.showShadowAnalysis ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover:text-slate-900'}`}>그림자 간섭 분석 (Shadow Heatmap)</span>
+                            <div className={`w-7 h-4 rounded-full transition-colors relative shadow-inner ${store.showShadowAnalysis ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                                <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full shadow transition-transform ${store.showShadowAnalysis ? 'translate-x-3' : ''}`} />
+                            </div>
+                            <input 
+                                type="checkbox" 
+                                className="hidden" 
+                                checked={store.showShadowAnalysis} 
+                                onChange={(e) => {
+                                    store.setShowShadowAnalysis(e.target.checked);
+                                    if (e.target.checked && !store.showSunlight) {
+                                        store.setShowSunlight(true);
+                                    }
+                                }} 
+                            />
+                        </label>
+                    </div>
+                </div>
+
+                {/* 1.6. 인센티브 완화 스위치 */}
                 <div className="bg-gradient-to-br from-green-50 to-orange-50 rounded-lg p-3 border border-orange-100">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5">

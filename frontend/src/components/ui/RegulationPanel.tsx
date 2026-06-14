@@ -43,6 +43,19 @@ export default function RegulationPanel() {
     const [showCatalog, setShowCatalog] = useState(false);
     const [expandedRegIndex, setExpandedRegIndex] = useState<number | null>(null);
     const [batchProgress, setBatchProgress] = useState(0);
+ 
+    useEffect(() => {
+        if (
+            store.address && 
+            store.address !== '미정' && 
+            store.address !== '정보 없음' && 
+            !store.landUseRegulation && 
+            !store.landUseLoading && 
+            !store.landUseError
+        ) {
+            store.fetchLandUseData(store.address);
+        }
+    }, [store.address, store.landUseRegulation, store.landUseLoading, store.landUseError, store.fetchLandUseData]);
 
     const hasProjectInfo = !!(store.projectName && store.projectName !== '미정 프로젝트');
     const totalBatches = REGULATION_BATCHES.length;

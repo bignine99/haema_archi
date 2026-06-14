@@ -1,7 +1,8 @@
-import React from 'react';
-import { Sparkles, Network, Leaf, ShieldCheck, Activity, Users, BatteryCharging, ChevronRight, ArrowRight, Fan, Building2, Trees, Eye, AlertOctagon, Maximize2, MoveRight, Lock, CheckCircle2, TrendingDown, Server, Cpu, Navigation, Landmark, BadgeCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Network, Leaf, ShieldCheck, Activity, Users, BatteryCharging, ChevronRight, ArrowRight, Fan, Building2, Trees, Eye, AlertOctagon, Maximize2, MoveRight, Lock, CheckCircle2, TrendingDown, Server, Cpu, Navigation, Landmark, BadgeCheck, Loader2 } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
 import { exportToJSON } from '@/utils/exportData';
+import { analyzeSpecializedDesign } from '@/services/geminiSpecializedService';
 
 const SpecialDesignPanel = () => {
     const store = useProjectStore();
@@ -14,17 +15,29 @@ const SpecialDesignPanel = () => {
     const isOffice = buildingUse === '업무시설(오피스)';
     const isSports = buildingUse.includes('체육') || buildingUse.includes('운동');
 
-    // Dynamic strings
+    
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const aiData = store.specializedDesignProposal;
+
+    // Dynamic strings - Fallback to hardcoded or use AI Data
     const defaultBranding = projectName ? `${projectName} Innovation Hub` : 'Urban Innovation Campus';
-    const branding = isHospital ? 'Healing Oasis Campus' : isOffice ? 'Smart Innovation Hub' : isSports ? 'Active Wellness Center' : defaultBranding;
-    const slogan = isHospital ? '자연과 치유가 만나는 메디컬 거점' : isOffice ? '초연결 스마트 워크스페이스' : isSports ? '지역사회 밀착형 활력 충전 플랫폼' : '미래를 향한 융합과 상생의 공동체';
-    const masterplanDesc = isHospital 
+    const fallbackBranding = isHospital ? 'Healing Oasis Campus' : isOffice ? 'Smart Innovation Hub' : isSports ? 'Active Wellness Center' : defaultBranding;
+    const fallbackSlogan = isHospital ? '자연과 치유가 만나는 메디컬 거점' : isOffice ? '초연결 스마트 워크스페이스' : isSports ? '지역사회 밀착형 활력 충전 플랫폼' : '미래를 향한 융합과 상생의 공동체';
+    const fallbackMasterplanDesc = isHospital 
         ? '일반적인 치료 기능을 넘어 지역 사회와 상생하며, 도심 속 프리미엄 헬스케어 및 생태적 치유 환경을 제공하는 메디컬 혁신 거점으로 자리매김합니다.'
         : isOffice 
         ? '단조로운 업무 공간을 넘어 구성원의 웰니스와 지역사회 네트워킹을 증명하는 차세대 하이브리드 워크스페이스 벤치마크 모델로 자리매김합니다.'
         : isSports
         ? '지역 주민에게 고부가 스포츠 인프라를 제공하며 모든 연령층의 신체적, 정신적 웰니스를 증진하는 개방형 라이프스타일 랜드마크로 자리매김합니다.'
         : `단순한 기능을 넘어 지역과의 활발한 상호작용을 촉진하며, 도심 속 창의적 혁신 거점이자 사용자 중심의 미래형 융합 플랫폼으로 자리매김합니다.`;
+
+    const branding = aiData ? aiData.branding : fallbackBranding;
+    const slogan = aiData ? aiData.slogan : fallbackSlogan;
+    const masterplanDesc = aiData ? aiData.masterplanDesc : fallbackMasterplanDesc;
+
+    const weLiving = aiData?.weLiving || { title: 'We-LIVING', desc: '님비 극복형 개방/공유 거버넌스' };
+    const weLinking = aiData?.weLinking || { title: 'We-LINKING', desc: '배리어프리 3차원 순환 네트워크' };
+    const weLearning = aiData?.weLearning || { title: 'We-LEARNING', desc: '생애주기 다단계 맞춤 공간' };
 
     const scaleFactor = Math.max(1, grossFloorArea / 3000);
     const vsiScore = Math.min(85, Math.round(42 * scaleFactor));
@@ -51,9 +64,15 @@ const SpecialDesignPanel = () => {
         policyTags = ['다목적 복합경기장 및 고효율 체육공간 확보', '주야간 상시 개방성을 고려한 방범/안전 특화 설계', '무장애(BF) 유니버설 및 체육약자 편의성 제고'];
     }
 
-    const clusterTitle = isHospital ? '4단계 환자 맞춤형 치유 클러스터' : isOffice ? '4단계 웰니스 코어 및 창의 존' : isSports ? '4단계 액티브 라이프스타일 콤플렉스' : '4단계 융합 및 소통 혁신 클러스터';
+    if (aiData) {
+        policyTitle = aiData.policyTitle || policyTitle;
+        policyDesc = aiData.policyDesc || policyDesc;
+        policyTags = Array.isArray(aiData.policyTags) ? aiData.policyTags : policyTags;
+    }
 
-    const clusterSteps = isHospital ? [
+    const clusterTitle = aiData ? aiData.clusterTitle : isHospital ? '4단계 환자 맞춤형 치유 클러스터' : isOffice ? '4단계 웰니스 코어 및 창의 존' : isSports ? '4단계 액티브 라이프스타일 콤플렉스' : '4단계 융합 및 소통 혁신 클러스터';
+
+    const fallbackClusterSteps = isHospital ? [
         { step: 1, name: '응급/외상', color: 'emerald', sub: '응급의료센터, 감염분류소' },
         { step: 2, name: '집중치료', color: 'blue', sub: '중환자실(ICU), 하이브리드 수술실' },
         { step: 3, name: '일반/격리', color: 'emerald', sub: '스마트 일반병동, 음압격리병실' },
@@ -75,16 +94,51 @@ const SpecialDesignPanel = () => {
         { step: 4, name: '힐링케어', color: 'orange', sub: '옥상 정원, 체육 밎 휴게 시설' }
     ];
 
-    const clusterFloors = isHospital ? ['1F 응급/로비', '2F 수술실/ICU', '3F 무균병동', '4F 일반병동/가든'] : isOffice ? ['1F 코워킹/로비', '2F 오픈라운지', '3F 집중업무구역', '4F 임원/루프탑'] : isSports ? ['1F 진입마당/로비', '2F 다목적 체육관', '3F 헬스&피트니스', '4F 옥상 공원/트랙'] : ['1F 로비/오픈존', '2F 협업 라운지', '3F 집중 업무/연구', '4F 조용/독립존'];
-    const loopTitle = isHospital ? '치유와 회복의 입체적 동선 교차망' : isOffice ? '업무와 휴식의 입체적 동선 교차망' : isSports ? '관람-경기-휴식의 3D 입체 트래픽 루프' : '유기적 연계 및 소통의 입체 동선망';
+    const clusterSteps = Array.isArray(aiData?.clusterSteps) ? aiData.clusterSteps : fallbackClusterSteps;
+    const clusterFloors = Array.isArray(aiData?.clusterFloors) ? aiData.clusterFloors : (isHospital ? ['1F 응급/로비', '2F 수술실/ICU', '3F 무균병동', '4F 일반병동/가든'] : isOffice ? ['1F 코워킹/로비', '2F 오픈라운지', '3F 집중업무구역', '4F 임원/루프탑'] : isSports ? ['1F 진입마당/로비', '2F 다목적 체육관', '3F 헬스&피트니스', '4F 옥상 공원/트랙'] : ['1F 로비/오픈존', '2F 협업 라운지', '3F 집중 업무/연구', '4F 조용/독립존']);
+    const loopTitle = aiData?.loopTitle ? aiData.loopTitle : isHospital ? '치유와 회복의 입체적 동선 교차망' : isOffice ? '업무와 휴식의 입체적 동선 교차망' : isSports ? '관람-경기-휴식의 3D 입체 트래픽 루프' : '유기적 연계 및 소통의 입체 동선망';
 
     const handleExport = () => {
         exportToJSON('SpecialDesign_Proposal', {
             project: projectName,
             use: buildingUse,
             grossFloorArea,
-            metrics: { vsiScore, ecoRate, crossoverYears: LCCCrossover, opexSavingsPct: opexSavings, bipvCapacity: bipvGen }
+            metrics: { vsiScore, ecoRate, crossoverYears: LCCCrossover, opexSavingsPct: opexSavings, bipvCapacity: bipvGen },
+            aiData
         });
+    };
+
+    const handleAIAnalysis = async () => {
+        if (!store.geminiApiKey) {
+            alert('설정 메뉴에서 Gemini API 키를 먼저 등록해주세요.');
+            return;
+        }
+
+        setIsAnalyzing(true);
+        try {
+            const rawText = store.documentInfo?.rawData?.rawText || '';
+            const result = await analyzeSpecializedDesign({
+                projectName,
+                buildingUse,
+                grossFloorArea,
+                rawText,
+                siteAnalysis: store.siteAnalysisResult,
+                regulationAnalysis: store.regulationAnalysisResult,
+                characteristicsAnalysis: store.characteristicsAnalysisResult,
+                spaceStrategy: store.spaceStrategyResult,
+            });
+
+            if (result) {
+                store.setSpecializedDesignProposal(result);
+            } else {
+                alert('특화설계 데이터를 생성하지 못했습니다. 다시 시도해주세요.');
+            }
+        } catch (err) {
+            console.error('AI 분석 중 오류:', err);
+            alert('오류가 발생했습니다.');
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     return (
@@ -105,6 +159,14 @@ const SpecialDesignPanel = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={handleAIAnalysis}
+                        disabled={isAnalyzing}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        {isAnalyzing ? <Loader2 size={16} className="animate-spin text-orange-500" /> : <Eye size={16} className="text-orange-500" />}
+                        <span className="whitespace-nowrap">{isAnalyzing ? '분석 중...' : '특화설계 분석'}</span>
+                    </button>
                     <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-md">
                         <Sparkles size={16} /> <span className="whitespace-nowrap">기술 제안서(PDF) 추출</span>
                     </button>
@@ -131,22 +193,22 @@ const SpecialDesignPanel = () => {
                         <div className="flex items-center gap-3 group">
                             <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 shadow-sm border border-orange-100"><Users size={18} /></div>
                             <div>
-                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">We-LIVING</h4>
-                                <p className="text-[10px] text-slate-500">님비 극복형 개방/공유 거버넌스</p>
+                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">{weLiving.title}</h4>
+                                <p className="text-[10px] text-slate-500">{weLiving.desc}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 group">
                             <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 shadow-sm border border-orange-100"><Network size={18} /></div>
                             <div>
-                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">We-LINKING</h4>
-                                <p className="text-[10px] text-slate-500">배리어프리 3차원 순환 네트워크</p>
+                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">{weLinking.title}</h4>
+                                <p className="text-[10px] text-slate-500">{weLinking.desc}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 group">
                             <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 shadow-sm border border-orange-100"><Sparkles size={18} /></div>
                             <div>
-                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">We-LEARNING</h4>
-                                <p className="text-[10px] text-slate-500">생애주기 다단계 맞춤 학습 공간</p>
+                                <h4 className="text-sm font-bold text-slate-800 mb-0.5">{weLearning.title}</h4>
+                                <p className="text-[10px] text-slate-500">{weLearning.desc}</p>
                             </div>
                         </div>
                     </div>
@@ -276,13 +338,13 @@ const SpecialDesignPanel = () => {
                             </h3>
                             {/* Vertical Life-cycle Mapper embedded in 3A header for space efficiency */}
                             <div className="flex bg-slate-50 border border-slate-200 rounded p-1 gap-1 shadow-inner h-fit">
-                                {clusterFloors.map((floor, i) => (
+                                {clusterFloors.map((floor: string, i: number) => (
                                     <div key={i} className={`text-[8px] font-bold px-1 py-0.5 rounded shadow-sm ${i === 3 ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-white text-slate-600'}`}>{floor}</div>
                                 ))}
                             </div>
                         </div>
                         <div className="grid grid-cols-4 gap-3 relative before:absolute before:top-[50%] before:left-4 before:right-4 before:h-[2px] before:bg-slate-100 before:-z-10 h-[100px]">
-                            {clusterSteps.map((item, i) => (
+                            {clusterSteps.map((item: any, i: number) => (
                                 <div key={i} className={
                                     `bg-white border-2 border-slate-100 rounded-lg p-2.5 hover:-translate-y-1 transition-all group flex flex-col shadow-sm cursor-pointer relative bg-gradient-to-b from-white to-slate-50 ` +
                                     (item.color === 'emerald' ? 'hover:border-orange-400' : item.color === 'blue' ? 'hover:border-orange-400' : 'hover:border-orange-400')

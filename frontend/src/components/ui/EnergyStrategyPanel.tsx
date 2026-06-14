@@ -1,6 +1,8 @@
 import React from 'react';
 import { Zap, Sun, ThermometerSun, ShieldAlert, Cpu, Snowflake, Wind, Activity, Sparkles, Navigation } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-8 에너지 및 ZEB 최적화 모듈 (Energy Engineering)
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const EnergyStrategyPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['energy'];
+    const sd = aiData?.sectionData || {} as any;
     const isEducation = store.buildingUse === '교육연구시설';
     const isPublic = isEducation || store.buildingUse === '업무시설(오피스)';
     const hasPool = isEducation || store.buildingUse?.includes('교육') || store.projectName?.includes('학교'); // 수중시설/다목적 특화 영역 가정
@@ -41,6 +48,39 @@ const EnergyStrategyPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200">
                             특화 조건: {isPublic ? '공공 ZEB 의무화 (4등급 이상) 강제 연산' : '표준 에너지 절감'}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'energy',
+                                        domainNameKor: 'ZEB/에너지',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('energy', result);
+                                    } else {
+                                        alert('에너지 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI ZEB/에너지 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -207,21 +247,19 @@ const EnergyStrategyPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">지열 천공 시 심층 지하수/연약·암반층에 의한 공기 지연</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">크리티컬</span></td>
-                                            <td className="px-3 py-2.5">공정표상 굴토 전 탄성파 탐사 선행. T4(에어해머) 장력 추가 장비 C-6 예비비(RiskHedge) 선배포.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">수중풀의 고도의 잠열 부하로 인한 여름철 급격한 ZEB 등급 강등</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                            <td className="px-3 py-2.5">폐수열 회수장치 의무 장착. 인버터형 지열 칠러(COP 급증가) 연계로 피크전력을 깎는 BEMS 가동.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">남측 입면 태양광(BIPV) 주변 건물 강한 빛 반사(Glare) 민원</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">하</span></td>
-                                            <td className="px-3 py-2.5">표면 무반사/헤어라인 코팅(AG/AR) 패널 단가 상향(C-1). Radiance 돌발 시뮬레이션으로 각도 조율.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['energy']?.riskBoard) ? store.engineeringAnalysisData['energy'].riskBoard : [
+                                            { risk: '지열 천공 시 심층 지하수/연약·암반층에 의한 공기 지연', impact: '상', prob: '중', solution: '공정표상 굴토 전 탄성파 탐사 선행. T4(에어해머) 장력 추가 장비 C-6 예비비(RiskHedge) 선배포.' },
+                                            { risk: '수중풀의 고도의 잠열 부하로 인한 여름철 급격한 ZEB 등급 강등', impact: '중', prob: '상', solution: '폐수열 회수장치 의무 장착. 인버터형 지열 칠러(COP 급증가) 연계로 피크전력을 깎는 BEMS 가동.' },
+                                            { risk: '남측 입면 태양광(BIPV) 주변 건물 강한 빛 반사(Glare) 민원', impact: '하', prob: '중', solution: '표면 무반사/헤어라인 코팅(AG/AR) 패널 단가 상향(C-1). Radiance 돌발 시뮬레이션으로 각도 조율.' },
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>{row.impact === '상' ? '크리티컬' : row.impact}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -244,12 +282,12 @@ const EnergyStrategyPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['energy']?.customMetrics) ? store.engineeringAnalysisData['energy'].customMetrics : [
                             { label: 'ZEB 달성률', value: '42.5% (4등급)' },
                             { label: '건물 기밀 (ACH50)', value: '< 1.0 (패시브급)' },
                             { label: 'PV / GSHP 믹스', value: '350kWp / 550RT' },
                             { label: '열회수 효율', value: 'ERV 80% 이상' },
-                        ].map((m, i) => (
+                        ]).slice(0, 4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

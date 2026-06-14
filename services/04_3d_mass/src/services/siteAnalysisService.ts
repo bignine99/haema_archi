@@ -11,7 +11,7 @@
 
 import { useProjectStore } from '@/store/projectStore';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 // ────── 입력 타입 ──────
 export interface SiteAnalysisInput {

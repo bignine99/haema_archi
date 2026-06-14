@@ -1,6 +1,8 @@
 import React from 'react';
-import { Zap, Activity, Radio, Shield, Cpu, Lightbulb, CheckCircle2, BatteryCharging, Network } from 'lucide-react';
+import { Zap, Activity, Radio, Shield, Cpu, Lightbulb, CheckCircle2, BatteryCharging, Network, Sparkles } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-4  전기·통신 엔지니어링 분석 모듈
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const ElectricalEngineeringPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['electrical'];
+    const sd = aiData?.sectionData || {} as any;
     const isSpecialUse = store.buildingUse === '의료시설' || store.buildingUse === '교육연구시설';
     
     return (
@@ -39,6 +46,39 @@ const ElectricalEngineeringPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                             예측 전력피크: {store.grossFloorArea ? Math.round(store.grossFloorArea * 0.08) : 0} kW
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'electrical',
+                                        domainNameKor: '전기/통신',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('electrical', result);
+                                    } else {
+                                        alert('전기 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 전기·통신 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -195,21 +235,19 @@ const ElectricalEngineeringPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">발전기실 배기 소음 민원 가능성</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">건축 간섭</span></td>
-                                            <td className="px-3 py-2.5">지하/옥상 방음 갤러리 도어 및 머플러(소음기) 추가 반영 요청 (Acoustic 모듈 송신).</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">수중운동실 100% 방수형 콘센트 누락 우려</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">안전 법규</span></td>
-                                            <td className="px-3 py-2.5">IP68 등급 방수 콘센트 일괄 지정 및 비상호출벨 무선 연동 라인 이중화(H4 SafetyAlarm).</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">심적 불안 유도형 조명 설계 (눈부심/플리커)</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">해결 마킹</span></td>
-                                            <td className="px-3 py-2.5">직접 조명 최소화 (루버 채용) 및 생체리듬 친화형 간접 조명(Flicker-Free 인증)으로 승급.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['electrical']?.riskBoard) ? store.engineeringAnalysisData['electrical'].riskBoard : [
+                                            { risk: '발전기실 배기 소음 민원 가능성', impact: '중', prob: '상', solution: '지하/옥상 방음 갤러리 도어 및 머플러(소음기) 추가 반영 요청 (Acoustic 모듈 송신)' },
+                                            { risk: '수중운동실 100% 방수형 콘센트 누락 우려', impact: '상', prob: '중', solution: 'IP68 등급 방수 콘센트 일괄 지정 및 비상호출벨 무선 연동 라인 이중화(H4 SafetyAlarm)' },
+                                            { risk: '심적 불안 유도형 조명 설계 (눈부심/플리커)', impact: '하', prob: '중', solution: '직접 조명 최소화 (루버 채용) 및 생체리듬 친화형 간접 조명(Flicker-Free 인증)으로 승급' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.impact === '상' ? '치명적' : row.impact === '중' ? '비용증가' : '정상치'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -232,12 +270,12 @@ const ElectricalEngineeringPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['electrical']?.customMetrics) ? store.engineeringAnalysisData['electrical'].customMetrics : [
                             { label: 'TR 변압기 적재율', value: '안전 보장 (68.5%)' },
                             { label: 'BEMS 피크 컷', value: 'Inverter-Down Ready' },
                             { label: '네트워크 백본', value: '10Gbps 광케이블' },
                             { label: '조명 인증 레벨', value: 'DALI Flicker-Free' }
-                        ].map((stat, i) => (
+                        ]).slice(0, 4).map((stat: any, i: number) => (
                             <div key={i} className="flex flex-col">
                                 <span className="text-indigo-200/80 text-[8px] uppercase tracking-wider mb-0.5 font-bold">{stat.label}</span>
                                 <span className="text-white font-bold tracking-wide">{stat.value}</span>

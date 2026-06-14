@@ -75,7 +75,7 @@ module.exports = {
             {
                 context: ['/api/gemini'],
                 target: 'https://generativelanguage.googleapis.com',
-                pathRewrite: { '^/api/gemini': `/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${dotenv.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''}` },
+                pathRewrite: { '^/api/gemini': `/v1beta/models/gemini-2.5-flash:generateContent?key=${dotenv.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''}` },
                 changeOrigin: true,
                 secure: true,
             },

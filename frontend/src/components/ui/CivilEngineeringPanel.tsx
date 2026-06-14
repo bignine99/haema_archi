@@ -1,6 +1,8 @@
 import React from 'react';
 import { MapPin, Mountain, TrendingDown, ShieldAlert, Cpu, Activity, Droplets, Anchor, Sparkles, Navigation, Waves, Eye } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-2  토목 및 지반 엔지니어링 분석 모듈
@@ -10,15 +12,22 @@ import { useProjectStore } from '@/store/projectStore';
 
 const CivilEngineeringPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['civil'];
+    const sd = aiData?.sectionData || {} as any;
 
     // ─── Dynamic: 지하 층수에 따른 흙막이 계산 로직 ───
     const basementFloors = (store as any).undergroundFloors ?? 3;
-    const depth = basementFloors * 3.5; // 평균 지하 1개층 3.5m 가정
+    const depth = sd?.excavation?.depth ? parseFloat(sd.excavation.depth) : basementFloors * 3.5;
     
     // F3 팝업 경고 (지하 2층 이상)
-    const showDeepExcavationAlert = basementFloors >= 2;
+    const showDeepExcavationAlert = sd?.excavation?.deepAlert === true || sd?.excavation?.deepAlert === 'true' || basementFloors >= 2;
 
-    const excavationData = basementFloors <= 1
+    const excavationData = sd?.excavation?.method
+        ? { method: sd.excavation.method, heaving: sd.excavation.heavingSF || '1.83', piping: sd.excavation.pipingSF || '2.45', boiling: sd.excavation.boilingSF || '1.62', depth }
+        : basementFloors <= 1
         ? { method: 'H-Pile + 흙막이판', heaving: '2.15', piping: '2.85', boiling: '2.10', depth }
         : basementFloors <= 3
         ? { method: 'CIP + 어스앵커(Earth Anchor)', heaving: '1.83', piping: '2.45', boiling: '1.62', depth }
@@ -51,6 +60,39 @@ const CivilEngineeringPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
                             지하 {basementFloors}층 규모
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'civil',
+                                        domainNameKor: '지반/토목',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('civil', result);
+                                    } else {
+                                        alert('토목 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e: any) {
+                                    alert('오류가 발생했습니다: ' + e.message);
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 지반 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -99,11 +141,16 @@ const CivilEngineeringPanel = () => {
                             <div className="flex flex-col gap-2">
                                 <div className="bg-slate-50 rounded-lg p-2.5 text-center border border-slate-100">
                                     <div className="text-[8px] text-slate-500">영구 안전율 (Fs)</div>
-                                    <div className="text-lg font-black text-orange-600">1.35<span className="text-[9px] font-normal text-slate-400 ml-1">≥ 1.20</span></div>
+                                    <div className="text-lg font-black text-orange-600">{sd?.buoyancy?.safetyFactor || '1.35'}<span className="text-[9px] font-normal text-slate-400 ml-1">≥ 1.20</span></div>
                                 </div>
                                 <div className="text-[9px] text-center text-orange-700 font-bold bg-orange-50 border border-orange-100 py-1.5 rounded">
-                                    Rock Anchor 145본 배치 완료
+                                    {sd?.buoyancy?.anchorType || 'Rock Anchor'} {sd?.buoyancy?.anchorCount || '145본'} 배치
                                 </div>
+                                {sd?.buoyancy?.description && (
+                                    <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                                        {sd.buoyancy.description}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -126,13 +173,18 @@ const CivilEngineeringPanel = () => {
                                 <div className="grid grid-cols-2 gap-2 text-center relative z-10">
                                     <div className="bg-white border border-slate-200 p-2 rounded-lg shadow-sm">
                                         <div className="text-[9px] text-slate-500">풍화암 출현 심도</div>
-                                        <div className="text-[12px] font-black text-slate-700">GL -8.5m</div>
+                                        <div className="text-[12px] font-black text-slate-700">{sd?.boringLog?.weatheredRockDepth || 'GL -8.5m'}</div>
                                     </div>
                                     <div className="bg-white border text-center border-slate-200 p-2 rounded-lg shadow-sm">
                                         <div className="text-[9px] text-slate-500">지하수위 (GL)</div>
-                                        <div className="text-[12px] font-black text-orange-600">-3.2m</div>
+                                        <div className="text-[12px] font-black text-orange-600">{sd?.boringLog?.groundwaterLevel || '-3.2m'}</div>
                                     </div>
                                 </div>
+                                {sd?.boringLog?.soilDescription && (
+                                    <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100 mt-2 relative z-10">
+                                        {sd.boringLog.soilDescription}
+                                    </div>
+                                )}
                             </div>
 
                             {/* F2: FoundationOpt */}
@@ -142,26 +194,24 @@ const CivilEngineeringPanel = () => {
                                     <h3 className="text-[12px] font-extrabold text-slate-800 tracking-tight">F2 · FoundationOpt — 기초 최적화</h3>
                                 </div>
                                 <p className="text-[11px] text-slate-600 leading-relaxed font-medium mb-5 bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                    Terzaghi 지지력 공식 연산 결과, 일반 구간은 허용지내력이 확보되어 
-                                    <span className="font-bold text-slate-800"> 얕은기초(Mat Foundation)</span>를 적용하며, 연약층(N&lt;10) 심도가 깊은 후면부는 
-                                    <span className="font-bold text-orange-600"> PHC 말뚝기초</span>를 국부 혼용 설계합니다.
+                                    {sd?.foundationOpt?.description || 'Terzaghi 지지력 공식 연산 결과, 일반 구간은 허용지내력이 확보되어 얕은기초(Mat Foundation)를 적용하며, 연약층(N<10) 심도가 깊은 후면부는 PHC 말뚝기초를 국부 혼용 설계합니다.'}
                                 </p>
                                 
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="border-l-4 border-orange-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 hover:bg-slate-50 transition-colors">
                                         <div className="text-[10px] text-slate-500 font-bold mb-1">허용지내력 (qa)</div>
-                                        <div className="text-sm font-black text-slate-800">300<span className="text-[10px] font-normal ml-0.5 text-slate-500">kN/m²</span></div>
-                                        <div className="text-[8px] text-orange-600 mt-0.5">안전율(FS) 3.0 만족</div>
+                                        <div className="text-sm font-black text-slate-800">{sd?.foundationOpt?.qa || '300'}<span className="text-[10px] font-normal ml-0.5 text-slate-500">kN/m²</span></div>
+                                        <div className="text-[8px] text-orange-600 mt-0.5">안전율(FS) {sd?.foundationOpt?.safetyFactor || '3.0'} 만족</div>
                                     </div>
                                     <div className="border-l-4 border-orange-500 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 hover:bg-slate-50 transition-colors">
                                         <div className="text-[10px] text-slate-500 font-bold mb-1">예상 부등 침하</div>
-                                        <div className="text-sm font-black text-slate-800">18.5<span className="text-[10px] font-normal ml-0.5 text-slate-500">mm</span></div>
+                                        <div className="text-sm font-black text-slate-800">{sd?.foundationOpt?.settlement || '18.5'}<span className="text-[10px] font-normal ml-0.5 text-slate-500">mm</span></div>
                                         <div className="text-[8px] text-orange-600 mt-0.5">각변위 1/300 이하 PASS</div>
                                     </div>
                                     <div className="border-l-4 border-slate-400 bg-white shadow-sm p-3 rounded-r-lg border-y border-r border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <div className="text-[10px] text-slate-500 font-bold mb-1">액상화(Liquefaction)</div>
-                                        <div className="text-sm font-black text-slate-800">발생 확률 낮음</div>
-                                        <div className="text-[8px] text-slate-500 mt-0.5">세립토 기준 통과</div>
+                                        <div className="text-[10px] text-slate-500 font-bold mb-1">기초 유형</div>
+                                        <div className="text-sm font-black text-slate-800">{sd?.foundationOpt?.type || 'Mat + 말뚝 혼용'}</div>
+                                        <div className="text-[8px] text-slate-500 mt-0.5">프로젝트 최적화</div>
                                     </div>
                                 </div>
                             </div>
@@ -241,8 +291,8 @@ const CivilEngineeringPanel = () => {
                                     </div>
                                     <div className="p-4 flex flex-col justify-center">
                                          <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
-                                            <span className="font-bold text-orange-600 block mb-1">영향권 반경 H×2.0 이내 스캔:</span>
-                                            지중경사계, 수위계 계측망 구축 및 Peck 경험식에 따른 인접 구조물 침하 방어 알고리즘 가동 예정.
+                                            <span className="font-bold text-orange-600 block mb-1">영향권 반경 {sd?.neighborImpact?.influenceRadius || 'H×2.0'} 이내 스캔:</span>
+                                            {sd?.neighborImpact?.monitoringPlan || '지중경사계, 수위계 계측망 구축 및 Peck 경험식에 따른 인접 구조물 침하 방어 알고리즘 가동 예정.'}
                                          </div>
                                     </div>
                                 </div>
@@ -267,21 +317,19 @@ const CivilEngineeringPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-orange-50/30 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">우수기 지하수위 상승으로 인한 구조물 부력 부상</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                            <td className="px-3 py-2.5">부력앵커(Rock Anchor) 추가 설계 및 영구배수 펌핑 시스템 이중화</td>
-                                        </tr>
-                                        <tr className="hover:bg-orange-50/30 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">연암/경암 구간 굴착 시 발생되는 도심지 소음·진동 민원</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                            <td className="px-3 py-2.5">전면 발파를 배제하고 무진동 미진동 암반 파쇄 공법 적용 검토</td>
-                                        </tr>
-                                        <tr className="hover:bg-orange-50/30 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">굴착 중 배면 토압에 의한 인접 건물 및 도로 지표 침하</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">상</span></td>
-                                            <td className="px-3 py-2.5">CIP 벽체 강성 증대, F5 모듈 기반 IoT 실시간 침하 계측망(SHM) 운영</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['civil']?.riskBoard) ? store.engineeringAnalysisData['civil'].riskBoard : [
+                                            { risk: '우수기 지하수위 상승으로 인한 구조물 부력 부상', impact: '상', prob: '상', solution: '부력앵커(Rock Anchor) 추가 설계 및 영구배수 펌핑 시스템 이중화' },
+                                            { risk: '연암/경암 구간 굴착 시 발생되는 도심지 소음·진동 민원', impact: '중', prob: '상', solution: '전면 발파를 배제하고 무진동 미진동 암반 파쇄 공법 적용 검토' },
+                                            { risk: '굴착 중 배면 토압에 의한 인접 건물 및 도로 지표 침하', impact: '상', prob: '중', solution: 'CIP 벽체 강성 증대, F5 모듈 기반 IoT 실시간 침하 계측망(SHM) 운영' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-orange-50/30 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>{row.impact}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -304,12 +352,12 @@ const CivilEngineeringPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['civil']?.customMetrics) ? store.engineeringAnalysisData['civil'].customMetrics : [
                             { label: '기초 설계', value: 'Mat + PHC Pile 혼용' },
                             { label: '흙막이 가시설', value: excavationData.method },
                             { label: '허용지내력', value: '300 kN/m² 이상 (평균)' },
                             { label: '부력 안전율', value: '1.35 (FS 강건)' },
-                        ].map((m, i) => (
+                        ]).slice(0, 4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

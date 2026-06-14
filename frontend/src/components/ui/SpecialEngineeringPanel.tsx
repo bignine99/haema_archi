@@ -1,6 +1,8 @@
 import React from 'react';
 import { Waves, Hexagon, Layers, ScanFace, Building2, ShieldAlert, Cpu, Network, Radar } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2, Sparkles } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-5  특수·디지털 융합 엔지니어링 분석 모듈
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const SpecialEngineeringPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['special'];
+    const sd = aiData?.sectionData || {} as any;
     const isSpecialUse = store.buildingUse === '의료시설' || store.buildingUse === '교육연구시설';
     
     return (
@@ -39,6 +46,39 @@ const SpecialEngineeringPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-bold border border-violet-200">
                             특화 모드: {isSpecialUse ? 'BF 및 소음 민감 대응' : '일반 표준'}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'special',
+                                        domainNameKor: '스마트/특수',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('special', result);
+                                    } else {
+                                        alert('특수 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 디지털 시뮬레이션'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -212,21 +252,19 @@ const SpecialEngineeringPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">특수치료실 정밀기기 층간 소음 전이</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">Hard</span></td>
-                                            <td className="px-3 py-2.5">바닥 플로팅 슬래브(Floating Slab) 및 제진 패드 설계 데이터 삽입. 기계실 경로 회피 맵핑.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">다분야 BIM 좌표 부정합 (Clash)</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">경고</span></td>
-                                            <td className="px-3 py-2.5">공용 배관 루트 CDE 절대 좌표 기준 통합 (LOD 300 체계 강제 정렬 동기화 수행).</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">IBMS 시스템 초기 도입(CAPEX) 예산 초과</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded font-bold">Soft</span></td>
-                                            <td className="px-3 py-2.5">유선 인프라를 최소화하고 Lora망/Zigbee 기반 무선 IoT 센서로 스위칭하여 공사비 12% Down 처리.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['special']?.riskBoard) ? store.engineeringAnalysisData['special'].riskBoard : [
+                                            { risk: '특수치료실 정밀기기 층간 소음 전이', impact: '상', prob: '상', solution: '바닥 플로팅 슬래브(Floating Slab) 및 제진 패드 설계 데이터 삽입. 기계실 경로 회피 맵핑.' },
+                                            { risk: '다분야 BIM 좌표 부정합 (Clash)', impact: '중', prob: '상', solution: '공용 배관 루트 CDE 절대 좌표 기준 통합 (LOD 300 체계 강제 정렬 동기화 수행).' },
+                                            { risk: 'IBMS 시스템 초기 도입(CAPEX) 예산 초과', impact: '하', prob: '상', solution: '유선 인프라를 최소화하고 Lora망/Zigbee 기반 무선 IoT 센서로 스위칭하여 공사비 12% Down 처리.' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>{row.impact === '상' ? 'Hard' : row.impact === '중' ? '경고' : 'Soft'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -249,12 +287,12 @@ const SpecialEngineeringPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['special']?.customMetrics) ? store.engineeringAnalysisData['special'].customMetrics : [
                             { label: 'BIM 레벨', value: 'LOD 300 확정' },
                             { label: '음향/진동', value: 'RT60 1.2s 타겟' },
                             { label: '간섭 회피', value: 'Clash Radar On' },
                             { label: 'IBMS 연동', value: 'IoT Sensor 140ea' }
-                        ].map((stat, i) => (
+                        ]).slice(0, 4).map((stat: any, i: number) => (
                             <div key={i} className="flex flex-col">
                                 <span className="text-violet-300/80 text-[8px] uppercase tracking-wider mb-0.5 font-bold">{stat.label}</span>
                                 <span className="text-white font-bold">{stat.value}</span>

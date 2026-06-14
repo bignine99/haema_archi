@@ -21,7 +21,7 @@ interface AltProfile {
     evalScores: { operation: number; safety: number; energy: number; bf: number; cost: number };
 }
 
-const getDynamicSimulationData = (buildingUse: string) => {
+const getDynamicSimulationData = (buildingUse: string, floorZoning?: any[]) => {
     const isEdu = buildingUse.includes('학교') || buildingUse.includes('교육');
     const isHospital = buildingUse.includes('병원') || buildingUse.includes('의료');
     const isOffice = buildingUse.includes('업무') || buildingUse.includes('오피스');
@@ -76,6 +76,68 @@ const getDynamicSimulationData = (buildingUse: string) => {
         },
     };
 
+    // Override with actual project data if available
+    if (floorZoning && floorZoning.length > 0) {
+        let fIndex = 1;
+        floorZoning.forEach((f) => {
+            const floorKey = fIndex++;
+            if (!floorData[floorKey]) {
+                floorData[floorKey] = {
+                    label: `${f.floor} : ${f.primaryUse}`,
+                    street: 'Circulation Street',
+                    streetColor: '#f1f5f9',
+                    streetAccent: '#94a3b8',
+                    rooms: []
+                };
+            } else {
+                floorData[floorKey].label = `${f.floor} : ${f.primaryUse}`;
+            }
+
+            // Flatten all rooms from zones
+            const allRooms: any[] = [];
+            f.zones.forEach((z: any) => {
+                z.rooms.forEach((r: any) => {
+                    allRooms.push({ ...r, zoneName: z.name });
+                });
+            });
+
+            // Sort rooms by area descending to prioritize larger rooms
+            allRooms.sort((a, b) => b.area - a.area);
+
+            // Assign to layout slots
+            const newRooms: RoomDef[] = [];
+            const slots = [
+                { x: 60, y: 80, w: 160, h: 120 },
+                { x: 370, y: 80, w: 160, h: 120 },
+                { x: 60, y: 220, w: 160, h: 100 },
+                { x: 370, y: 220, w: 160, h: 100 },
+                { x: 60, y: 340, w: 130, h: 60 },
+            ];
+
+            allRooms.slice(0, 5).forEach((r, idx) => {
+                const slot = slots[idx];
+                const isMain = idx < 2; // top slots
+                const isThird = idx === 2;
+                newRooms.push({
+                    name: r.name,
+                    area: `${r.area}㎡`,
+                    ch: `CH ${f.height}m`,
+                    x: slot.x,
+                    y: slot.y,
+                    w: slot.w,
+                    h: slot.h,
+                    color: isMain ? themeA.bg : (isThird ? themeC.bg : themeB.bg),
+                    stroke: isMain ? themeA.border : (isThird ? themeC.border : themeB.border),
+                    subs: [r.zoneName.substring(0, 8)]
+                });
+            });
+
+            if (newRooms.length > 0) {
+                floorData[floorKey].rooms = newRooms;
+            }
+        });
+    }
+
     const altProfiles: Record<string, AltProfile> = {
         alt1: {
             cpo: 88, eduRatio: 65, commonRatio: 35, pathReduction: 18, zeb: 41.2, naturalLight: 78, acousticGap: '30m+',
@@ -89,7 +151,7 @@ const getDynamicSimulationData = (buildingUse: string) => {
         alt2: {
             cpo: 96, eduRatio: 60, commonRatio: 40, pathReduction: 12, zeb: 38.5, naturalLight: 70, acousticGap: '25m',
             streetX: 210, streetW: 80, hubDx: 0,
-            roomOffsets: { [floorData[1].rooms[0].name]: { dx: -20, dy: 10 }, [floorData[1].rooms[3].name]: { dx: 20, dy: 10 } },
+            roomOffsets: floorData[1]?.rooms?.length >= 4 ? { [floorData[1].rooms[0].name]: { dx: -20, dy: 10 }, [floorData[1].rooms[3].name]: { dx: 20, dy: 10 } } : {},
             loopStyle: 'radial',
             evalSummary: '중앙 HUB 확대 및 주변 가시성 확보. 모니터링 시스템 효율 96% 최적화',
             evalGrade: 'A-',
@@ -98,7 +160,7 @@ const getDynamicSimulationData = (buildingUse: string) => {
         alt3: {
             cpo: 82, eduRatio: 68, commonRatio: 32, pathReduction: 10, zeb: 52.3, naturalLight: 92, acousticGap: '35m+',
             streetX: 230, streetW: 40, hubDx: 0,
-            roomOffsets: { [floorData[1].rooms[0].name]: { dx: 0, dy: -10 }, [floorData[1].rooms[3].name]: { dx: 0, dy: -10 } },
+            roomOffsets: floorData[1]?.rooms?.length >= 4 ? { [floorData[1].rooms[0].name]: { dx: 0, dy: -10 }, [floorData[1].rooms[3].name]: { dx: 0, dy: -10 } } : {},
             loopStyle: 'linear',
             evalSummary: '남향 채광 극대화 배치 (ZEB 특화). 코어 분산으로 동선 10% 증가',
             evalGrade: 'B+',
@@ -122,10 +184,11 @@ const CirculationLayoutPanel = () => {
     const store = useProjectStore();
     const buildingUse = store.buildingUse;
     const grossFloorArea = store.grossFloorArea;
+    const floorZoning = store.floorZoning;
 
     // Dynamic Engine Calibration for C2 (Safety/Conflict) and C6 (Energy/Environmental)
     const { floorData: FLOOR_DATA, altProfiles: ALT_PROFILES } = React.useMemo(() => {
-        const data = getDynamicSimulationData(buildingUse);
+        const data = getDynamicSimulationData(buildingUse, floorZoning);
         // Base penalty or boost based on scale
         const scaleFactor = grossFloorArea > 10000 ? 0.9 : 1.05; // Larger building = more conflict C2, harder energy C6
         
@@ -142,7 +205,7 @@ const CirculationLayoutPanel = () => {
         data.altProfiles.alt3.evalScores.energy = Math.min(100, Math.round(97 / scaleFactor)); // Highly sensitive to scale
 
         return data;
-    }, [buildingUse, grossFloorArea]);
+    }, [buildingUse, grossFloorArea, floorZoning]);
 
     const [activeFloor, setActiveFloor] = useState(1);
     const [activeAlt, setActiveAlt] = useState('alt1');
@@ -333,10 +396,10 @@ const CirculationLayoutPanel = () => {
                 {/* ═══════════════ LEFT: Main Canvas ═══════════════ */}
                 <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col overflow-hidden relative">
                     {/* Floor selector */}
-                    <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur rounded-lg p-1.5 shadow-sm border border-slate-200 flex gap-1">
-                        {[1, 2, 3, 4].map(f => (
-                            <button key={f} onClick={() => setActiveFloor(f)}
-                                className={`w-8 h-8 rounded shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${activeFloor === f ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
+                    <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur rounded-lg p-1.5 shadow-sm border border-slate-200 flex gap-1 flex-wrap max-w-sm">
+                        {Object.keys(FLOOR_DATA).map(f => (
+                            <button key={f} onClick={() => setActiveFloor(Number(f))}
+                                className={`w-8 h-8 rounded shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${activeFloor === Number(f) ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
                             >{f}F</button>
                         ))}
                         <div className="w-px bg-slate-200 mx-1" />

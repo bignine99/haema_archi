@@ -1,6 +1,8 @@
 import React from 'react';
 import { Calculator, Calendar, Clock, DollarSign, TrendingDown, Layers, FileText, Target, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-6  공사비 산출 및 공정 시뮬레이션 모듈
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const CostSchedulePanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['cost'];
+    const sd = aiData?.sectionData || {} as any;
     const isEducation = store.buildingUse === '교육연구시설';
     const isSpecialParams = isEducation || store.buildingUse === '의료시설';
     const totalMonth = isEducation ? 24 : Math.max(12, Math.floor((store.totalFloors || 4) * 1.5) + (store.undergroundFloors || 1) * 3);
@@ -43,6 +50,39 @@ const CostSchedulePanel = () => {
                         <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                             특화 조건: {isEducation ? '3월 개교 준공 타깃' : (isSpecialParams ? '설비/장비 가중 분석' : '표준 타임라인')}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'cost',
+                                        domainNameKor: '공사비/공정',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('cost', result);
+                                    } else {
+                                        alert('공사비/공정 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 공사비/공정 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -156,20 +196,18 @@ const CostSchedulePanel = () => {
                                     <h3 className="text-[12px] font-extrabold text-slate-800 tracking-tight">J3 · ValueEco — VE 최적화</h3>
                                 </div>
                                 <div className="flex flex-col gap-3">
-                                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
-                                        <div className="text-[10px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-                                            <span>규격화 기반 골조 VE</span>
-                                            <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded">적용 제안</span>
+                                    {(Array.isArray(store.engineeringAnalysisData['cost']?.systemProposals) ? store.engineeringAnalysisData['cost'].systemProposals : [
+                                        { title: '규격화 기반 골조 VE', subtitle: '적용 제안', details: '교실 모듈 7.5×9.0m 일괄 통일. 거푸집 전용 횟수 증대로 노무비 5% 절감 및 동바리 자재 절약 예측.' },
+                                        { title: '외단열 조립 패널 (Prefab)', subtitle: 'Fast-Track', details: '외장 벽돌 조적 배제, 알루미늄 건식 패널 빔 조합. 외부 비계 철거 공기 1개월 선결 확보 모델.' }
+                                    ]).map((ve: any, i: number) => (
+                                        <div key={i} className="bg-white p-3 rounded-lg border border-emerald-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                                            <div className="text-[10px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                                                <span>{ve.title}</span>
+                                                <span className={`text-[8px] px-1 py-0.5 rounded ${i===0 ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'}`}>{ve.subtitle || 'VE 제안'}</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-500">{ve.details}</div>
                                         </div>
-                                        <div className="text-[9px] text-slate-500">교실 모듈 7.5×9.0m 일괄 통일. 거푸집 전용 횟수 증대로 노무비 5% 절감 및 동바리 자재 절약 예측.</div>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
-                                        <div className="text-[10px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-                                            <span>외단열 조립 패널 (Prefab)</span>
-                                            <span className="text-[8px] bg-sky-100 text-sky-700 px-1 py-0.5 rounded">Fast-Track</span>
-                                        </div>
-                                        <div className="text-[9px] text-slate-500">외장 벽돌 조적 배제, 알루미늄 건식 패널 빔 조합. 외부 비계 철거 공기 1개월 선결 확보 모델.</div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -253,21 +291,19 @@ const CostSchedulePanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">무장애(BF) 본인증 취득 심의 지연에 따른 개교일 타격</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">크리티컬</span></td>
-                                            <td className="px-3 py-2.5">내장 마감 완료 시점(공정 80%, 20개월 차)에 예비 실사 선행. 지적(단차 등) 시정 마일스톤 4주 사전 확보.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">동절기(12~2월) 기상 제한 요소로 인한 골조 타설 중지</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중</span></td>
-                                            <td className="px-3 py-2.5">단열 갱폼 거푸집 사용 보수비 J5 할당. 혹한기 이전 지상층 코어 공사 마무리 목표(마일스톤 집중).</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">의료 특수기기 및 공조 장비 관급 단가 초과/납품 지연</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">하</span></td>
-                                            <td className="px-3 py-2.5">설계 단계에서 장비 Specs 확정 시 조기 조달청 등록 또는 사급 협의. J1 예비비 5% 선반영.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['cost']?.riskBoard) ? store.engineeringAnalysisData['cost'].riskBoard : [
+                                            { risk: '무장애(BF) 본인증 취득 심의 지연에 따른 개교일 타격', impact: '상', prob: '상', solution: '내장 마감 완료 시점(공정 80%, 20개월 차)에 예비 실사 선행. 지적(단차 등) 시정 마일스톤 4주 사전 확보.' },
+                                            { risk: '동절기(12~2월) 기상 제한 요소로 인한 골조 타설 중지', impact: '중', prob: '상', solution: '단열 갱폼 거푸집 사용 보수비 J5 할당. 혹한기 이전 지상층 코어 공사 마무리 목표(마일스톤 집중).' },
+                                            { risk: '장비 납품 지연', impact: '하', prob: '중', solution: '설계 단계에서 장비 Specs 확정 시 조기 발주 협의.' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.impact === '상' ? '크리티컬' : row.impact === '중' ? '중' : '하'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -290,12 +326,12 @@ const CostSchedulePanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['cost']?.customMetrics) ? store.engineeringAnalysisData['cost'].customMetrics : [
                             { label: '5D 타겟 예산', value: constructionCostStr },
                             { label: '4D 절대 공기', value: `총 ${totalMonth}개월 (CP 모델)` },
                             { label: 'VE 최적화', value: '거푸집/외장 패널 공기단축' },
                             { label: '리스크 방어', value: '동절기 예비비 J5 편입' },
-                        ].map((m, i) => (
+                        ]).slice(0, 4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

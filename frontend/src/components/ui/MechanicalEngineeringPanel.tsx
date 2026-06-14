@@ -1,6 +1,8 @@
 import React from 'react';
 import { Wind, Thermometer, ShieldAlert, Droplets, ArrowUpDown, Lightbulb, Sparkles, Navigation, CheckCircle2, Factory } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-3  기계 설비·MEP 및 수직 이동 통제 시스템 분석 모듈
@@ -10,6 +12,12 @@ import { useProjectStore } from '@/store/projectStore';
 
 const MechanicalEngineeringPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['mechanical'];
+    const sd = aiData?.sectionData || {} as any;
+    
     const isLargeBldg = (store.grossFloorArea && store.grossFloorArea > 30000) ? true : false;
     const isSpecialEdu = store.buildingUse === '교육연구시설' || store.buildingUse === '의료시설';
     
@@ -40,6 +48,39 @@ const MechanicalEngineeringPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-sky-50 text-sky-700 font-bold border border-sky-200">
                             연면적: {store.grossFloorArea ? store.grossFloorArea.toLocaleString() : '미정'} ㎡
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'mechanical',
+                                        domainNameKor: '기계/공조/소방',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('mechanical', result);
+                                    } else {
+                                        alert('기계 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 설비 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -84,22 +125,16 @@ const MechanicalEngineeringPanel = () => {
                                 <span className="text-[11px] font-extrabold text-slate-800">G2 열원 파이프라인 (LCC)</span>
                             </div>
                             <div className="flex mb-2 h-4 rounded-full overflow-hidden bg-slate-100">
-                                {isLargeBldg ? (
-                                    <>
-                                        <div className="bg-blue-500 h-full" style={{width: '70%'}} title="지열/흡수식 (70%)"></div>
-                                        <div className="bg-sky-300 h-full" style={{width: '30%'}} title="터보냉동/보일러 (30%)"></div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="bg-emerald-400 h-full" style={{width: '60%'}} title="EHP 멀티에어컨 (60%)"></div>
-                                        <div className="bg-blue-400 h-full" style={{width: '40%'}} title="지열 히트펌프 (40%)"></div>
-                                    </>
-                                )}
+                                <div className="bg-blue-500 h-full" style={{width: `${sd?.thermalSource?.primaryPercent || (isLargeBldg ? 70 : 60)}%`}} title={`${sd?.thermalSource?.primarySystem || (isLargeBldg ? '지열/흡수식' : 'EHP 멀티에어컨')} (${sd?.thermalSource?.primaryPercent || (isLargeBldg ? 70 : 60)}%)`}></div>
+                                <div className="bg-sky-300 h-full" style={{width: `${sd?.thermalSource?.secondaryPercent || (isLargeBldg ? 30 : 40)}%`}} title={`${sd?.thermalSource?.secondarySystem || (isLargeBldg ? '터보냉동/보일러' : '지열 히트펌프')} (${sd?.thermalSource?.secondaryPercent || (isLargeBldg ? 30 : 40)}%)`}></div>
                             </div>
                             <div className="flex justify-between text-[9px] font-bold text-slate-500 px-1">
-                                <span>{isLargeBldg ? '중앙집중식 최적화' : '개별/공용 하이브리드'}</span>
-                                <span className="text-blue-600">{isLargeBldg ? '70% GSHP' : '60% EHP'}</span>
+                                <span>{sd?.thermalSource?.strategy || (isLargeBldg ? '중앙집중식 최적화' : '개별/공용 하이브리드')}</span>
+                                <span className="text-blue-600">{sd?.thermalSource?.primaryPercent || (isLargeBldg ? 70 : 60)}% {sd?.thermalSource?.primarySystem || (isLargeBldg ? 'GSHP' : 'EHP')}</span>
                             </div>
+                            {sd?.thermalSource?.description && (
+                                <div className="text-[9px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100 mt-1">{sd.thermalSource.description}</div>
+                            )}
                         </div>
                     </div>
 
@@ -116,7 +151,7 @@ const MechanicalEngineeringPanel = () => {
                                         <Wind size={16} className="text-sky-500" />
                                         <span className="text-[12px] font-extrabold text-slate-800">G1 · HVAC-Optima 공조 루트</span>
                                     </div>
-                                    <span className="text-[9px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">ERV 75% 환기율</span>
+                                    <span className="text-[9px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">ERV {sd?.hvac?.ervRate || '75'}% 환기율</span>
                                 </div>
                                 <div className="flex-1 p-4 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center relative">
                                     <HvacDiagramSVG />
@@ -124,13 +159,16 @@ const MechanicalEngineeringPanel = () => {
                                 <div className="grid grid-cols-2 text-center text-[10px] bg-slate-50 border-t border-slate-100">
                                     <div className="p-2 border-r border-slate-100">
                                         <span className="block text-slate-400 mb-0.5 font-bold">냉난방 부하 (HVAC Load)</span>
-                                        <span className="font-black text-slate-700">125 W/m² (10% 예비율)</span>
+                                        <span className="font-black text-slate-700">{sd?.hvac?.load || '125 W/m²'} {sd?.hvac?.system ? `(${sd.hvac.system})` : '(10% 예비율)'}</span>
                                     </div>
                                     <div className="p-2 flex flex-col justify-center">
-                                        <span className="block text-slate-400 mb-0.5 font-bold">특수 마감</span>
-                                        <span className="font-black text-sky-600">{isSpecialEdu ? '헤파필터(HEPA) 적용' : '표준 필터'}</span>
+                                        <span className="block text-slate-400 mb-0.5 font-bold">특수 마감/필터</span>
+                                        <span className="font-black text-sky-600">{sd?.hvac?.filterType || (isSpecialEdu ? '헤파필터(HEPA) 적용' : '표준 필터')}</span>
                                     </div>
                                 </div>
+                                {sd?.hvac?.description && (
+                                    <div className="p-3 border-t border-slate-100 text-[9px] text-slate-500 leading-relaxed">{sd.hvac.description}</div>
+                                )}
                             </div>
 
                             {/* G3 AeroVent 방재/소방 */}
@@ -204,21 +242,19 @@ const MechanicalEngineeringPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">목욕장/수중재활실 결로 및 염소(Cl) 가스 부식</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">치명적</span></td>
-                                            <td className="px-3 py-2.5">특수 에폭시(Epoxy) 코팅 필터 내염해성 공조기 채용. 실내 전용 독립 음압(-5Pa) 제어로 이종 공간 전이 차단.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">급수/급탕망 레지오넬라균 오염 가능성</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">비용증가</span></td>
-                                            <td className="px-3 py-2.5">부스터 펌프 시스템 수압 통제 및 지속적인 60℃ 급탕 시스템 순환 네트워크 구축.</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">초고층화로 인한 승강로 연돌효과(Stack Effect)</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">정상치</span></td>
-                                            <td className="px-3 py-2.5">회전문 부속실 가압 및 엘리베이터 도어 압력 해제(Airlock) 전실 반영.</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['mechanical']?.riskBoard) ? store.engineeringAnalysisData['mechanical'].riskBoard : [
+                                            { risk: '목욕장/수중재활실 결로 및 염소(Cl) 가스 부식', impact: '상', prob: '상', solution: '특수 에폭시(Epoxy) 코팅 필터 내염해성 공조기 채용. 실내 전용 독립 음압(-5Pa) 제어' },
+                                            { risk: '급수/급탕망 레지오넬라균 오염 가능성', impact: '중', prob: '중', solution: '부스터 펌프 시스템 수압 통제 및 지속적인 60℃ 급탕 시스템 순환 네트워크 구축' },
+                                            { risk: '초고층화로 인한 승강로 연돌효과(Stack Effect)', impact: '중', prob: '하', solution: '회전문 부속실 가압 및 엘리베이터 도어 압력 해제(Airlock) 전실 반영' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>{row.impact === '상' ? '치명적' : row.impact === '중' ? '비용증가' : '정상치'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -241,12 +277,12 @@ const MechanicalEngineeringPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['mechanical']?.customMetrics) ? store.engineeringAnalysisData['mechanical'].customMetrics : [
                             { label: '열원 최적화', value: 'GSHP / EHP 조합' },
                             { label: '환기 지수', value: 'ERV 75%↑' },
                             { label: '승강기 AWT', value: '24.5 초 (패스)' },
                             { label: '소방 제연', value: '40~60Pa 급기가압' }
-                        ].map((stat, i) => (
+                        ]).slice(0, 4).map((stat: any, i: number) => (
                             <div key={i} className="flex flex-col">
                                 <span className="text-slate-400 text-[8px] uppercase tracking-wider mb-0.5 font-bold">{stat.label}</span>
                                 <span className="text-white font-bold">{stat.value}</span>

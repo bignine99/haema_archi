@@ -1,6 +1,8 @@
 import React from 'react';
 import { Settings, ShieldAlert, Cpu, SearchCheck, Activity, Wind, Layers, Sparkles, Anchor, Building2, Gauge, Radio } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-1  구조 엔지니어링 분석 모듈
@@ -10,14 +12,21 @@ import { useProjectStore } from '@/store/projectStore';
 
 const StructuralEngineeringPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['structural'];
+    const sd = aiData?.sectionData || {} as any;
 
     // ─── Dynamic: 층수 비례 횡력 저항 시스템 결정 ───
     const totalFloors = store.totalFloors || 4;
     const isSpecialUse = ['교육연구시설', '의료시설', '노유자시설'].some(u => (store.buildingUse || '').includes(u));
-    const seismicGrade = isSpecialUse ? '내진 특등급' : totalFloors > 30 ? '내진 1등급' : '내진 2등급';
-    const importanceFactor = isSpecialUse ? 1.5 : totalFloors > 30 ? 1.2 : 1.0;
+    const seismicGrade = sd?.seismic?.grade || (isSpecialUse ? '내진 특등급' : totalFloors > 30 ? '내진 1등급' : '내진 2등급');
+    const importanceFactor = sd?.seismic?.importanceFactor || (isSpecialUse ? 1.5 : totalFloors > 30 ? 1.2 : 1.0);
 
-    const lfrsData = totalFloors <= 10
+    const lfrsData = sd?.seismic?.lfrs
+        ? { system: sd.seismic.lfrs, damper: sd.seismic.damper || '미지정', drift: sd.seismic.driftResult || 'PASS', tier: `${totalFloors}층 규모` }
+        : totalFloors <= 10
         ? { system: '모멘트골조(MRF) / 전단벽', damper: '불필요 (필수 내진상세만 적용)', drift: 'PASS', tier: '10층 이하' }
         : totalFloors <= 30
         ? { system: '이중골조(Dual System) 코어 혼합', damper: '브레이스 골조(BF) 또는 점성유체댐퍼(VFD)', drift: 'SAFE', tier: '11~30층' }
@@ -50,6 +59,39 @@ const StructuralEngineeringPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
                             {seismicGrade}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'structural',
+                                        domainNameKor: '구조',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('structural', result);
+                                    } else {
+                                        alert('구조 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 엔지니어링 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -122,11 +164,11 @@ const StructuralEngineeringPanel = () => {
                                 {/* 부위별 최적 구조 시스템 */}
                                 <div className="p-5 lg:col-span-2 flex flex-col gap-3">
                                     <div className="text-[11px] font-bold text-slate-700 mb-1">부위별 최적 구조 시스템 제안</div>
-                                    {[
-                                        { title: 'RC (철근콘크리트)', usage: '표준 모듈 및 주요 기능구역', pros: '진동 저감 능력이 우수하며 심리적 안정감을 제공. CM-CR 편심률 ≤ 0.15', accent: 'orange' },
-                                        { title: 'Steel (철골)', usage: '대공간 및 특수 목적(장스팬)', pros: '장스팬 무주공간 확보에 최적화, 경량화 달성. 아웃리거 트러스 적용', accent: 'amber' },
-                                        { title: 'PC (프리캐스트)', usage: '지하주차장 및 구조 코어', pros: '공기 단축 획기적 절감 및 모듈화 품질 균일성 보장', accent: 'orange' },
-                                    ].map((sys, i) => (
+                                    {(Array.isArray(sd?.superStructure) ? sd.superStructure : Array.isArray(aiData?.systemProposals) ? aiData.systemProposals : [
+                                        { title: 'RC (철근콘크리트)', usage: '표준 모듈 및 주요 기능구역', pros: '진동 저감 능력이 우수하며 심리적 안정감을 제공. CM-CR 편심률 ≤ 0.15' },
+                                        { title: 'Steel (철골)', usage: '대공간 및 특수 목적(장스팬)', pros: '장스팬 무주공간 확보에 최적화, 경량화 달성. 아웃리거 트러스 적용' },
+                                        { title: 'PC (프리캐스트)', usage: '지하주차장 및 구조 코어', pros: '공기 단축 획기적 절감 및 모듈화 품질 균일성 보장' },
+                                    ]).map((sys: any, i: number) => (
                                         <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-l-4 border-l-orange-500 border-t-slate-100 border-r-slate-100 border-b-slate-100 bg-white shadow-sm hover:bg-orange-50/30 transition-all">
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-0.5">
@@ -176,7 +218,7 @@ const StructuralEngineeringPanel = () => {
                                 {/* 좌: 내진 정보 */}
                                 <div className="w-full lg:w-4/12 p-5 bg-gradient-to-br from-orange-50/60 to-white border-r border-orange-50 flex flex-col justify-center">
                                     <h4 className="text-xl font-extrabold text-slate-800 mb-2">KDS 41 17 {seismicGrade}</h4>
-                                    <p className="text-[11px] text-slate-600 mb-4">비선형 동적해석 및 성능기반 설계를 통한 최고 수준의 재난 안전성 확보 결과입니다.</p>
+                                    <p className="text-[11px] text-slate-600 mb-4">{sd?.seismic?.description || '비선형 동적해석 및 성능기반 설계를 통한 최고 수준의 재난 안전성 확보 결과입니다.'}</p>
                                     <div className="flex flex-col gap-2">
                                         <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
                                             <span className="text-slate-600 font-medium">건축물 중요도 계수 (I)</span>
@@ -184,11 +226,11 @@ const StructuralEngineeringPanel = () => {
                                         </div>
                                         <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
                                             <span className="text-slate-600 font-medium">허용 층간변위 (Drift)</span>
-                                            <span className="font-extrabold text-slate-800">H/250 이내</span>
+                                            <span className="font-extrabold text-slate-800">{sd?.seismic?.driftLimit || 'H/250 이내'}</span>
                                         </div>
                                         <div className="bg-white px-3 py-2 rounded-lg border border-orange-100 text-[11px] flex items-center justify-between">
                                             <span className="text-slate-600 font-medium">탄성거동 응답 스펙트럼</span>
-                                            <span className="font-extrabold text-orange-600">PASS</span>
+                                            <span className="font-extrabold text-orange-600">{sd?.seismic?.driftResult || 'PASS'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -214,9 +256,9 @@ const StructuralEngineeringPanel = () => {
                                 <div className="p-5 flex-1 flex flex-col gap-3">
                                     <div className="grid grid-cols-3 gap-2 text-[10px]">
                                         {[
-                                            { label: 'N치 도달 심도', value: 'GL-12m', sub: 'N≥50' },
-                                            { label: '허용 지내력', value: '250 kN/m²', sub: '모래질 자갈' },
-                                            { label: '지하수위', value: 'GL-3.5m', sub: '부력 검토 필수' },
+                                            { label: '허용 지내력', value: sd?.foundationSpecs?.qa || '250 kN/m²', sub: sd?.foundationSpecs?.settlementCheck || '안전율(FS) 3.0' },
+                                            { label: '예상 부등침하', value: sd?.foundationSpecs?.settlement ? `${sd.foundationSpecs.settlement}mm` : '18.5mm', sub: sd?.foundationSpecs?.settlementCheck || '각변위 1/300 이하' },
+                                            { label: '액상화 위험', value: sd?.foundationSpecs?.liquefaction || '발생 확률 낮음', sub: sd?.foundationSpecs?.type || '매트기초' },
                                         ].map((item, i) => (
                                             <div key={i} className="bg-slate-50 rounded-lg p-2.5 border border-slate-100 text-center">
                                                 <div className="text-[8px] text-slate-400 font-bold">{item.label}</div>
@@ -225,22 +267,12 @@ const StructuralEngineeringPanel = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="text-[10px] font-bold text-slate-700">추천 기초 모델</div>
-                                    {[
-                                        { model: 'MAT 기초 (온통형)', fit: '92%', desc: '대규모 집중 하중에 최적. 부등 침하 억제' },
-                                        { model: 'PHC 파일기초', fit: '85%', desc: '경제성 우수. 마찰 저항 + 선단 지지' },
-                                        { model: 'PRD 파일기초', fit: '78%', desc: '소음 저감형. 도심 시공 적합' },
-                                    ].map((f, i) => (
-                                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 bg-white hover:bg-orange-50/30 transition-all">
-                                            <div className="flex-1">
-                                                <div className="text-[11px] font-bold text-slate-700">{f.model}</div>
-                                                <div className="text-[9px] text-slate-400">{f.desc}</div>
-                                            </div>
-                                            <div className="text-[11px] font-black text-orange-600">{f.fit}</div>
-                                        </div>
-                                    ))}
+                                    <div className="text-[10px] font-bold text-slate-700">추천 기초 모델: {sd?.foundationSpecs?.type || '최적 기초 시스템'}</div>
+                                    <div className="text-[10px] text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed">
+                                        {sd?.foundationSpecs?.description || 'Terzaghi 지지력 공식 연산 결과, 일반 구간은 허용지내력이 확보되어 얕은기초(Mat Foundation)를 적용하며, 연약층(N<10) 심도가 깊은 구간은 PHC 말뚝기초를 국부 혼용 설계합니다.'}
+                                    </div>
                                     <div className="text-[9px] text-orange-700 bg-orange-50 p-2 rounded-lg border border-orange-100 font-medium">
-                                        ⚠️ 부력(Uplift) 검토: 지하수위가 높아 Rock Anchor 또는 슬래브 자중 증가 대안 비교 검토 완료
+                                        ⚠️ 기초 유형: {sd?.foundationSpecs?.type || 'Mat + PHC Pile 혼용'} | 허용지내력: {sd?.foundationSpecs?.qa || '250 kN/m²'} | 판정: {sd?.foundationSpecs?.settlementCheck || 'PASS'}
                                     </div>
                                 </div>
                             </div>
@@ -250,14 +282,14 @@ const StructuralEngineeringPanel = () => {
                                 <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
                                     <Layers size={16} className="text-orange-500"/>
                                     <span className="text-[12px] font-extrabold text-slate-800">E4 · SlabTech — 슬래브 및 층고 저감</span>
-                                    <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-200 rounded font-black ml-auto">+300mm 확보</span>
+                                    <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-200 rounded font-black ml-auto">{sd?.slabSystem?.savings || '+300mm 확보'}</span>
                                 </div>
                                 <div className="p-5 flex-1 flex flex-col gap-4">
                                     {/* PT Diagram */}
                                     <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex flex-col items-center shadow-inner">
                                         <PostTensionDiagram />
                                         <div className="mt-2 text-[9px] text-slate-500 text-center">
-                                            <span className="font-bold text-slate-700">시뮬레이션 결과:</span> 일반 RC보 대비 Beam 깊이 축소 → <span className="text-orange-600 font-bold">체감 층고 300mm 추가 확보</span>
+                                            <span className="font-bold text-slate-700">{sd?.slabSystem?.type || '슬래브 시스템'}:</span> {sd?.slabSystem?.thickness ? `두께 ${sd.slabSystem.thickness}, ` : ''}<span className="text-orange-600 font-bold">{sd?.slabSystem?.savings || '체감 층고 300mm 추가 확보'}</span>
                                         </div>
                                     </div>
                                     {/* 배근율 */}
@@ -277,7 +309,7 @@ const StructuralEngineeringPanel = () => {
                                             </div>
                                         </div>
                                         <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">
-                                            기준 대비 <span className="font-bold text-orange-600">약 5~8% 철근 물량 절약</span> 및 단부 간섭 해소
+                                            바닥진동: <span className="font-bold text-orange-600">{sd?.slabSystem?.vibration || '1.0% g 이내 (PASS)'}</span> | {sd?.monitoring?.system || 'SHM 모니터링 연동 계획 수립'}
                                         </div>
                                     </div>
                                 </div>
@@ -314,23 +346,18 @@ const StructuralEngineeringPanel = () => {
                                     <span className="text-[11px] font-bold text-slate-700">E5 · LifeSafety — 구조 건전성 모니터링 (SHM)</span>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    {[
-                                        { target: '부등 침하 궤적', sensor: '가속도계 + 변위센서', threshold: '±3mm 이내', status: 'Active' },
-                                        { target: '횡변위 피로 누적', sensor: 'LVDT 변위계', threshold: '기대주기 2500회', status: 'Active' },
-                                        { target: '콘크리트 균열망', sensor: '초음파 탐상기(UST)', threshold: '0.2mm 이하', status: 'Standby' },
-                                    ].map((m, i) => (
-                                        <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-100 bg-white hover:bg-orange-50/20 transition-all">
-                                            <div className="flex-1">
-                                                <div className="text-[11px] font-bold text-slate-700">{m.target}</div>
-                                                <div className="text-[9px] text-slate-400">{m.sensor} · 기준: {m.threshold}</div>
-                                            </div>
-                                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${m.status === 'Active' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
-                                                {m.status}
-                                            </span>
+                                    <div className="text-[10px] text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed mb-2">
+                                        {sd?.monitoring?.system || '구조 건전성 모니터링(SHM) 계획: BEMS + IoT 연동으로 Digital Twin Safety 시스템과 실시간 통신'}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-white rounded-lg border border-slate-100 p-2.5">
+                                            <div className="text-[9px] text-slate-400 font-bold">주요 센서</div>
+                                            <div className="text-[11px] font-bold text-slate-700">{sd?.monitoring?.sensors || '가속도계, LVDT, 초음파 탐상기'}</div>
                                         </div>
-                                    ))}
-                                    <div className="text-[9px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
-                                        BEMS + IoT 연동 — Digital Twin Safety 시스템과 실시간 통신 (Phase C+D)
+                                        <div className="bg-white rounded-lg border border-slate-100 p-2.5">
+                                            <div className="text-[9px] text-slate-400 font-bold">계측 주기</div>
+                                            <div className="text-[11px] font-bold text-slate-700">{sd?.monitoring?.frequency || '실시간 (1초 간격)'}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -354,12 +381,12 @@ const StructuralEngineeringPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {[
-                                            { risk: '장스팬 구조로 인한 처짐·진동 문제', impact: '중', prob: '중', color: 'amber', solution: '포스트텐션(PT) 적용 및 바닥진동 1.0% g 이내 검토' },
-                                            { risk: '비정형 매스 편심률(CR 변위) 보정', impact: '상', prob: '중', color: 'orange', solution: 'BIM 3D 간섭 체크 + 최적 접합부(Hybrid) 사전 조율' },
-                                            { risk: '풍하중 고층부 층간변위 및 비틀림', impact: '중', prob: '하', color: 'amber', solution: '코어월 중앙 배치로 CR-CM 편심 최소화' },
-                                            { risk: '슬래브 국부 뚫림 전단(Punching Shear)', impact: '상', prob: '하', color: 'orange', solution: 'Drop Panel 또는 전단보강근(Shear Band) 자동 배치' },
-                                        ].map((row, i) => (
+                                        {(Array.isArray(store.engineeringAnalysisData['structural']?.riskBoard) ? store.engineeringAnalysisData['structural'].riskBoard : [
+                                            { risk: '장스팬 구조로 인한 처짐·진동 문제', impact: '중', prob: '중', solution: '포스트텐션(PT) 적용 및 바닥진동 1.0% g 이내 검토' },
+                                            { risk: '비정형 매스 편심률(CR 변위) 보정', impact: '상', prob: '중', solution: 'BIM 3D 간섭 체크 + 최적 접합부(Hybrid) 사전 조율' },
+                                            { risk: '풍하중 고층부 층간변위 및 비틀림', impact: '중', prob: '하', solution: '코어월 중앙 배치로 CR-CM 편심 최소화' },
+                                            { risk: '슬래브 국부 뚫림 전단(Punching Shear)', impact: '상', prob: '하', solution: 'Drop Panel 또는 전단보강근(Shear Band) 자동 배치' },
+                                        ]).map((row: any, i: number) => (
                                             <tr key={i} className="hover:bg-orange-50/30 transition-colors">
                                                 <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
                                                 <td className="px-3 py-2.5 text-center">
@@ -393,12 +420,12 @@ const StructuralEngineeringPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['structural']?.customMetrics) ? store.engineeringAnalysisData['structural'].customMetrics : [
                             { label: '주요 구조', value: '하이브리드 (RC+S+PC)' },
                             { label: '내진 등급', value: `${seismicGrade} (I=${importanceFactor})` },
                             { label: '슬래브', value: 'PT 무량판 결합' },
                             { label: '바닥 진동', value: '1.0% g 이내 (PASS)' },
-                        ].map((m, i) => (
+                        ]).slice(0,4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

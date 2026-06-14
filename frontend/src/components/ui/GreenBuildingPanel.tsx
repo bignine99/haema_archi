@@ -1,6 +1,8 @@
 import React from 'react';
 import { Leaf, Wind, Sun, Droplets, Target, ShieldAlert, Award, Activity, Sparkles, AlertCircle } from 'lucide-react';
 import { useProjectStore } from '@/store/projectStore';
+import { analyzeEngineeringDomain } from '@/services/geminiEngineeringService';
+import { Loader2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
    C-7 친환경 건축 및 치유 생태계 모듈 (Green Building)
@@ -10,6 +12,11 @@ import { useProjectStore } from '@/store/projectStore';
 
 const GreenBuildingPanel = () => {
     const store = useProjectStore();
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
+    // ─── AI 분석 데이터 참조 ───
+    const aiData = store.engineeringAnalysisData['green'];
+    const sd = aiData?.sectionData || {} as any;
     const isEducation = store.buildingUse === '교육연구시설';
     const isHospital = store.buildingUse === '의료시설';
     const isSpecialParams = isEducation || isHospital;
@@ -41,6 +48,39 @@ const GreenBuildingPanel = () => {
                         <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                             특화 조건: {isSpecialParams ? '호흡기/면역 보호 IAQ 극대화' : '표준 인증 대응'}
                         </span>
+                        <button
+                            onClick={async () => {
+                                setIsAnalyzing(true);
+                                try {
+                                    const result = await analyzeEngineeringDomain({
+                                        domain: 'green',
+                                        domainNameKor: '친환경/재생',
+                                        projectName: store.projectName,
+                                        buildingUse: store.buildingUse,
+                                        grossFloorArea: store.grossFloorArea,
+                                        rawText: store.documentInfo?.rawData?.rawText || '',
+                                        siteAnalysis: store.siteAnalysisResult,
+                                        regulationAnalysis: store.regulationAnalysisResult,
+                                        characteristicsAnalysis: store.characteristicsAnalysisResult,
+                                        spaceStrategy: store.spaceStrategyResult,
+                                    });
+                                    if (result) {
+                                        store.setEngineeringData('green', result);
+                                    } else {
+                                        alert('친환경 엔지니어링 분석 실패. 다시 시도해주세요.');
+                                    }
+                                } catch (e) {
+                                    alert('오류가 발생했습니다.');
+                                } finally {
+                                    setIsAnalyzing(false);
+                                }
+                            }}
+                            disabled={isAnalyzing}
+                            className="ml-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold shadow-sm flex items-center gap-1 transition-colors"
+                        >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAnalyzing ? '분석 중...' : 'AI 친환경/생태 분석'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -244,16 +284,18 @@ const GreenBuildingPanel = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">옥상 생태/치유 공간 조성을 위한 토심 증가</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">구조 하중</span></td>
-                                            <td className="px-3 py-2.5">C-1(구조)팀 연계. 활하중 및 습윤하중 기준 상향 (설계하중 5.0kN/㎡ 이상 확보 배정)</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-3 py-2.5 font-bold text-slate-700">14일 간의 강력한 Flush-out 시행 중 에너지비 발생</td>
-                                            <td className="px-3 py-2.5 text-center"><span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">비용/일정</span></td>
-                                            <td className="px-3 py-2.5">C-6(공정) 연계. 준공전 보일러/공조기 가동을 위한 임시동력 및 가스요금 실비 5D예산 편제</td>
-                                        </tr>
+                                        {(Array.isArray(store.engineeringAnalysisData['green']?.riskBoard) ? store.engineeringAnalysisData['green'].riskBoard : [
+                                            { risk: '옥상 생태/치유 공간 조성을 위한 토심 증가', impact: '상', prob: '상', solution: 'C-1(구조)팀 연계. 활하중 및 습윤하중 기준 상향 (설계하중 5.0kN/㎡ 이상 확보 배정)' },
+                                            { risk: '14일 간의 강력한 Flush-out 시행 중 에너지비 발생', impact: '중', prob: '상', solution: 'C-6(공정) 연계. 준공전 보일러/공조기 가동을 위한 임시동력 및 가스요금 실비 5D예산 편제' }
+                                        ]).map((row: any, i: number) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2.5 font-bold text-slate-700">{row.risk}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.impact === '상' ? 'bg-red-100 text-red-700' : row.impact === '중' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.impact === '상' ? '구조 하중' : row.impact === '중' ? '비용/일정' : '인증 탈락'}</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">{row.solution}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -276,12 +318,12 @@ const GreenBuildingPanel = () => {
                         </div>
                     </div>
                     <div className="flex-1 flex justify-evenly text-[10px] font-medium px-3 text-center">
-                        {[
+                        {(Array.isArray(store.engineeringAnalysisData['green']?.customMetrics) ? store.engineeringAnalysisData['green'].customMetrics : [
                             { label: '실내공기질', value: 'E0자재 & Flush-out' },
                             { label: '인증 목표', value: 'G-SEED 최우수 (1D)' },
                             { label: '채광/자연빛', value: 'DA 72% + Glare Free' },
                             { label: '워터 밸런스', value: '중수/우수 35% 재활용' },
-                        ].map((m, i) => (
+                        ]).slice(0, 4).map((m: any, i: number) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <div className="w-[1px] h-6 bg-slate-600"></div>}
                                 <div className="flex flex-col items-center gap-0.5">

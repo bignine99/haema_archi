@@ -1,13 +1,13 @@
 /**
  * Gemini API 서비스 — 과업지시서 AI 분석
  * 
- * 모델: gemini-2.5-flash-lite
+ * 모델: gemini-2.5-flash
  * 역할: 과업지시서 원문을 면밀히 분석한 후, 
  *       설계자가 꼭 알아야 할 핵심만 불릿 형태로 요약
  */
 import { useProjectStore } from '@/store/projectStore';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export interface GeminiAnalysisResult {
     // ─── 기본 제원 (AI가 추출) ───
@@ -91,11 +91,7 @@ export async function analyzeWithGemini(documentText: string): Promise<GeminiAna
 
         const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
-        // 텍스트가 너무 길면 앞뒤 핵심 부분만 추출 (API 토큰 제한)
         let text = documentText;
-        if (text.length > 15000) {
-            text = text.substring(0, 10000) + '\n\n... (중간 생략) ...\n\n' + text.substring(text.length - 5000);
-        }
 
         const response = await fetch(GEMINI_URL, {
             method: 'POST',
@@ -108,6 +104,9 @@ export async function analyzeWithGemini(documentText: string): Promise<GeminiAna
                     temperature: 0.2,
                     maxOutputTokens: 2048,
                     responseMimeType: 'application/json',
+                    thinkingConfig: {
+                        thinkingBudget: 0
+                    }
                 }
             })
         });
@@ -127,7 +126,8 @@ export async function analyzeWithGemini(documentText: string): Promise<GeminiAna
 
         // JSON 파싱
         const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        const cleanContent = match ? match[1].trim() : content.trim();
+        let cleanContent = match ? match[1].trim() : content.trim();
+        cleanContent = cleanContent.replace(/,\s*([}\]])/g, '$1'); // Trailing comma fix
         const parsed = JSON.parse(cleanContent);
 
         console.log('[Gemini] 분석 완료:', {
@@ -138,6 +138,18 @@ export async function analyzeWithGemini(documentText: string): Promise<GeminiAna
         });
 
         return {
+            projectName: parsed.projectName,
+            address: parsed.address,
+            zoneType: parsed.zoneType,
+            buildingUse: parsed.buildingUse,
+            landArea: parsed.landArea,
+            grossFloorArea: parsed.grossFloorArea,
+            totalFloors: parsed.totalFloors,
+            undergroundFloors: parsed.undergroundFloors,
+            buildingCoverageLimit: parsed.buildingCoverageLimit,
+            floorAreaRatioLimit: parsed.floorAreaRatioLimit,
+            maxHeight: parsed.maxHeight,
+            constructionCost: parsed.constructionCost,
             designDirection: parsed.designDirection || [],
             generalGuidelines: parsed.generalGuidelines || [],
             designGuidelines: parsed.designGuidelines || [],
