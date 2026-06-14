@@ -62,6 +62,16 @@ const EditorialStyle = () => (
 ────────────────────────────────────────────────────────── */
 function AbstractSculpture({ slide }: { slide: number }) {
     const ref = useRef<THREE.Group>(null);
+    const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsDesktop(window.innerWidth >= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useFrame((state) => {
         if(ref.current) {
             const t = state.clock.elapsedTime;
@@ -70,8 +80,9 @@ function AbstractSculpture({ slide }: { slide: number }) {
             ref.current.rotation.z = Math.cos(t * 0.6) * 0.5;
             ref.current.position.y = Math.sin(t * 2.0) * 0.6;
             
-            // 마우스 반응성 고조
-            const targetX = (state.pointer.x * 3.0);
+            // 마우스 반응성 고조 (데스크톱에서는 왼쪽으로 -2.2 오프셋하여 배치)
+            const baseOffset = isDesktop ? -2.2 : 0;
+            const targetX = baseOffset + (state.pointer.x * 3.0);
             const targetY = (state.pointer.y * 3.0);
             ref.current.position.x += (targetX - ref.current.position.x) * 0.15;
             ref.current.position.y += (targetY - ref.current.position.y) * 0.15;
@@ -79,7 +90,7 @@ function AbstractSculpture({ slide }: { slide: number }) {
     });
     
     return (
-        <group ref={ref} position={[0, -0.5, 0]}>
+        <group ref={ref} position={[isDesktop ? -2.2 : 0, -0.5, 0]}>
             {slide === 0 && (
                 <Float speed={4} rotationIntensity={1.5} floatIntensity={2}>
                     <mesh position={[0, 1.5, 0]} rotation={[0.4, 0.4, 0]} castShadow receiveShadow>
@@ -230,17 +241,17 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
             <section className="relative w-full h-[100svh] min-h-[700px] flex flex-col md:flex-row items-center pt-20 px-8 md:px-16 lg:px-24 bg-[#f1f2f3]">
                 
                 {/* Editorial Top Nav */}
-                <div className="absolute top-10 left-8 md:left-24 text-[9px] tracking-[0.3em] uppercase font-bold text-slate-800">
+                <div className="absolute top-10 left-8 md:left-24 text-[9px] tracking-[0.3em] uppercase font-bold text-slate-800 z-30">
                     ARCHE PLATFORM
                 </div>
-                <div className="absolute top-10 right-8 md:right-24 text-[9px] tracking-[0.2em] uppercase text-slate-500 hidden sm:flex gap-8">
+                <div className="absolute top-10 right-8 md:right-24 text-[9px] tracking-[0.2em] uppercase text-slate-500 hidden sm:flex gap-8 z-30">
                     <span className="cursor-pointer hover:text-black transition-colors">Architecture</span>
                     <span className="cursor-pointer hover:text-black transition-colors">Platform</span>
                     <span className="cursor-pointer hover:text-black transition-colors">Contact</span>
                 </div>
 
                 {/* Left side Abstract 3D Canvas */}
-                <div className="absolute inset-0 md:relative md:w-1/2 h-full z-0 pointer-events-none opacity-40 md:opacity-100">
+                <div className="absolute inset-0 w-full h-full z-20 pointer-events-none opacity-40 md:opacity-100">
                     <Canvas camera={{ position: [0, 0, 9], fov: 45 }} shadows>
                         <ambientLight intensity={0.6} />
                         <directionalLight position={[10, 15, 10]} intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />
@@ -287,7 +298,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                 </div>
 
                 {/* Pagination like reference */}
-                <div className="absolute bottom-12 md:bottom-20 left-8 md:left-24 flex items-center gap-3 text-sm font-serif-elegant tracking-widest">
+                <div className="absolute bottom-12 md:bottom-20 left-8 md:left-24 flex items-center gap-3 text-sm font-serif-elegant tracking-widest z-30">
                     {SLIDES.map((_, i) => (
                         <button key={i} onClick={() => setSlide(i)} className={`cursor-pointer transition-colors ${slide === i ? 'w-1.5 h-1.5 rounded-full bg-slate-800' : 'w-1 h-1 rounded-full bg-slate-300 hover:bg-slate-400'}`} />
                     ))}
@@ -301,7 +312,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                     <span className="text-slate-400 text-xs mt-1">/ 0{SLIDES.length}</span>
                 </div>
                 {/* Scroll label */}
-                <div className="absolute bottom-16 right-8 md:right-24 hidden md:flex items-center gap-4">
+                <div className="absolute bottom-16 right-8 md:right-24 hidden md:flex items-center gap-4 z-30">
                     <span className="text-[9px] tracking-[0.2em] text-slate-500 uppercase">Scroll</span>
                     <div className="w-16 h-[1px] bg-slate-300"></div>
                 </div>
