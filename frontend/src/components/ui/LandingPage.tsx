@@ -285,22 +285,29 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                             </p>
                         </motion.div>
                     </AnimatePresence>
-                    
-                    {/* Navigation Arrows like reference */}
-                    <div className="flex mt-8 pointer-events-auto">
-                        <button onClick={prevSlide} className="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
-                            <ArrowLeft size={16} className="text-slate-500" strokeWidth={1.5} />
-                        </button>
-                        <button onClick={nextSlide} className="w-14 h-14 bg-slate-900 flex items-center justify-center cursor-pointer hover:bg-slate-800 transition-colors">
-                            <ArrowRight size={16} className="text-white" strokeWidth={1.5} />
-                        </button>
-                    </div>
                 </div>
 
-                {/* Pagination like reference */}
-                <div className="absolute bottom-12 md:bottom-20 left-8 md:left-24 flex items-center gap-3 text-sm font-serif-elegant tracking-widest z-30">
+                {/* Navigation Arrows - Moved to absolute position at z-40 to prevent being blocked by the 3D Canvas */}
+                <div className="absolute bottom-24 md:bottom-28 right-8 md:right-24 flex z-40">
+                    <button onClick={prevSlide} className="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                        <ArrowLeft size={16} className="text-slate-500" strokeWidth={1.5} />
+                    </button>
+                    <button onClick={nextSlide} className="w-14 h-14 bg-slate-900 flex items-center justify-center cursor-pointer hover:bg-slate-800 transition-colors">
+                        <ArrowRight size={16} className="text-white" strokeWidth={1.5} />
+                    </button>
+                </div>
+
+                {/* Pagination like reference - Expanded button hit target to w-6 h-6 and bumped to z-40 */}
+                <div className="absolute bottom-12 md:bottom-20 left-8 md:left-24 flex items-center gap-1 text-sm font-serif-elegant tracking-widest z-40">
                     {SLIDES.map((_, i) => (
-                        <button key={i} onClick={() => setSlide(i)} className={`cursor-pointer transition-colors ${slide === i ? 'w-1.5 h-1.5 rounded-full bg-slate-800' : 'w-1 h-1 rounded-full bg-slate-300 hover:bg-slate-400'}`} />
+                        <button 
+                            key={i} 
+                            onClick={() => setSlide(i)} 
+                            className="w-6 h-6 flex items-center justify-center cursor-pointer group"
+                            aria-label={`Go to slide ${i + 1}`}
+                        >
+                            <span className={`transition-all duration-300 rounded-full ${slide === i ? 'w-2 h-2 bg-slate-800' : 'w-1 h-1 bg-slate-300 group-hover:bg-slate-500'}`} />
+                        </button>
                     ))}
                     <span className="ml-6 text-2xl text-slate-900 overflow-hidden w-10 text-center">
                         <AnimatePresence mode="wait">
