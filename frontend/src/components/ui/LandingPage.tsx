@@ -287,17 +287,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                     </AnimatePresence>
                 </div>
 
-                {/* Navigation Arrows - Moved to absolute position at z-40 to prevent being blocked by the 3D Canvas */}
-                <div className="absolute bottom-24 md:bottom-28 right-8 md:right-24 flex z-40">
-                    <button onClick={prevSlide} className="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
-                        <ArrowLeft size={16} className="text-slate-500" strokeWidth={1.5} />
-                    </button>
-                    <button onClick={nextSlide} className="w-14 h-14 bg-slate-900 flex items-center justify-center cursor-pointer hover:bg-slate-800 transition-colors">
-                        <ArrowRight size={16} className="text-white" strokeWidth={1.5} />
-                    </button>
-                </div>
-
-                {/* Pagination like reference - Expanded button hit target to w-6 h-6 and bumped to z-40 */}
+                {/* Pagination and Navigation Buttons - Combined at bottom-left at z-40 */}
                 <div className="absolute bottom-12 md:bottom-20 left-8 md:left-24 flex items-center gap-1 text-sm font-serif-elegant tracking-widest z-40">
                     {SLIDES.map((_, i) => (
                         <button 
@@ -316,7 +306,17 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                             </motion.span>
                         </AnimatePresence>
                     </span>
-                    <span className="text-slate-400 text-xs mt-1">/ 0{SLIDES.length}</span>
+                    <span className="text-slate-400 text-xs mt-1 mr-4">/ 0{SLIDES.length}</span>
+
+                    {/* Navigation Arrows */}
+                    <div className="flex ml-4">
+                        <button onClick={prevSlide} className="w-10 h-10 bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                            <ArrowLeft size={14} className="text-slate-500" strokeWidth={1.5} />
+                        </button>
+                        <button onClick={nextSlide} className="w-10 h-10 bg-slate-900 flex items-center justify-center cursor-pointer hover:bg-slate-800 transition-colors">
+                            <ArrowRight size={14} className="text-white" strokeWidth={1.5} />
+                        </button>
+                    </div>
                 </div>
                 {/* Scroll label */}
                 <div className="absolute bottom-16 right-8 md:right-24 hidden md:flex items-center gap-4 z-30">
