@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 // .env 파일에서 환경변수를 로드 (dotenv 불필요 — 빌드 시 주입)
 const dotenv = (() => {
@@ -54,6 +55,17 @@ module.exports = {
     plugins: [
         new HtmlWebpackPlugin({
             template: './index.html',
+        }),
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: path.resolve(__dirname, 'public'),
+                    to: path.resolve(__dirname, 'dist'),
+                    globOptions: {
+                        ignore: ['**/index.html', '**/test.html'],
+                    },
+                },
+            ],
         }),
         // 환경변수를 빌드 시 코드에 주입 (API 키를 소스코드에 넣지 않음)
         // 환경변수를 빌드 시 코드에 주입 (Vite 호환성을 위해 import.meta.env도 주입)

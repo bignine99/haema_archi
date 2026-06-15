@@ -185,82 +185,94 @@ export async function getVworldParcel(lng: number, lat: number): Promise<ParcelR
     // Vworld Data API 2.0 - GetFeature
     // 연속지적도 필지 레이어로 공간 검색
     const layers = ['LP_PA_CBND_BUBUN', 'LT_C_ADSIGOT'];
+    const domainCandidates = [
+        'http://localhost',
+        window.location.origin,
+        'http://localhost:3004',
+    ];
 
     for (const layer of layers) {
-        try {
-            const url = `/vworld-api/req/data?` +
-                `service=data&request=GetFeature&data=${layer}` +
-                `&key=${VWORLD_API_KEY}` +
-                `&domain=${window.location.origin}` +
-                `&geomFilter=POINT(${lng} ${lat})` +
-                `&geometry=true&crs=EPSG:4326&format=json&size=1`;
+        for (const domain of domainCandidates) {
+            try {
+                const url = `/vworld-api/req/data?` +
+                    `service=data&request=GetFeature&data=${layer}` +
+                    `&key=${VWORLD_API_KEY}` +
+                    `&domain=${encodeURIComponent(domain)}` +
+                    `&geomFilter=POINT(${lng} ${lat})` +
+                    `&geometry=true&crs=EPSG:4326&format=json&size=1`;
 
-            console.log(`[GIS] Vworld 요청 (${layer}):`, url);
-            const res = await fetch(url);
+                console.log(`[GIS] Vworld 요청 (${layer}), domain=${domain}:`, url);
+                const res = await fetch(url);
 
-            if (!res.ok) {
-                console.warn(`[GIS] Vworld ${layer} HTTP 에러:`, res.status);
-                continue;
-            }
-
-            const data = await res.json();
-            console.log(`[GIS] Vworld ${layer} 응답:`, data);
-
-            const features = data?.response?.result?.featureCollection?.features;
-            if (!features || features.length === 0) {
-                console.warn(`[GIS] Vworld ${layer}: 피처 없음`);
-                continue;
-            }
-
-            const feature = features[0];
-            const geom = feature.geometry;
-            const props = feature.properties || {};
-
-            // Polygon 또는 MultiPolygon 처리
-            let rawCoords: [number, number][];
-            if (geom.type === 'MultiPolygon') {
-                rawCoords = geom.coordinates[0][0]; // 첫 번째 폴리곤의 외곽 링
-            } else if (geom.type === 'Polygon') {
-                rawCoords = geom.coordinates[0]; // 외곽 링
-            } else {
-                console.warn(`[GIS] 지원하지 않는 geometry type:`, geom.type);
-                continue;
-            }
-
-            // 마지막 점이 첫 점과 같으면 제거 (닫힌 폴리곤)
-            if (rawCoords.length > 1) {
-                const first = rawCoords[0];
-                const last = rawCoords[rawCoords.length - 1];
-                if (Math.abs(first[0] - last[0]) < 1e-10 && Math.abs(first[1] - last[1]) < 1e-10) {
-                    rawCoords = rawCoords.slice(0, -1);
+                if (!res.ok) {
+                    console.warn(`[GIS] Vworld ${layer} HTTP 에러 (domain=${domain}):`, res.status);
+                    continue;
                 }
+
+                const data = await res.json();
+                console.log(`[GIS] Vworld ${layer} 응답 (domain=${domain}):`, data);
+
+                if (data?.response?.status === 'ERROR') {
+                    console.warn(`[GIS] Vworld ${layer} API 에러: ${data?.response?.error?.text || '?'} (domain=${domain})`);
+                    continue;
+                }
+
+                const features = data?.response?.result?.featureCollection?.features;
+                if (!features || features.length === 0) {
+                    console.warn(`[GIS] Vworld ${layer} (domain=${domain}): 피처 없음`);
+                    continue;
+                }
+
+                const feature = features[0];
+                const geom = feature.geometry;
+                const props = feature.properties || {};
+
+                // Polygon 또는 MultiPolygon 처리
+                let rawCoords: [number, number][];
+                if (geom.type === 'MultiPolygon') {
+                    rawCoords = geom.coordinates[0][0]; // 첫 번째 폴리곤의 외곽 링
+                } else if (geom.type === 'Polygon') {
+                    rawCoords = geom.coordinates[0]; // 외곽 링
+                } else {
+                    console.warn(`[GIS] 지원하지 않는 geometry type:`, geom.type);
+                    continue;
+                }
+
+                // 마지막 점이 첫 점과 같으면 제거 (닫힌 폴리곤)
+                if (rawCoords.length > 1) {
+                    const first = rawCoords[0];
+                    const last = rawCoords[rawCoords.length - 1];
+                    if (Math.abs(first[0] - last[0]) < 1e-10 && Math.abs(first[1] - last[1]) < 1e-10) {
+                        rawCoords = rawCoords.slice(0, -1);
+                    }
+                }
+
+                // 중심점 계산
+                let cLng = 0, cLat = 0;
+                for (const [lo, la] of rawCoords) { cLng += lo; cLat += la; }
+                cLng /= rawCoords.length;
+                cLat /= rawCoords.length;
+
+                // WGS84 → 로컬 미터 변환
+                const localCoords = wgs84ToLocalMeters(rawCoords, cLng, cLat);
+                const area = computeArea(localCoords);
+
+                console.log(`[GIS] ✅ 필지 발견: PNU=${props.pnu}, 면적=${area.toFixed(1)}㎡, 꼭짓점=${localCoords.length}개`);
+
+                return {
+                    pnu: props.pnu || props.PNU || '',
+                    polygonLocal: localCoords,
+                    polygonWGS84: rawCoords,
+                    centerLng: cLng,
+                    centerLat: cLat,
+                    area: Math.round(area),
+                    jibun: props.jibun || props.JIBUN || '',
+                    addr: props.addr || props.ADDR || '',
+                };
+            } catch (err) {
+                console.warn(`[GIS] Vworld ${layer} 실패 (domain=${domain}):`, err);
+                continue;
             }
-
-            // 중심점 계산
-            let cLng = 0, cLat = 0;
-            for (const [lo, la] of rawCoords) { cLng += lo; cLat += la; }
-            cLng /= rawCoords.length;
-            cLat /= rawCoords.length;
-
-            // WGS84 → 로컬 미터 변환
-            const localCoords = wgs84ToLocalMeters(rawCoords, cLng, cLat);
-            const area = computeArea(localCoords);
-
-            console.log(`[GIS] ✅ 필지 발견: PNU=${props.pnu}, 면적=${area.toFixed(1)}㎡, 꼭짓점=${localCoords.length}개`);
-
-            return {
-                pnu: props.pnu || props.PNU || '',
-                polygonLocal: localCoords,
-                polygonWGS84: rawCoords,
-                centerLng: cLng,
-                centerLat: cLat,
-                area: Math.round(area),
-                jibun: props.jibun || props.JIBUN || '',
-                addr: props.addr || props.ADDR || '',
-            };
-        } catch (err) {
-            console.warn(`[GIS] Vworld ${layer} 실패:`, err);
-            continue;
         }
     }
 
