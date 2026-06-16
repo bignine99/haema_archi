@@ -20,7 +20,9 @@ const CivilEngineeringPanel = () => {
 
     // ─── Dynamic: 지하 층수에 따른 흙막이 계산 로직 ───
     const basementFloors = (store as any).undergroundFloors ?? 3;
-    const depth = sd?.excavation?.depth ? parseFloat(sd.excavation.depth) : basementFloors * 3.5;
+    const rawDepth = sd?.excavation?.depth;
+    const depthVal = rawDepth ? parseFloat(typeof rawDepth === 'string' ? rawDepth.replace(/[^0-9.]/g, '') : String(rawDepth)) : NaN;
+    const depth = isNaN(depthVal) ? basementFloors * 3.5 : depthVal;
     
     // F3 팝업 경고 (지하 2층 이상)
     const showDeepExcavationAlert = sd?.excavation?.deepAlert === true || sd?.excavation?.deepAlert === 'true' || basementFloors >= 2;

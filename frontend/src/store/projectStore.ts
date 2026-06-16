@@ -1370,6 +1370,7 @@ export const useProjectStore = create<ProjectState>()(
         if (parsedData.commercialFloors !== undefined) updates.commercialFloors = Number(parsedData.commercialFloors) || 0;
         if (parsedData.residentialFloors !== undefined) updates.residentialFloors = Number(parsedData.residentialFloors) || 0;
         if (parsedData.totalFloors !== undefined) updates.totalFloors = Number(parsedData.totalFloors) || 0;
+        if (parsedData.undergroundFloors !== undefined) updates.undergroundFloors = Number(parsedData.undergroundFloors) || 0;
         if (parsedData.constructionCost) updates.constructionCost = parsedData.constructionCost;
         if (parsedData.designScope) updates.designScope = parsedData.designScope;
         if (parsedData.certifications) updates.certifications = parsedData.certifications;
